@@ -32,7 +32,7 @@ export type Restaurante = {
   ativo: boolean;
   /** Loja pausou pedidos manualmente (ainda aparece na lista) */
   pausado: boolean;
-  /** Valor mínimo do subtotal (sem taxa de entrega); 0 = sem mínimo */
+  /** Valor minimo do subtotal (sem taxa de entrega); 0 = sem minimo */
   pedido_minimo: number;
   criado_em: string;
 };
