@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { exigirSessao } from "@/lib/auth-servidor";
 import { resumoDoDiaLocal, usandoModoDemo } from "@/lib/local-db";
 import { resumoDoDia } from "@/lib/pedidos-servidor";
 
-/** Números do dia para o painel do dono */
+/** Números / fechamento do dia para o painel do dono */
 export async function GET() {
   try {
+    await exigirSessao("dono");
+
     if (usandoModoDemo()) {
       const resumo = await resumoDoDiaLocal();
       return NextResponse.json({ modo: "demo", resumo });
@@ -15,6 +18,10 @@ export async function GET() {
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao calcular resumo.";
-    return NextResponse.json({ erro: mensagem }, { status: 500 });
+    const status =
+      mensagem.includes("login") || mensagem.includes("permissão")
+        ? 401
+        : 500;
+    return NextResponse.json({ erro: mensagem }, { status });
   }
 }

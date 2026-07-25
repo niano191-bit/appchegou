@@ -18,6 +18,10 @@ import {
   type ResumoDia,
 } from "@/lib/dono";
 import {
+  linkWhatsAppFechamento,
+  type FechamentoDia,
+} from "@/lib/fechamento";
+import {
   classificarPedidoCritico,
   contarPedidosCriticos,
   ordenarCriticosPrimeiro,
@@ -214,6 +218,9 @@ export function PainelDono() {
         <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Números do dia
         </h2>
+        {resumo?.data_label ? (
+          <p className="text-sm text-muted capitalize">{resumo.data_label}</p>
+        ) : null}
         <div className="grid grid-cols-2 gap-3">
           <CardNumero
             rotulo="Pedidos"
@@ -232,6 +239,62 @@ export function PainelDono() {
             valor={formatarReais(resumo?.ticket_medio ?? 0)}
           />
         </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="rounded-xl border border-linha bg-white px-2 py-2">
+            <p className="font-semibold text-foreground">
+              {resumo?.entregues ?? 0}
+            </p>
+            <p className="text-muted">Entregues</p>
+          </div>
+          <div className="rounded-xl border border-linha bg-white px-2 py-2">
+            <p className="font-semibold text-foreground">
+              {resumo?.em_andamento ?? 0}
+            </p>
+            <p className="text-muted">Andamento</p>
+          </div>
+          <div className="rounded-xl border border-linha bg-white px-2 py-2">
+            <p className="font-semibold text-foreground">
+              {resumo?.cancelados ?? 0}
+            </p>
+            <p className="text-muted">Cancelados</p>
+          </div>
+        </div>
+
+        {resumo?.por_loja && resumo.por_loja.length > 0 ? (
+          <div className="rounded-2xl border border-linha bg-white px-4 py-3 text-sm">
+            <p className="text-xs font-medium tracking-wide text-muted uppercase">
+              Por loja
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {resumo.por_loja.map((loja) => (
+                <li
+                  key={loja.nome}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span className="text-foreground">
+                    {loja.nome}{" "}
+                    <span className="text-muted">({loja.pedidos})</span>
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {formatarReais(loja.faturamento)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {resumo ? (
+          <a
+            href={linkWhatsAppFechamento(resumo as FechamentoDia)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-xl bg-mar px-4 py-3 text-center text-sm font-semibold text-white"
+          >
+            Enviar fechamento no WhatsApp
+          </a>
+        ) : null}
       </section>
 
       {/* Pedidos ao vivo */}

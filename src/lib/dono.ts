@@ -8,10 +8,27 @@ import type {
 import type { PedidoComItens } from "@/lib/pedidos-servidor";
 
 export type ResumoDia = {
+  data?: string;
+  data_label?: string;
   qtd_pedidos: number;
   faturamento: number;
   comissao: number;
   ticket_medio: number;
+  taxa_entrega_total?: number;
+  entregues?: number;
+  cancelados?: number;
+  em_andamento?: number;
+  por_loja?: {
+    nome: string;
+    pedidos: number;
+    faturamento: number;
+    comissao: number;
+  }[];
+  por_entregador?: {
+    nome: string;
+    entregas: number;
+    valor: number;
+  }[];
 };
 
 export type PedidoDono = PedidoComItens & {

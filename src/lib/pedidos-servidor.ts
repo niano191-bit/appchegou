@@ -13,6 +13,7 @@ import { createSupabaseClient } from "@/lib/supabase/client";
 import { normalizarConfiguracao, type ItemNovoPedido } from "@/lib/local-db";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import { buscarBairro, listarBairros } from "@/lib/bairros-servidor";
+import { montarFechamentoDia } from "@/lib/fechamento";
 import {
   dataPedidoSalvador,
   inicioFimDoDiaSalvador,
@@ -990,28 +991,18 @@ export async function listarTodosPedidosDono() {
 
 export async function resumoDoDia() {
   const pedidos = await listarTodosPedidosDono();
-  const agoraSp = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
-  );
-  const y = agoraSp.getFullYear();
-  const m = String(agoraSp.getMonth() + 1).padStart(2, "0");
-  const d = String(agoraSp.getDate()).padStart(2, "0");
-  const inicio = new Date(`${y}-${m}-${d}T00:00:00-03:00`).getTime();
-  const fim = new Date(`${y}-${m}-${d}T23:59:59.999-03:00`).getTime();
+  const { inicio, fim } = inicioFimDoDiaSalvador();
+  const ganhos = await ganhosTodosEntregadoresHoje();
 
-  const doDia = pedidos.filter((p) => {
-    const t = new Date(p.criado_em).getTime();
-    return p.status_pagamento === "pago" && t >= inicio && t <= fim;
+  return montarFechamentoDia({
+    pedidos,
+    inicio: inicio.getTime(),
+    fim: fim.getTime(),
+    data: dataPedidoSalvador(),
+    ganhosEntregadores: ganhos.map((g) => ({
+      nome: g.nome,
+      entregas: g.entregas,
+      valor: g.valor,
+    })),
   });
-
-  const qtd = doDia.length;
-  const faturamento = doDia.reduce((s, p) => s + Number(p.total), 0);
-  const comissao = doDia.reduce((s, p) => s + Number(p.comissao_valor), 0);
-
-  return {
-    qtd_pedidos: qtd,
-    faturamento,
-    comissao,
-    ticket_medio: qtd > 0 ? faturamento / qtd : 0,
-  };
 }

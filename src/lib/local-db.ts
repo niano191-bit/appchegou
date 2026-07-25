@@ -15,6 +15,7 @@ import type {
 } from "@/types/database";
 import { BAIRROS_SALVADOR_SEED } from "@/lib/bairros-seed";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
+import { montarFechamentoDia } from "@/lib/fechamento";
 import {
   dataPedidoSalvador,
   inicioFimDoDiaSalvador,
@@ -1159,31 +1160,23 @@ export async function listarTodosPedidosLocal() {
 }
 
 
-/** Números do dia: pedidos, comissão e ticket médio */
+/** Números / fechamento do dia */
 export async function resumoDoDiaLocal() {
   const pedidos = await listarTodosPedidosLocal();
   const { inicio, fim } = inicioFimDoDiaSalvador();
+  const ganhos = await ganhosTodosEntregadoresHojeLocal();
 
-  const doDia = pedidos.filter((p) => {
-    const t = new Date(p.criado_em).getTime();
-    return (
-      p.status_pagamento === "pago" &&
-      t >= inicio.getTime() &&
-      t <= fim.getTime()
-    );
+  return montarFechamentoDia({
+    pedidos,
+    inicio: inicio.getTime(),
+    fim: fim.getTime(),
+    data: dataPedidoSalvador(),
+    ganhosEntregadores: ganhos.map((g) => ({
+      nome: g.nome,
+      entregas: g.entregas,
+      valor: g.valor,
+    })),
   });
-
-  const qtdPedidos = doDia.length;
-  const faturamento = doDia.reduce((s, p) => s + Number(p.total), 0);
-  const comissao = doDia.reduce((s, p) => s + Number(p.comissao_valor), 0);
-  const ticketMedio = qtdPedidos > 0 ? faturamento / qtdPedidos : 0;
-
-  return {
-    qtd_pedidos: qtdPedidos,
-    faturamento,
-    comissao,
-    ticket_medio: ticketMedio,
-  };
 }
 
 export async function listarBairrosLocal(apenasAtivos = false) {
