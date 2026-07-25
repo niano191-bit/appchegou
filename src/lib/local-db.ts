@@ -253,6 +253,102 @@ export async function atualizarStatusPedidoLocal(
   return pedido;
 }
 
+export async function listarRestaurantesLocal() {
+  const banco = await lerBancoLocal();
+  return banco.restaurantes.filter((r) => r.ativo);
+}
+
+export async function buscarRestauranteLocal(id: string) {
+  const banco = await lerBancoLocal();
+  return banco.restaurantes.find((r) => r.id === id) ?? null;
+}
+
+export async function listarCardapioLocal(restauranteId: string) {
+  const banco = await lerBancoLocal();
+  return banco.itens_cardapio.filter(
+    (item) => item.restaurante_id === restauranteId && item.disponivel,
+  );
+}
+
+export type ItemNovoPedido = {
+  item_cardapio_id: string;
+  quantidade: number;
+};
+
+/** Cria pedido com status novo no banco local */
+export async function criarPedidoLocal(entrada: {
+  clienteId: string;
+  restauranteId: string;
+  endereco_entrega: string;
+  observacao?: string;
+  taxa_entrega: number;
+  itens: ItemNovoPedido[];
+}) {
+  if (!entrada.itens.length) {
+    throw new Error("Adicione pelo menos um item ao pedido.");
+  }
+
+  const banco = await lerBancoLocal();
+  const restaurante = banco.restaurantes.find(
+    (r) => r.id === entrada.restauranteId && r.ativo,
+  );
+
+  if (!restaurante) {
+    throw new Error("Restaurante não encontrado.");
+  }
+
+  const criado = agora();
+  const pedidoId = crypto.randomUUID();
+  const itensPedido: ItemPedido[] = [];
+  let total = 0;
+
+  for (const item of entrada.itens) {
+    const doCardapio = banco.itens_cardapio.find(
+      (c) =>
+        c.id === item.item_cardapio_id &&
+        c.restaurante_id === entrada.restauranteId &&
+        c.disponivel,
+    );
+
+    if (!doCardapio) {
+      throw new Error("Item do cardápio inválido.");
+    }
+
+    if (item.quantidade < 1) {
+      throw new Error("Quantidade inválida.");
+    }
+
+    total += Number(doCardapio.preco) * item.quantidade;
+    itensPedido.push({
+      id: crypto.randomUUID(),
+      pedido_id: pedidoId,
+      item_cardapio_id: doCardapio.id,
+      nome: doCardapio.nome,
+      preco_unitario: Number(doCardapio.preco),
+      quantidade: item.quantidade,
+    });
+  }
+
+  const pedido: PedidoLocal = {
+    id: pedidoId,
+    cliente_id: entrada.clienteId,
+    restaurante_id: entrada.restauranteId,
+    entregador_id: null,
+    status: "novo",
+    total,
+    taxa_entrega: entrada.taxa_entrega,
+    endereco_entrega: entrada.endereco_entrega,
+    observacao: entrada.observacao?.trim() || null,
+    criado_em: criado,
+    atualizado_em: criado,
+    itens_pedido: itensPedido,
+  };
+
+  banco.pedidos.push(pedido);
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
 /** Indica se estamos no modo demonstração (sem Supabase) */
 export function usandoModoDemo() {
   return !(

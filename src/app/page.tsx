@@ -35,19 +35,27 @@ export default function Home() {
           <p className="mt-1 opacity-90">
             {supabase.configured
               ? supabase.message
-              : "Você já pode testar o painel sem Docker/Supabase. Os pedidos ficam salvos neste computador."}
+              : "Peça como cliente e aceite no painel do restaurante — tudo neste computador."}
           </p>
         </div>
 
-        <Link
-          href="/restaurante"
-          className="inline-flex w-full items-center justify-center rounded-xl bg-[#C45C26] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#A84C1E]"
-        >
-          Abrir painel do restaurante
-        </Link>
+        <div className="flex w-full flex-col gap-3">
+          <Link
+            href="/cliente"
+            className="inline-flex w-full items-center justify-center rounded-xl bg-[#C45C26] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#A84C1E]"
+          >
+            Pedir comida (cliente)
+          </Link>
+          <Link
+            href="/restaurante"
+            className="inline-flex w-full items-center justify-center rounded-xl border border-[#C45C26] px-5 py-3.5 text-sm font-semibold text-[#C45C26] transition hover:bg-[#FFF4EB]"
+          >
+            Painel do restaurante
+          </Link>
+        </div>
 
         <p className="text-sm text-[#8A7460]">
-          Fase 2 — Painel do restaurante: aceitar pedidos e marcar como pronto.
+          Fase 3 — Cliente: cardápio, carrinho e pedido com status novo.
         </p>
       </main>
     </div>
