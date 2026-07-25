@@ -8,13 +8,17 @@ if (!token) {
   process.exit(1);
 }
 
+/** SQL pendente / seguro reaplicar (IF NOT EXISTS / ADD VALUE IF NOT EXISTS) */
 const files = [
-  ["001", "supabase/migrations/001_fase1_schema.sql"],
-  ["002", "supabase/migrations/002_fase6_configuracao.sql"],
-  ["003", "supabase/migrations/003_fase8_pagamentos.sql"],
   ["004", "supabase/migrations/004_fase12_senha.sql"],
   ["005", "supabase/migrations/005_fase13_gateways.sql"],
   ["006", "supabase/migrations/006_fase14_cancelado.sql"],
+  ["007", "supabase/migrations/007_fase15_recusa.sql"],
+  ["008", "supabase/migrations/008_fase16_horario.sql"],
+  ["009", "supabase/migrations/009_fase17_bairros.sql"],
+  ["010", "supabase/migrations/010_fase18_estorno.sql"],
+  ["011", "supabase/migrations/011_fase19_eta.sql"],
+  ["012", "supabase/migrations/012_fase20_numero_pedido.sql"],
 ];
 
 async function runQuery(query) {
@@ -42,12 +46,16 @@ for (const [name, path] of files) {
   console.log(`${name} OK`);
 }
 
-const tabelas = await runQuery(
-  "select table_name from information_schema.tables where table_schema = 'public' order by 1",
-);
-console.log("Tabelas:", tabelas);
-
-const contagem = await runQuery(
-  "select (select count(*) from restaurantes) as restaurantes, (select count(*) from usuarios) as usuarios, (select count(*) from pedidos) as pedidos",
-);
-console.log("Dados de teste:", contagem);
+const cols = await runQuery(`
+  select column_name
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'pedidos'
+    and column_name in (
+      'numero_dia', 'data_pedido',
+      'tempo_estimado_minutos', 'previsao_entrega_em',
+      'cancelado_por', 'motivo_cancelamento'
+    )
+  order by 1
+`);
+console.log("Colunas chave em pedidos:", cols);

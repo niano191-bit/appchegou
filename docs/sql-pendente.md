@@ -1,15 +1,24 @@
-# SQL pendente no Supabase (produção)
+# SQL no Supabase (produção)
 
-Rode no **SQL Editor**, nesta ordem, se ainda não rodou:
+**Atualizado:** migrations `004` → `012` aplicadas no projeto em 25/07/2026.
 
-1. `supabase/migrations/004_fase12_senha.sql` — senha nos usuários (cadastro)
-2. `supabase/migrations/005_fase13_gateways.sql` — Mercado Pago + LucPaguei no financeiro
-3. `supabase/migrations/006_fase14_cancelado.sql` — status cancelado
-4. `supabase/migrations/007_fase15_recusa.sql` — loja pode recusar pedido (quem cancelou + motivo)
-5. `supabase/migrations/008_fase16_horario.sql` — loja pode pausar pedidos
-6. `supabase/migrations/009_fase17_bairros.sql` — bairros com taxa por zona
-7. `supabase/migrations/010_fase18_estorno.sql` — status Pix estornado / reembolso pendente
-8. `supabase/migrations/011_fase19_eta.sql` — tempo estimado ao aceitar o pedido
-9. `supabase/migrations/012_fase20_numero_pedido.sql` — número do pedido do dia (#1, #2…)
+Se criar um projeto novo do zero, rode nesta ordem:
 
-As migrations 001, 002 e 003 já devem estar aplicadas.
+1. `001_fase1_schema.sql`
+2. `002_fase6_configuracao.sql`
+3. `003_fase8_pagamentos.sql`
+4. `004_fase12_senha.sql`
+5. `005_fase13_gateways.sql`
+6. `006_fase14_cancelado.sql`
+7. `007_fase15_recusa.sql`
+8. `008_fase16_horario.sql`
+9. `009_fase17_bairros.sql`
+10. `010_fase18_estorno.sql`
+11. `011_fase19_eta.sql`
+12. `012_fase20_numero_pedido.sql`
+
+Script local (com `SUPABASE_ACCESS_TOKEN`):
+
+```bash
+node scripts/aplicar-migrations.mjs
+```
