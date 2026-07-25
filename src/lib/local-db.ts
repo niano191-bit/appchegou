@@ -203,6 +203,8 @@ function dadosIniciais(): BancoLocal {
         taxa_entrega: 8,
         endereco_entrega: "Rua Teste, 100 — Barra, Salvador",
         observacao: "Pedido de teste — sem cebola",
+        cancelado_por: null,
+        motivo_cancelamento: null,
         criado_em: criado,
         atualizado_em: criado,
         itens_pedido: [
@@ -375,6 +377,36 @@ export async function cancelarPedidoLocal(
     );
   }
   pedido.status = "cancelado";
+  pedido.cancelado_por = "cliente";
+  pedido.motivo_cancelamento = null;
+  pedido.atualizado_em = agora();
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
+/** Loja recusa pedido (novo ou aceito) — cliente é avisado no acompanhamento */
+export async function recusarPedidoLocal(
+  pedidoId: string,
+  restauranteId: string,
+  motivo?: string | null,
+) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.restaurante_id !== restauranteId) {
+    throw new Error("Este pedido não é da sua loja.");
+  }
+  if (pedido.status_pagamento !== "pago") {
+    throw new Error("Só é possível recusar pedidos já pagos.");
+  }
+  if (pedido.status !== "novo" && pedido.status !== "aceito") {
+    throw new Error(
+      "Só é possível recusar enquanto o pedido está novo ou em preparo.",
+    );
+  }
+  pedido.status = "cancelado";
+  pedido.cancelado_por = "restaurante";
+  pedido.motivo_cancelamento = motivo?.trim() || null;
   pedido.atualizado_em = agora();
   await salvarBancoLocal(banco);
   return pedido;
@@ -774,6 +806,8 @@ export async function criarPedidoLocal(entrada: {
     taxa_entrega: entrada.taxa_entrega,
     endereco_entrega: entrada.endereco_entrega,
     observacao: entrada.observacao?.trim() || null,
+    cancelado_por: null,
+    motivo_cancelamento: null,
     criado_em: criado,
     atualizado_em: criado,
     itens_pedido: itensPedido,

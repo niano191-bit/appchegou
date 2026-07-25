@@ -8,6 +8,7 @@ import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
   atualizarStatusPedido,
   listarPedidosDoRestaurante,
+  recusarPedido,
   type PedidoComItens,
 } from "@/lib/pedidos";
 import { obterSessaoCliente } from "@/lib/sessao-cliente";
@@ -45,7 +46,7 @@ export function PainelRestaurante() {
               )
             : await listarPedidosDoRestaurante(
                 restauranteIdRef.current,
-                ["pronto", "a_caminho", "entregue"],
+                ["pronto", "a_caminho", "entregue", "cancelado"],
                 "desc",
               );
 
@@ -87,6 +88,34 @@ export function PainelRestaurante() {
       const mensagem =
         e instanceof Error ? e.message : "Não foi possível atualizar o pedido.";
       setErro(mensagem);
+    } finally {
+      setAcaoId(null);
+    }
+  }
+
+  async function recusar(pedidoId: string) {
+    const motivo = window.prompt(
+      "Motivo da recusa (opcional). O cliente verá este aviso.",
+      "",
+    );
+    if (motivo === null) return;
+    if (
+      !confirm(
+        "Recusar este pedido? Ele será cancelado e o cliente será avisado. Se já pagou, o estorno é feito no painel LucPaguei / suporte.",
+      )
+    ) {
+      return;
+    }
+
+    setAcaoId(pedidoId);
+    setErro(null);
+    try {
+      await recusarPedido(pedidoId, motivo.trim() || undefined);
+      await carregar(true);
+    } catch (e) {
+      setErro(
+        e instanceof Error ? e.message : "Não foi possível recusar o pedido.",
+      );
     } finally {
       setAcaoId(null);
     }
@@ -226,26 +255,39 @@ export function PainelRestaurante() {
               </ul>
 
               {aba === "agora" ? (
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                  {pedido.status === "novo" ? (
-                    <button
-                      type="button"
-                      disabled={ocupado}
-                      onClick={() => void mudarStatus(pedido.id, "aceito")}
-                      className="flex-1 rounded-xl bg-dende px-4 py-3 text-sm font-semibold text-white transition hover:bg-dende-escuro disabled:opacity-60"
-                    >
-                      {ocupado ? "Salvando…" : "Aceitar"}
-                    </button>
-                  ) : null}
+                <div className="mt-4 flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    {pedido.status === "novo" ? (
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => void mudarStatus(pedido.id, "aceito")}
+                        className="flex-1 rounded-xl bg-dende px-4 py-3 text-sm font-semibold text-white transition hover:bg-dende-escuro disabled:opacity-60"
+                      >
+                        {ocupado ? "Salvando…" : "Aceitar"}
+                      </button>
+                    ) : null}
 
-                  {pedido.status === "aceito" ? (
+                    {pedido.status === "aceito" ? (
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => void mudarStatus(pedido.id, "pronto")}
+                        className="flex-1 rounded-xl bg-mar px-4 py-3 text-sm font-semibold text-white transition hover:bg-mar/90 disabled:opacity-60"
+                      >
+                        {ocupado ? "Salvando…" : "Marcar como pronto"}
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {pedido.status === "novo" || pedido.status === "aceito" ? (
                     <button
                       type="button"
                       disabled={ocupado}
-                      onClick={() => void mudarStatus(pedido.id, "pronto")}
-                      className="flex-1 rounded-xl bg-mar px-4 py-3 text-sm font-semibold text-white transition hover:bg-mar/90 disabled:opacity-60"
+                      onClick={() => void recusar(pedido.id)}
+                      className="rounded-xl border border-dende px-4 py-2.5 text-sm font-semibold text-dende disabled:opacity-60"
                     >
-                      {ocupado ? "Salvando…" : "Marcar como pronto"}
+                      Recusar pedido
                     </button>
                   ) : null}
                 </div>

@@ -49,6 +49,8 @@ export type StatusPagamento = "pendente" | "pago" | "falhou";
 
 export type FormaPagamento = "pix" | "cartao" | null;
 
+export type CanceladoPor = "cliente" | "restaurante" | null;
+
 export type Pedido = {
   id: string;
   cliente_id: string;
@@ -62,6 +64,8 @@ export type Pedido = {
   taxa_entrega: number;
   endereco_entrega: string;
   observacao: string | null;
+  cancelado_por?: CanceladoPor;
+  motivo_cancelamento?: string | null;
   criado_em: string;
   atualizado_em: string;
 };

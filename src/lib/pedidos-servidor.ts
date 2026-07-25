@@ -408,10 +408,51 @@ export async function cancelarPedido(pedidoId: string, clienteId: string) {
   const supabase = createSupabaseClient();
   const { error } = await supabase
     .from("pedidos")
-    .update({ status: "cancelado", atualizado_em: new Date().toISOString() })
+    .update({
+      status: "cancelado",
+      cancelado_por: "cliente",
+      motivo_cancelamento: null,
+      atualizado_em: new Date().toISOString(),
+    })
     .eq("id", pedidoId)
     .eq("cliente_id", clienteId)
     .eq("status", "novo");
+
+  if (error) throw new Error(error.message);
+}
+
+/** Loja recusa pedido pago (novo ou aceito) */
+export async function recusarPedido(
+  pedidoId: string,
+  restauranteId: string,
+  motivo?: string | null,
+) {
+  const pedido = await buscarPedido(pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.restaurante_id !== restauranteId) {
+    throw new Error("Este pedido não é da sua loja.");
+  }
+  if (pedido.status_pagamento !== "pago") {
+    throw new Error("Só é possível recusar pedidos já pagos.");
+  }
+  if (pedido.status !== "novo" && pedido.status !== "aceito") {
+    throw new Error(
+      "Só é possível recusar enquanto o pedido está novo ou em preparo.",
+    );
+  }
+
+  const supabase = createSupabaseClient();
+  const { error } = await supabase
+    .from("pedidos")
+    .update({
+      status: "cancelado",
+      cancelado_por: "restaurante",
+      motivo_cancelamento: motivo?.trim() || null,
+      atualizado_em: new Date().toISOString(),
+    })
+    .eq("id", pedidoId)
+    .eq("restaurante_id", restauranteId)
+    .in("status", ["novo", "aceito"]);
 
   if (error) throw new Error(error.message);
 }

@@ -34,6 +34,19 @@ const DICA: Record<StatusPedido, string> = {
   cancelado: "Pedido cancelado.",
 };
 
+function mensagemCancelado(pedido: PedidoDetalhe) {
+  if (pedido.cancelado_por === "restaurante") {
+    const motivo = pedido.motivo_cancelamento?.trim();
+    return motivo
+      ? `A loja não pôde atender: ${motivo}. Se já pagou, peça o estorno pelo WhatsApp da loja ou no LucPaguei.`
+      : "A loja não pôde atender este pedido. Se já pagou, peça o estorno pelo WhatsApp da loja ou no LucPaguei.";
+  }
+  if (pedido.cancelado_por === "cliente") {
+    return "Você cancelou este pedido.";
+  }
+  return "Pedido cancelado.";
+}
+
 export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
   const [pedido, setPedido] = useState<PedidoDetalhe | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -144,7 +157,9 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
         <p className="mt-2 text-sm text-muted">
           {aguardandoPagamento
             ? "Assim que pagar, o restaurante poderá aceitar."
-            : DICA[pedido.status]}
+            : cancelado
+              ? mensagemCancelado(pedido)
+              : DICA[pedido.status]}
         </p>
         <p className="mt-3 text-base font-semibold text-dende">
           {aguardandoPagamento
@@ -152,6 +167,12 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
             : STATUS_PEDIDO_LABEL[pedido.status]}
         </p>
       </div>
+
+      {cancelado ? (
+        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
+          {mensagemCancelado(pedido)}
+        </div>
+      ) : null}
 
       {!cancelado ? (
         <ol className="rounded-2xl border border-linha bg-white px-5 py-4">

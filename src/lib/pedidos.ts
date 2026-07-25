@@ -123,6 +123,19 @@ export async function cancelarPedido(pedidoId: string) {
   }
 }
 
+/** Loja recusa pedido (novo ou em preparo) */
+export async function recusarPedido(pedidoId: string, motivo?: string) {
+  const resposta = await fetch(`/api/restaurante/pedidos/${pedidoId}/recusar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ motivo }),
+  });
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível recusar o pedido.");
+  }
+}
+
 /** Cria um pedido novo a partir do carrinho */
 export async function criarPedido(entrada: {
   restauranteId: string;
