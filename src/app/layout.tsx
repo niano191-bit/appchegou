@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: `${MARCA.nome} — Delivery em ${MARCA.cidade}`,
   description: MARCA.descricao,
   applicationName: MARCA.nome,
+  icons: {
+    icon: "/logo-tentacoes.png",
+    apple: "/logo-tentacoes.png",
+  },
 };
 
 export default function RootLayout({

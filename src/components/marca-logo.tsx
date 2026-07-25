@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { MARCA } from "@/lib/marca";
 
@@ -7,16 +8,26 @@ type Props = {
   tamanho?: "sm" | "md" | "lg";
   centralizado?: boolean;
   mostrarTagline?: boolean;
+  /** Só o selo redondo, sem o nome ao lado */
+  soSelo?: boolean;
 };
 
-/** Logo em texto da marca (sem arquivo de imagem) */
+const TAMANHO_IMG = {
+  sm: 36,
+  md: 52,
+  lg: 96,
+} as const;
+
+/** Logo da marca: selo + nome */
 export function MarcaLogo({
   href,
   tamanho = "md",
   centralizado = false,
   mostrarTagline = false,
+  soSelo = false,
 }: Props) {
   const destino = href === null ? null : (href ?? "/");
+  const px = TAMANHO_IMG[tamanho];
   const titulo =
     tamanho === "lg"
       ? "text-4xl sm:text-5xl leading-[1.1]"
@@ -24,18 +35,30 @@ export function MarcaLogo({
         ? "text-xl leading-tight"
         : "text-2xl leading-tight";
 
-  const conteudo = (
+  const selo = (
+    <Image
+      src="/logo-tentacoes.png"
+      alt={soSelo ? MARCA.nome : ""}
+      width={px}
+      height={px}
+      className="marca-selo shrink-0 rounded-full"
+      priority={tamanho === "lg"}
+    />
+  );
+
+  const conteudo = soSelo ? (
+    selo
+  ) : (
     <span
       className={`inline-flex flex-col ${centralizado ? "items-center text-center" : "items-start text-left"}`}
     >
-      <span className="inline-flex items-center gap-2">
+      <span
+        className={`inline-flex items-center ${tamanho === "lg" ? "flex-col gap-4" : "gap-2.5"}`}
+      >
+        {selo}
         <span
-          aria-hidden
-          className={`marca-selo shrink-0 rounded-full bg-dende ${
-            tamanho === "lg" ? "h-3 w-3" : tamanho === "sm" ? "h-2 w-2" : "h-2.5 w-2.5"
-          }`}
-        />
-        <span className={`font-display font-semibold tracking-tight text-foreground ${titulo}`}>
+          className={`font-display font-semibold tracking-tight text-foreground ${titulo}`}
+        >
           <span className="text-dende">{MARCA.nomeCurto}</span>
           <span className="text-foreground"> da Neuza</span>
         </span>

@@ -44,9 +44,9 @@ body {
   font-optical-sizing: auto;
 }
 
-/* Ponto do logo — pulso suave */
+/* Selo do logo — pulso suave */
 .marca-selo {
-  box-shadow: 0 0 0 0 color-mix(in srgb, var(--dende) 45%, transparent);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--dende) 35%, transparent);
   animation: marca-pulso 2.8s ease-out infinite;
 }
 
