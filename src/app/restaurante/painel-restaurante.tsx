@@ -21,6 +21,7 @@ import {
 import { rotuloPedido } from "@/lib/pedido-rotulo";
 import { obterSessaoCliente } from "@/lib/sessao-cliente";
 import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
+import { EsgotadoRapido } from "./esgotado-rapido";
 
 type Aba = "agora" | "historico";
 
@@ -420,6 +421,8 @@ export function PainelRestaurante() {
           {salvandoPix ? "Salvando…" : "Salvar chave Pix"}
         </button>
       </div>
+
+      <EsgotadoRapido />
 
       <div className="flex gap-2">
         <button

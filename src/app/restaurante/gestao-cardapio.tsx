@@ -286,7 +286,7 @@ export function GestaoCardapioLoja() {
                       }}
                       className="font-medium text-dende underline-offset-2 hover:underline"
                     >
-                      {item.disponivel ? "Esconder" : "Mostrar"}
+                      {item.disponivel ? "Esgotado" : "Disponível"}
                     </button>
                   </div>
                   <input

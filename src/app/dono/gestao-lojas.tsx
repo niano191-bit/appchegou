@@ -444,7 +444,7 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
                                   className="text-xs font-medium text-dende underline-offset-2 hover:underline"
                                 >
                                   {item.disponivel
-                                    ? "Esconder do cliente"
+                                    ? "Marcar esgotado"
                                     : "Mostrar no cardápio"}
                                 </button>
                               </div>
