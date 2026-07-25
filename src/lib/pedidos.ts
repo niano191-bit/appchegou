@@ -37,17 +37,40 @@ export async function listarPedidosDoRestaurante(
 export async function atualizarStatusPedido(
   pedidoId: string,
   status: StatusPedido,
+  extras?: { entregadorId?: string },
 ) {
   const resposta = await fetch(`/api/pedidos/${pedidoId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, entregadorId: extras?.entregadorId }),
   });
   const json = (await resposta.json()) as { erro?: string };
 
   if (!resposta.ok) {
     throw new Error(json.erro ?? "Não foi possível atualizar o pedido.");
   }
+}
+
+export type CorridaComItens = PedidoComItens & {
+  restaurante_nome: string;
+};
+
+/** Lista corridas do entregador */
+export async function listarCorridas(entregadorId: string) {
+  const params = new URLSearchParams({ entregadorId });
+  const resposta = await fetch(`/api/corridas?${params.toString()}`, {
+    cache: "no-store",
+  });
+  const json = (await resposta.json()) as {
+    corridas?: CorridaComItens[];
+    erro?: string;
+  };
+
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível carregar as corridas.");
+  }
+
+  return json.corridas ?? [];
 }
 
 /** Cria um pedido novo a partir do carrinho */

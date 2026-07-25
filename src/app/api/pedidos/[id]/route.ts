@@ -18,9 +18,12 @@ export async function PATCH(
 ) {
   const { id } = await context.params;
 
-  let corpo: { status?: string };
+  let corpo: { status?: string; entregadorId?: string };
   try {
-    corpo = (await request.json()) as { status?: string };
+    corpo = (await request.json()) as {
+      status?: string;
+      entregadorId?: string;
+    };
   } catch {
     return NextResponse.json(
       { erro: "Dados inválidos. Envie um JSON com o status." },
@@ -36,14 +39,15 @@ export async function PATCH(
   }
 
   const status = corpo.status as StatusPedido;
+  const extras = { entregadorId: corpo.entregadorId };
 
   try {
     if (usandoModoDemo()) {
-      const pedido = await atualizarStatusPedidoLocal(id, status);
+      const pedido = await atualizarStatusPedidoLocal(id, status, extras);
       return NextResponse.json({ modo: "demo", pedido });
     }
 
-    await atualizarStatusPedido(id, status);
+    await atualizarStatusPedido(id, status, extras);
     return NextResponse.json({ modo: "supabase", ok: true });
   } catch (e) {
     const mensagem =

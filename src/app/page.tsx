@@ -35,7 +35,7 @@ export default function Home() {
           <p className="mt-1 opacity-90">
             {supabase.configured
               ? supabase.message
-              : "Peça como cliente e aceite no painel do restaurante — tudo neste computador."}
+              : "Fluxo completo: cliente → restaurante → entregador."}
           </p>
         </div>
 
@@ -52,10 +52,16 @@ export default function Home() {
           >
             Painel do restaurante
           </Link>
+          <Link
+            href="/entregador"
+            className="inline-flex w-full items-center justify-center rounded-xl border border-[#2F6B3A] px-5 py-3.5 text-sm font-semibold text-[#2F6B3A] transition hover:bg-[#E8F5E9]"
+          >
+            App do entregador
+          </Link>
         </div>
 
         <p className="text-sm text-[#8A7460]">
-          Fase 3 — Cliente: cardápio, carrinho e pedido com status novo.
+          Fase 4 — Entregador: aceitar corrida e confirmar entrega.
         </p>
       </main>
     </div>

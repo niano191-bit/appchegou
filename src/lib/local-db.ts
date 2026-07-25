@@ -239,6 +239,7 @@ export async function listarPedidosLocal(
 export async function atualizarStatusPedidoLocal(
   pedidoId: string,
   status: StatusPedido,
+  extras?: { entregadorId?: string | null },
 ) {
   const banco = await lerBancoLocal();
   const pedido = banco.pedidos.find((p) => p.id === pedidoId);
@@ -247,10 +248,66 @@ export async function atualizarStatusPedidoLocal(
     throw new Error("Pedido não encontrado no banco local.");
   }
 
+  if (status === "a_caminho") {
+    if (pedido.status !== "pronto") {
+      throw new Error("Só é possível aceitar corrida de pedidos prontos.");
+    }
+    if (pedido.entregador_id && pedido.entregador_id !== extras?.entregadorId) {
+      throw new Error("Esta corrida já foi aceita por outro entregador.");
+    }
+    if (!extras?.entregadorId) {
+      throw new Error("Informe o entregador.");
+    }
+    pedido.entregador_id = extras.entregadorId;
+  }
+
+  if (status === "entregue") {
+    if (pedido.status !== "a_caminho") {
+      throw new Error("Só é possível confirmar entrega de pedidos a caminho.");
+    }
+    if (
+      extras?.entregadorId &&
+      pedido.entregador_id &&
+      pedido.entregador_id !== extras.entregadorId
+    ) {
+      throw new Error("Esta corrida pertence a outro entregador.");
+    }
+  }
+
   pedido.status = status;
   pedido.atualizado_em = agora();
   await salvarBancoLocal(banco);
   return pedido;
+}
+
+export type CorridaLocal = PedidoLocal & {
+  restaurante_nome: string;
+};
+
+/** Corridas disponíveis (pronto) + as do entregador (a caminho) */
+export async function listarCorridasLocal(entregadorId: string) {
+  const banco = await lerBancoLocal();
+  const porRestaurante = new Map(
+    banco.restaurantes.map((r) => [r.id, r.nome]),
+  );
+
+  return banco.pedidos
+    .filter(
+      (p) =>
+        p.status === "pronto" ||
+        (p.status === "a_caminho" && p.entregador_id === entregadorId),
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime(),
+    )
+    .map(
+      (p): CorridaLocal => ({
+        ...p,
+        restaurante_nome:
+          porRestaurante.get(p.restaurante_id) ?? "Restaurante",
+      }),
+    );
 }
 
 export async function listarRestaurantesLocal() {

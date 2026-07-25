@@ -12,6 +12,10 @@ export type PedidoComItens = Pedido & {
   itens_pedido: ItemPedido[];
 };
 
+export type Corrida = PedidoComItens & {
+  restaurante_nome: string;
+};
+
 export async function listarRestaurantes() {
   const supabase = createSupabaseClient();
   const { data, error } = await supabase
@@ -136,19 +140,62 @@ export async function listarPedidosDoRestaurante(
   return (data ?? []) as PedidoComItens[];
 }
 
-/** Atualiza status no Supabase */
+/** Atualiza status no Supabase (e entregador, se informado) */
 export async function atualizarStatusPedido(
   pedidoId: string,
   status: StatusPedido,
+  extras?: { entregadorId?: string | null },
 ) {
   const supabase = createSupabaseClient();
+  const patch: { status: StatusPedido; entregador_id?: string } = { status };
+
+  if (status === "a_caminho") {
+    if (!extras?.entregadorId) {
+      throw new Error("Informe o entregador.");
+    }
+    patch.entregador_id = extras.entregadorId;
+  }
 
   const { error } = await supabase
     .from("pedidos")
-    .update({ status })
+    .update(patch)
     .eq("id", pedidoId);
 
   if (error) {
     throw new Error(error.message);
   }
+}
+
+/** Corridas: prontas para pegar + as do entregador a caminho */
+export async function listarCorridas(entregadorId: string) {
+  const supabase = createSupabaseClient();
+
+  const { data: prontos, error: erroProntos } = await supabase
+    .from("pedidos")
+    .select("*, itens_pedido(*), restaurantes(nome)")
+    .eq("status", "pronto")
+    .order("criado_em", { ascending: true });
+
+  if (erroProntos) throw new Error(erroProntos.message);
+
+  const { data: meus, error: erroMeus } = await supabase
+    .from("pedidos")
+    .select("*, itens_pedido(*), restaurantes(nome)")
+    .eq("status", "a_caminho")
+    .eq("entregador_id", entregadorId)
+    .order("criado_em", { ascending: true });
+
+  if (erroMeus) throw new Error(erroMeus.message);
+
+  const mapa = (lista: typeof prontos): Corrida[] =>
+    (lista ?? []).map((p) => {
+      const restaurantes = p.restaurantes as { nome?: string } | null;
+      const { restaurantes: _, ...pedido } = p;
+      return {
+        ...(pedido as PedidoComItens),
+        restaurante_nome: restaurantes?.nome ?? "Restaurante",
+      };
+    });
+
+  return [...mapa(prontos), ...mapa(meus)];
 }
