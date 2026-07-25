@@ -1,17 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
-import { DEMO } from "@/lib/demo-ids";
 import {
   atualizarStatusPedido,
   listarCorridas,
   type CorridaComItens,
 } from "@/lib/pedidos";
+import { obterSessaoCliente } from "@/lib/sessao-cliente";
 import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
 
 export function PainelEntregador() {
+  const entregadorIdRef = useRef<string | null>(null);
   const [corridas, setCorridas] = useState<CorridaComItens[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -20,7 +21,12 @@ export function PainelEntregador() {
   const carregar = useCallback(async (silencioso = false) => {
     try {
       if (!silencioso) setErro(null);
-      const dados = await listarCorridas(DEMO.entregadorId);
+      if (!entregadorIdRef.current) {
+        const user = await obterSessaoCliente();
+        if (!user) throw new Error("Faça login para continuar.");
+        entregadorIdRef.current = user.id;
+      }
+      const dados = await listarCorridas();
       setCorridas(dados);
       setErro(null);
     } catch (e) {
@@ -46,12 +52,13 @@ export function PainelEntregador() {
     pedidoId: string,
     status: "a_caminho" | "entregue",
   ) {
+    if (!entregadorIdRef.current) return;
     setAcaoId(pedidoId);
     setErro(null);
 
     try {
       await atualizarStatusPedido(pedidoId, status, {
-        entregadorId: DEMO.entregadorId,
+        entregadorId: entregadorIdRef.current,
       });
       await carregar(true);
     } catch (e) {

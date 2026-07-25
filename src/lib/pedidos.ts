@@ -76,12 +76,9 @@ export async function buscarPedido(pedidoId: string) {
   return json.pedido!;
 }
 
-/** Lista corridas do entregador */
-export async function listarCorridas(entregadorId: string) {
-  const params = new URLSearchParams({ entregadorId });
-  const resposta = await fetch(`/api/corridas?${params.toString()}`, {
-    cache: "no-store",
-  });
+/** Lista corridas do entregador logado */
+export async function listarCorridas() {
+  const resposta = await fetch("/api/corridas", { cache: "no-store" });
   const json = (await resposta.json()) as {
     corridas?: CorridaComItens[];
     erro?: string;

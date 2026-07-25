@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { DEMO } from "@/lib/demo-ids";
+import { exigirSessao, lerSessao } from "@/lib/auth-servidor";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import {
   criarPedidoLocal,
@@ -17,8 +17,21 @@ import type { StatusPedido } from "@/types/database";
 /** Lista pedidos (modo demo local ou Supabase, se configurado) */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const restauranteId = searchParams.get("restauranteId");
   const statusParam = searchParams.get("status") ?? "novo,aceito";
+  const sessao = await lerSessao();
+
+  let restauranteId = searchParams.get("restauranteId");
+
+  // Restaurante logado só vê a própria loja
+  if (sessao?.papel === "restaurante") {
+    if (!sessao.restaurante_id) {
+      return NextResponse.json(
+        { erro: "Sua conta não está ligada a um restaurante." },
+        { status: 400 },
+      );
+    }
+    restauranteId = sessao.restaurante_id;
+  }
 
   if (!restauranteId) {
     return NextResponse.json(
@@ -77,12 +90,13 @@ export async function POST(request: Request) {
   }
 
   try {
+    const sessao = await exigirSessao("cliente");
     const taxa = usandoModoDemo()
       ? (await lerConfiguracaoLocal()).taxa_entrega
       : TAXA_ENTREGA_PADRAO;
 
     const entrada = {
-      clienteId: DEMO.clienteId,
+      clienteId: sessao.id,
       restauranteId: corpo.restauranteId,
       endereco_entrega: corpo.endereco_entrega.trim(),
       observacao: corpo.observacao,

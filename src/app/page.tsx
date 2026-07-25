@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { destinoPorPapel } from "@/lib/auth";
+import { lerSessao } from "@/lib/auth-servidor";
 import { getSupabaseStatus } from "@/lib/supabase/status";
+import { BotaoSair } from "@/components/botao-sair";
 
-export default function Home() {
+export default async function Home() {
   const supabase = getSupabaseStatus();
+  const sessao = await lerSessao();
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
@@ -28,46 +32,44 @@ export default function Home() {
           }`}
         >
           <p className="font-medium">
-            {supabase.configured
-              ? "Supabase conectado"
-              : "Modo demonstração (banco local)"}
+            {sessao
+              ? `Olá, ${sessao.nome}`
+              : supabase.configured
+                ? "Supabase conectado"
+                : "Modo demonstração"}
           </p>
           <p className="mt-1 opacity-90">
-            {supabase.configured
-              ? supabase.message
-              : "Fluxo completo: cliente → restaurante → entregador → dono."}
+            {sessao
+              ? `Você entrou como ${sessao.papel}.`
+              : "Entre com uma conta de teste para ver só a sua área."}
           </p>
         </div>
 
         <div className="flex w-full flex-col gap-3">
-          <Link
-            href="/cliente"
-            className="inline-flex w-full items-center justify-center rounded-xl bg-[#C45C26] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#A84C1E]"
-          >
-            Pedir comida (cliente)
-          </Link>
-          <Link
-            href="/restaurante"
-            className="inline-flex w-full items-center justify-center rounded-xl border border-[#C45C26] px-5 py-3.5 text-sm font-semibold text-[#C45C26] transition hover:bg-[#FFF4EB]"
-          >
-            Painel do restaurante
-          </Link>
-          <Link
-            href="/entregador"
-            className="inline-flex w-full items-center justify-center rounded-xl border border-[#2F6B3A] px-5 py-3.5 text-sm font-semibold text-[#2F6B3A] transition hover:bg-[#E8F5E9]"
-          >
-            App do entregador
-          </Link>
-          <Link
-            href="/dono"
-            className="inline-flex w-full items-center justify-center rounded-xl border border-[#1A120C] px-5 py-3.5 text-sm font-semibold text-[#1A120C] transition hover:bg-[#F5F0EA]"
-          >
-            Painel do dono
-          </Link>
+          {sessao ? (
+            <>
+              <Link
+                href={destinoPorPapel(sessao.papel)}
+                className="inline-flex w-full items-center justify-center rounded-xl bg-[#C45C26] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#A84C1E]"
+              >
+                Ir para minha área
+              </Link>
+              <div className="flex justify-center">
+                <BotaoSair />
+              </div>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-[#C45C26] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#A84C1E]"
+            >
+              Entrar
+            </Link>
+          )}
         </div>
 
         <p className="text-sm text-[#8A7460]">
-          Fase 6 — Painel do dono: números, comissões e configurações.
+          Fase 7 — Login: cada conta vê só a sua área.
         </p>
       </main>
     </div>

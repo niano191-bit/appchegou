@@ -1,6 +1,6 @@
 /**
  * IDs fixos dos dados de teste (mesmo UUID do SQL da Fase 1).
- * Usados até a Fase 7 (login), quando cada usuário entra com a própria conta.
+ * Contas de login usam estes IDs no modo demo.
  */
 export const DEMO = {
   restauranteAcarajeId: "11111111-1111-1111-1111-111111111111",

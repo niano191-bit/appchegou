@@ -1,17 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
-import { DEMO } from "@/lib/demo-ids";
 import {
   atualizarStatusPedido,
   listarPedidosDoRestaurante,
   type PedidoComItens,
 } from "@/lib/pedidos";
+import { obterSessaoCliente } from "@/lib/sessao-cliente";
 import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
 
 export function PainelRestaurante() {
+  const restauranteIdRef = useRef<string | null>(null);
   const [pedidos, setPedidos] = useState<PedidoComItens[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -20,8 +21,17 @@ export function PainelRestaurante() {
   const carregar = useCallback(async (silencioso = false) => {
     try {
       if (!silencioso) setErro(null);
+
+      if (!restauranteIdRef.current) {
+        const user = await obterSessaoCliente();
+        if (!user?.restaurante_id) {
+          throw new Error("Sua conta não está ligada a um restaurante.");
+        }
+        restauranteIdRef.current = user.restaurante_id;
+      }
+
       const dados = await listarPedidosDoRestaurante(
-        DEMO.restauranteAcarajeId,
+        restauranteIdRef.current,
         ["novo", "aceito"],
       );
       setPedidos(dados);

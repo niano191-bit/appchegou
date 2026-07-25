@@ -1,25 +1,26 @@
 import { NextResponse } from "next/server";
-import { DEMO } from "@/lib/demo-ids";
+import { exigirSessao } from "@/lib/auth-servidor";
 import { listarCorridasLocal, usandoModoDemo } from "@/lib/local-db";
 import { listarCorridas } from "@/lib/pedidos-servidor";
 
-/** Lista corridas do entregador (prontas + as dele a caminho) */
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const entregadorId =
-    searchParams.get("entregadorId") ?? DEMO.entregadorId;
-
+/** Lista corridas do entregador logado */
+export async function GET() {
   try {
+    const sessao = await exigirSessao("entregador");
+
     if (usandoModoDemo()) {
-      const corridas = await listarCorridasLocal(entregadorId);
+      const corridas = await listarCorridasLocal(sessao.id);
       return NextResponse.json({ modo: "demo", corridas });
     }
 
-    const corridas = await listarCorridas(entregadorId);
+    const corridas = await listarCorridas(sessao.id);
     return NextResponse.json({ modo: "supabase", corridas });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao listar corridas.";
-    return NextResponse.json({ erro: mensagem }, { status: 500 });
+    const status = mensagem.includes("login") || mensagem.includes("permissão")
+      ? 401
+      : 500;
+    return NextResponse.json({ erro: mensagem }, { status });
   }
 }
