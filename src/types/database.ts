@@ -1,7 +1,7 @@
-/** Papéis possíveis de um usuário na plataforma */
+/** Papeis possiveis de um usuario na plataforma */
 export type PapelUsuario = "cliente" | "restaurante" | "entregador" | "dono";
 
-/** Fluxo do pedido: novo ? aceito ? pronto ? a_caminho ? entregue */
+/** Fluxo do pedido: novo -> aceito -> pronto -> a_caminho -> entregue */
 export type StatusPedido =
   | "novo"
   | "aceito"
@@ -17,7 +17,7 @@ export type Usuario = {
   telefone: string | null;
   papel: PapelUsuario;
   restaurante_id: string | null;
-  /** Só no servidor ? nunca enviar ao navegador */
+  /** So no servidor ? nunca enviar ao navegador */
   senha_hash?: string | null;
   criado_em: string;
 };
@@ -46,7 +46,7 @@ export type ItemCardapio = {
   criado_em: string;
 };
 
-/** Pagamento do pedido (Mercado Pago em teste ou simulação) */
+/** Pagamento do pedido (Mercado Pago em teste ou simulacao) */
 export type StatusPagamento = "pendente" | "pago" | "falhou";
 
 export type FormaPagamento = "pix" | "cartao" | null;
@@ -85,7 +85,7 @@ export type ItemPedido = {
 
 export type GatewayPagamento = "mercadopago" | "lucpaguei";
 
-/** Bairro com taxa de entrega pr?pria (zona) */
+/** Bairro com taxa de entrega propria (zona) */
 export type BairroEntrega = {
   id: string;
   nome: string;
@@ -95,9 +95,9 @@ export type BairroEntrega = {
   criado_em: string;
 };
 
-/** Configurações gerais do app (taxa, horário e gateways) */
+/** Configuracoes gerais do app (taxa, horario e gateways) */
 export type Configuracao = {
-  /** Taxa padr?o quando n?o h? bairros ativos */
+  /** Taxa padrao quando nao ha bairros ativos */
   taxa_entrega: number;
   horario_abertura: string;
   horario_fechamento: string;
@@ -115,7 +115,7 @@ export function formatarReais(valor: number) {
   });
 }
 
-/** Textos amigáveis dos status do pedido */
+/** Textos amigaveis dos status do pedido */
 export const STATUS_PEDIDO_LABEL: Record<StatusPedido, string> = {
   novo: "Novo",
   aceito: "Aceito",
