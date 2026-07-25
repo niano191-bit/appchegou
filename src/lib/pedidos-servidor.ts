@@ -584,6 +584,65 @@ export async function marcarPedidoPago(
   return data as Pedido;
 }
 
+/** Pix devolvido (refund ou saque) */
+export async function marcarPedidoEstornado(
+  pedidoId: string,
+  referencia?: string | null,
+) {
+  const supabase = createSupabaseClient();
+  const patch: Record<string, unknown> = {
+    status_pagamento: "estornado",
+    atualizado_em: new Date().toISOString(),
+  };
+  if (referencia) patch.mp_payment_id = referencia;
+
+  const { data, error } = await supabase
+    .from("pedidos")
+    .update(patch)
+    .eq("id", pedidoId)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as Pedido;
+}
+
+/** Precisa que o cliente informe a chave Pix para o estorno */
+export async function marcarPedidoReembolsoPendente(pedidoId: string) {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .update({
+      status_pagamento: "reembolso_pendente",
+      atualizado_em: new Date().toISOString(),
+    })
+    .eq("id", pedidoId)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as Pedido;
+}
+
+/** Dados do cliente dono do pedido (para estorno Pix) */
+export async function buscarClienteDoPedido(pedidoId: string) {
+  const pedido = await buscarPedido(pedidoId);
+  if (!pedido) return null;
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("usuarios")
+    .select("id, nome, email, telefone")
+    .eq("id", pedido.cliente_id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as {
+    id: string;
+    nome: string;
+    email: string | null;
+    telefone: string | null;
+  } | null;
+}
+
 export async function lerConfiguracao() {
   const supabase = createSupabaseClient();
   const { data, error } = await supabase

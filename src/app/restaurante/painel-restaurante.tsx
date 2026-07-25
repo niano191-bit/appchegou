@@ -136,7 +136,7 @@ export function PainelRestaurante() {
     if (motivo === null) return;
     if (
       !confirm(
-        "Recusar este pedido? Ele será cancelado e o cliente será avisado. Se já pagou, o estorno é feito no painel LucPaguei / suporte.",
+        "Recusar este pedido? Ele será cancelado, o cliente será avisado e o app tenta estornar o Pix automaticamente.",
       )
     ) {
       return;

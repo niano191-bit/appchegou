@@ -1,4 +1,4 @@
-/** Bipe curto via Web Audio (sem arquivo de áudio) */
+/** Alerta sonoro forte para a cozinha (Web Audio + vibração) */
 let ctx: AudioContext | null = null;
 
 function obterContexto(): AudioContext | null {
@@ -26,22 +26,49 @@ export async function liberarAudioAlerta(): Promise<boolean> {
   return audio.state === "running";
 }
 
-export function tocarAlertaPedido(vezes = 2) {
+/**
+ * Sirene bem audível: vários bipos altos + vibração no celular.
+ * `ciclos` = quantas vezes repetir o padrão (padrão 3).
+ */
+export function tocarAlertaPedido(ciclos = 3) {
   const audio = obterContexto();
-  if (!audio || audio.state !== "running") return;
+  if (audio && audio.state === "running") {
+    tocarSirene(audio, ciclos);
+  }
 
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    try {
+      const padrao: number[] = [];
+      for (let i = 0; i < ciclos; i++) {
+        padrao.push(220, 80, 220, 80, 320, 160);
+      }
+      navigator.vibrate(padrao);
+    } catch {
+      /* vibração opcional */
+    }
+  }
+}
+
+function tocarSirene(audio: AudioContext, ciclos: number) {
   const agora = audio.currentTime;
-  for (let i = 0; i < vezes; i++) {
-    const osc = audio.createOscillator();
-    const gain = audio.createGain();
-    osc.type = "square";
-    osc.frequency.value = i === 0 ? 880 : 660;
-    gain.gain.setValueAtTime(0.0001, agora + i * 0.22);
-    gain.gain.exponentialRampToValueAtTime(0.18, agora + i * 0.22 + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, agora + i * 0.22 + 0.18);
-    osc.connect(gain);
-    gain.connect(audio.destination);
-    osc.start(agora + i * 0.22);
-    osc.stop(agora + i * 0.22 + 0.2);
+  const notas = [1046, 784, 1046, 784]; // C6 / G5 — bem penetrante
+  const passo = 0.2;
+  const volume = 0.42;
+
+  for (let c = 0; c < ciclos; c++) {
+    for (let i = 0; i < notas.length; i++) {
+      const t0 = agora + (c * notas.length + i) * passo;
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = "square";
+      osc.frequency.value = notas[i]!;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(volume, t0 + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+      osc.connect(gain);
+      gain.connect(audio.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.18);
+    }
   }
 }

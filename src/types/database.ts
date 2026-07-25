@@ -47,7 +47,12 @@ export type ItemCardapio = {
 };
 
 /** Pagamento do pedido (Mercado Pago em teste ou simulacao) */
-export type StatusPagamento = "pendente" | "pago" | "falhou";
+export type StatusPagamento =
+  | "pendente"
+  | "pago"
+  | "falhou"
+  | "estornado"
+  | "reembolso_pendente";
 
 export type FormaPagamento = "pix" | "cartao" | null;
 
@@ -129,4 +134,6 @@ export const STATUS_PAGAMENTO_LABEL: Record<StatusPagamento, string> = {
   pendente: "Aguardando pagamento",
   pago: "Pago",
   falhou: "Pagamento falhou",
+  estornado: "Pix estornado",
+  reembolso_pendente: "Aguardando chave Pix para estorno",
 };

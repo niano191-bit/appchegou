@@ -8,6 +8,7 @@ import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
   buscarPedido,
   cancelarPedido,
+  solicitarEstornoPix,
   type PedidoDetalhe,
 } from "@/lib/pedidos";
 import {
@@ -38,8 +39,8 @@ function mensagemCancelado(pedido: PedidoDetalhe) {
   if (pedido.cancelado_por === "restaurante") {
     const motivo = pedido.motivo_cancelamento?.trim();
     return motivo
-      ? `A loja não pôde atender: ${motivo}. Se já pagou, peça o estorno pelo WhatsApp da loja ou no LucPaguei.`
-      : "A loja não pôde atender este pedido. Se já pagou, peça o estorno pelo WhatsApp da loja ou no LucPaguei.";
+      ? `A loja não pôde atender: ${motivo}.`
+      : "A loja não pôde atender este pedido.";
   }
   if (pedido.cancelado_por === "cliente") {
     return "Você cancelou este pedido.";
@@ -47,11 +48,26 @@ function mensagemCancelado(pedido: PedidoDetalhe) {
   return "Pedido cancelado.";
 }
 
+function mensagemPagamentoCancelado(pedido: PedidoDetalhe) {
+  if (pedido.status_pagamento === "estornado") {
+    return "O Pix foi estornado. O valor deve voltar na sua conta em instantes.";
+  }
+  if (pedido.status_pagamento === "reembolso_pendente") {
+    return "Informe sua chave Pix abaixo para receber o estorno.";
+  }
+  if (pedido.status_pagamento === "pago") {
+    return "Estamos processando o estorno do Pix…";
+  }
+  return null;
+}
+
 export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
   const [pedido, setPedido] = useState<PedidoDetalhe | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [cancelando, setCancelando] = useState(false);
+  const [chavePix, setChavePix] = useState("");
+  const [estornando, setEstornando] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -86,6 +102,24 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
       setErro(e instanceof Error ? e.message : "Erro ao cancelar.");
     } finally {
       setCancelando(false);
+    }
+  }
+
+  async function enviarChaveEstorno() {
+    if (!chavePix.trim()) {
+      setErro("Digite sua chave Pix.");
+      return;
+    }
+    setEstornando(true);
+    setErro(null);
+    try {
+      await solicitarEstornoPix(pedidoId, chavePix.trim());
+      setChavePix("");
+      await carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao solicitar estorno.");
+    } finally {
+      setEstornando(false);
     }
   }
 
@@ -170,7 +204,39 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
 
       {cancelado ? (
         <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
-          {mensagemCancelado(pedido)}
+          <p>{mensagemCancelado(pedido)}</p>
+          {mensagemPagamentoCancelado(pedido) ? (
+            <p className="mt-2 font-medium text-foreground">
+              {mensagemPagamentoCancelado(pedido)}
+            </p>
+          ) : null}
+          {pedido.status_pagamento === "estornado" ? (
+            <p className="mt-1 text-xs">
+              {STATUS_PAGAMENTO_LABEL.estornado}
+            </p>
+          ) : null}
+          {pedido.status_pagamento === "reembolso_pendente" ? (
+            <div className="mt-3 flex flex-col gap-2">
+              <label className="text-xs font-medium text-foreground">
+                Sua chave Pix (celular, e-mail, CPF ou CNPJ)
+              </label>
+              <input
+                type="text"
+                value={chavePix}
+                onChange={(e) => setChavePix(e.target.value)}
+                placeholder="Ex.: 71999999999 ou email@…"
+                className="rounded-xl border border-linha bg-white px-3 py-2.5 text-sm text-foreground"
+              />
+              <button
+                type="button"
+                disabled={estornando}
+                onClick={() => void enviarChaveEstorno()}
+                className="rounded-xl bg-mar px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {estornando ? "Enviando estorno…" : "Receber estorno no Pix"}
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

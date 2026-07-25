@@ -136,6 +136,19 @@ export async function recusarPedido(pedidoId: string, motivo?: string) {
   }
 }
 
+/** Cliente informa chave Pix para receber estorno */
+export async function solicitarEstornoPix(pedidoId: string, pixKey: string) {
+  const resposta = await fetch(`/api/pedidos/${pedidoId}/estorno`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pix_key: pixKey }),
+  });
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível solicitar o estorno.");
+  }
+}
+
 /** Cria um pedido novo a partir do carrinho */
 export async function criarPedido(entrada: {
   restauranteId: string;

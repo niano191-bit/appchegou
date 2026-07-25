@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { exigirSessao } from "@/lib/auth-servidor";
+import { processarEstornoPedido } from "@/lib/estorno";
 import {
+  buscarClienteDoPedidoLocal,
   recusarPedidoLocal,
   usandoModoDemo,
 } from "@/lib/local-db";
-import { recusarPedido } from "@/lib/pedidos-servidor";
+import {
+  buscarClienteDoPedido,
+  recusarPedido,
+} from "@/lib/pedidos-servidor";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Restaurante recusa pedido (novo ou aceito) */
+/** Restaurante recusa pedido (novo ou aceito) + tenta estorno Pix */
 export async function POST(request: Request, ctx: Ctx) {
   const { id } = await ctx.params;
 
@@ -37,11 +42,24 @@ export async function POST(request: Request, ctx: Ctx) {
         sessao.restaurante_id,
         motivo,
       );
-      return NextResponse.json({ modo: "demo", pedido });
+      const cliente = await buscarClienteDoPedidoLocal(id);
+      const estorno = await processarEstornoPedido({
+        pedidoId: id,
+        clienteTelefone: cliente?.telefone,
+        clienteEmail: cliente?.email,
+      });
+      return NextResponse.json({ modo: "demo", pedido, estorno });
     }
 
     await recusarPedido(id, sessao.restaurante_id, motivo);
-    return NextResponse.json({ modo: "supabase", ok: true });
+    const cliente = await buscarClienteDoPedido(id);
+    const estorno = await processarEstornoPedido({
+      pedidoId: id,
+      clienteTelefone: cliente?.telefone,
+      clienteEmail: cliente?.email,
+    });
+
+    return NextResponse.json({ modo: "supabase", ok: true, estorno });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao recusar pedido.";

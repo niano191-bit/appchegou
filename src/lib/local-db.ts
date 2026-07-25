@@ -899,6 +899,44 @@ export async function marcarPedidoPagoLocal(
   return pedido;
 }
 
+export async function marcarPedidoEstornadoLocal(
+  pedidoId: string,
+  referencia?: string | null,
+) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  pedido.status_pagamento = "estornado";
+  if (referencia) pedido.mp_payment_id = referencia;
+  pedido.atualizado_em = agora();
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
+export async function marcarPedidoReembolsoPendenteLocal(pedidoId: string) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  pedido.status_pagamento = "reembolso_pendente";
+  pedido.atualizado_em = agora();
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
+export async function buscarClienteDoPedidoLocal(pedidoId: string) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) return null;
+  const u = banco.usuarios.find((x) => x.id === pedido.cliente_id);
+  if (!u) return null;
+  return {
+    id: u.id,
+    nome: u.nome,
+    email: u.email,
+    telefone: u.telefone,
+  };
+}
+
 export async function marcarPedidoPagamentoFalhouLocal(pedidoId: string) {
   const banco = await lerBancoLocal();
   const pedido = banco.pedidos.find((p) => p.id === pedidoId);
