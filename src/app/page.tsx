@@ -69,7 +69,7 @@ export default async function Home() {
         </div>
 
         <p className="text-sm text-[#8A7460]">
-          Fase 8 — Pagamentos em teste (Pix e cartão).
+          Fase 9 — Publicar: GitHub pronto; Vercel + Supabase no guia do README.
         </p>
       </main>
     </div>
