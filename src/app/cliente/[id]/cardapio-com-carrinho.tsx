@@ -169,9 +169,17 @@ export function CardapioComCarrinho({
             return (
               <li
                 key={item.id}
-                className="rounded-2xl border border-linha bg-white px-4 py-3"
+                className="overflow-hidden rounded-2xl border border-linha bg-white"
               >
-                <div className="flex items-start justify-between gap-3">
+                {item.imagem_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.imagem_url}
+                    alt=""
+                    className="h-36 w-full object-cover"
+                  />
+                ) : null}
+                <div className="flex items-start justify-between gap-3 px-4 py-3">
                   <div>
                     <p className="font-semibold text-foreground">{item.nome}</p>
                     {item.descricao ? (

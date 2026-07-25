@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
+import { exigirSessao } from "@/lib/auth-servidor";
 import {
   atualizarItemCardapioLocal,
+  listarCardapioAdminLocal,
   usandoModoDemo,
 } from "@/lib/local-db";
-import { atualizarItemCardapio } from "@/lib/pedidos-servidor";
+import {
+  atualizarItemCardapio,
+  listarCardapioAdmin,
+} from "@/lib/pedidos-servidor";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Atualiza prato do cardápio */
+/** Atualiza prato — só se for da loja logada */
 export async function PATCH(request: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   let corpo: {
@@ -25,6 +30,25 @@ export async function PATCH(request: Request, ctx: Ctx) {
   }
 
   try {
+    const sessao = await exigirSessao("restaurante");
+    if (!sessao.restaurante_id) {
+      return NextResponse.json(
+        { erro: "Sua conta não está ligada a um restaurante." },
+        { status: 400 },
+      );
+    }
+
+    const cardapio = usandoModoDemo()
+      ? await listarCardapioAdminLocal(sessao.restaurante_id)
+      : await listarCardapioAdmin(sessao.restaurante_id);
+
+    if (!cardapio.some((i) => i.id === id)) {
+      return NextResponse.json(
+        { erro: "Este prato não é da sua loja." },
+        { status: 403 },
+      );
+    }
+
     if (usandoModoDemo()) {
       const item = await atualizarItemCardapioLocal(id, corpo);
       return NextResponse.json({ modo: "demo", item });
@@ -34,7 +58,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
     return NextResponse.json({ modo: "supabase", item });
   } catch (e) {
     const mensagem =
-      e instanceof Error ? e.message : "Erro ao atualizar item do cardápio.";
+      e instanceof Error ? e.message : "Erro ao atualizar prato.";
     return NextResponse.json({ erro: mensagem }, { status: 500 });
   }
 }

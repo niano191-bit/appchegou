@@ -24,6 +24,15 @@ Sem Supabase, o app usa **modo demonstração** (dados salvos neste PC).
 
 Clientes novos podem se cadastrar em `/cadastro` com e-mail e senha próprios. O dono cadastra entregadores no painel.
 
+## SQL pendente (produção)
+
+Se o cadastro ou o financeiro com LucPaguei falhar no Supabase, rode no SQL Editor:
+
+- `supabase/migrations/004_fase12_senha.sql`
+- `supabase/migrations/005_fase13_gateways.sql`
+
+Guia curto: `docs/sql-pendente.md`
+
 ## Painel do dono
 
 No `/dono`, além dos números do dia, o dono pode **criar lojas**, editar dados/comissão e montar o **cardápio** de cada restaurante. Ao criar uma loja, o app gera um login (`loja....@chegou.local`) com senha `teste123`.

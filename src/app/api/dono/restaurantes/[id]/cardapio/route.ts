@@ -38,6 +38,7 @@ export async function POST(request: Request, ctx: Ctx) {
     descricao?: string | null;
     preco?: number;
     disponivel?: boolean;
+    imagem_url?: string | null;
   };
 
   try {
@@ -64,6 +65,7 @@ export async function POST(request: Request, ctx: Ctx) {
         descricao: corpo.descricao,
         preco: corpo.preco,
         disponivel: corpo.disponivel,
+        imagem_url: corpo.imagem_url,
       });
       return NextResponse.json({ modo: "demo", item }, { status: 201 });
     }
@@ -74,6 +76,7 @@ export async function POST(request: Request, ctx: Ctx) {
       descricao: corpo.descricao,
       preco: corpo.preco,
       disponivel: corpo.disponivel,
+      imagem_url: corpo.imagem_url,
     });
     return NextResponse.json({ modo: "supabase", item }, { status: 201 });
   } catch (e) {

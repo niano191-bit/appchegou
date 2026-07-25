@@ -49,15 +49,27 @@ export function ListaRestaurantes() {
         <li key={loja.id}>
           <Link
             href={`/cliente/${loja.id}`}
-            className="block rounded-2xl border border-linha bg-white px-5 py-4 transition hover:border-dende/50 hover:bg-background"
+            className="block overflow-hidden rounded-2xl border border-linha bg-white transition hover:border-dende/50 hover:bg-background"
           >
-            <p className="text-lg font-semibold text-foreground">{loja.nome}</p>
-            {loja.descricao ? (
-              <p className="mt-1 text-sm text-muted">{loja.descricao}</p>
+            {loja.imagem_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={loja.imagem_url}
+                alt=""
+                className="h-32 w-full object-cover"
+              />
             ) : null}
-            {loja.endereco ? (
-              <p className="mt-2 text-xs text-muted">{loja.endereco}</p>
-            ) : null}
+            <div className="px-5 py-4">
+              <p className="text-lg font-semibold text-foreground">
+                {loja.nome}
+              </p>
+              {loja.descricao ? (
+                <p className="mt-1 text-sm text-muted">{loja.descricao}</p>
+              ) : null}
+              {loja.endereco ? (
+                <p className="mt-2 text-xs text-muted">{loja.endereco}</p>
+              ) : null}
+            </div>
           </Link>
         </li>
       ))}

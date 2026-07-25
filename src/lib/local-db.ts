@@ -580,6 +580,7 @@ export async function criarItemCardapioLocal(entrada: {
   descricao?: string | null;
   preco: number;
   disponivel?: boolean;
+  imagem_url?: string | null;
 }) {
   const nome = entrada.nome.trim();
   if (!nome) throw new Error("Informe o nome do prato.");
@@ -600,7 +601,7 @@ export async function criarItemCardapioLocal(entrada: {
     descricao: entrada.descricao?.trim() || null,
     preco,
     disponivel: entrada.disponivel ?? true,
-    imagem_url: null,
+    imagem_url: entrada.imagem_url?.trim() || null,
     criado_em: agora(),
   };
   banco.itens_cardapio.push(item);
@@ -615,6 +616,7 @@ export async function atualizarItemCardapioLocal(
     descricao?: string | null;
     preco?: number;
     disponivel?: boolean;
+    imagem_url?: string | null;
   },
 ) {
   const banco = await lerBancoLocal();
@@ -636,6 +638,9 @@ export async function atualizarItemCardapioLocal(
   }
   if (patch.disponivel !== undefined) {
     item.disponivel = patch.disponivel;
+  }
+  if (patch.imagem_url !== undefined) {
+    item.imagem_url = patch.imagem_url?.trim() || null;
   }
 
   await salvarBancoLocal(banco);
@@ -775,6 +780,7 @@ export type PatchRestaurante = {
   nome?: string;
   descricao?: string | null;
   endereco?: string | null;
+  imagem_url?: string | null;
   comissao_percentual?: number;
   ativo?: boolean;
 };
@@ -797,6 +803,9 @@ export async function atualizarRestauranteLocal(
   }
   if (patch.endereco !== undefined) {
     loja.endereco = patch.endereco?.trim() || null;
+  }
+  if (patch.imagem_url !== undefined) {
+    loja.imagem_url = patch.imagem_url?.trim() || null;
   }
   if (patch.comissao_percentual !== undefined) {
     const valor = Number(patch.comissao_percentual);

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { AvisoPedido } from "@/components/aviso-pedido";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import { buscarPedido, type PedidoDetalhe } from "@/lib/pedidos";
@@ -80,6 +81,16 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
   return (
     <div className="flex flex-col gap-4">
       <SeloAoVivo />
+      <AvisoPedido
+        ativo={!aguardandoPagamento && pedido.status !== "entregue"}
+        buscarStatus={async () => {
+          const p = await buscarPedido(pedidoId);
+          return {
+            status: p.status,
+            rotuloExtra: p.restaurante_nome,
+          };
+        }}
+      />
 
       {aguardandoPagamento ? (
         <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">

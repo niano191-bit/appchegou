@@ -22,6 +22,7 @@ export function middleware(request: NextRequest) {
     { prefixo: "/entregador", papeis: ["entregador"] },
     { prefixo: "/dono", papeis: ["dono"] },
     { prefixo: "/api/dono", papeis: ["dono"] },
+    { prefixo: "/api/restaurante", papeis: ["restaurante"] },
   ];
 
   for (const regra of regras) {
@@ -67,5 +68,6 @@ export const config = {
     "/entregador/:path*",
     "/dono/:path*",
     "/api/dono/:path*",
+    "/api/restaurante/:path*",
   ],
 };
