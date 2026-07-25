@@ -13,6 +13,10 @@ import type {
   Usuario,
 } from "@/types/database";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
+import {
+  mensagemBloqueioPedido,
+  statusOperacaoLoja,
+} from "@/lib/horario";
 
 export type PedidoLocal = Pedido & { itens_pedido: ItemPedido[] };
 
@@ -72,6 +76,7 @@ function dadosIniciais(): BancoLocal {
         imagem_url: null,
         comissao_percentual: 12,
         ativo: true,
+        pausado: false,
         criado_em: criado,
       },
       {
@@ -82,6 +87,7 @@ function dadosIniciais(): BancoLocal {
         imagem_url: null,
         comissao_percentual: 15,
         ativo: true,
+        pausado: false,
         criado_em: criado,
       },
     ],
@@ -269,6 +275,13 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
       banco.configuracao.pagamento_lucpaguei === undefined
     ) {
       banco.configuracao = normalizada;
+      mudou = true;
+    }
+  }
+
+  for (const loja of banco.restaurantes) {
+    if (loja.pausado === undefined) {
+      loja.pausado = false;
       mudou = true;
     }
   }
@@ -572,6 +585,7 @@ export async function criarRestauranteLocal(entrada: {
     imagem_url: null,
     comissao_percentual: comissao,
     ativo: true,
+    pausado: false,
     criado_em: criado,
   };
 
@@ -761,6 +775,12 @@ export async function criarPedidoLocal(entrada: {
     throw new Error("Restaurante não encontrado.");
   }
 
+  const config = normalizarConfiguracao(banco.configuracao);
+  const status = statusOperacaoLoja(restaurante, config);
+  if (status !== "aberta") {
+    throw new Error(mensagemBloqueioPedido(status, config));
+  }
+
   const criado = agora();
   const pedidoId = crypto.randomUUID();
   const itensPedido: ItemPedido[] = [];
@@ -872,6 +892,7 @@ export type PatchRestaurante = {
   imagem_url?: string | null;
   comissao_percentual?: number;
   ativo?: boolean;
+  pausado?: boolean;
 };
 
 export async function atualizarRestauranteLocal(
@@ -905,6 +926,9 @@ export async function atualizarRestauranteLocal(
   }
   if (patch.ativo !== undefined) {
     loja.ativo = patch.ativo;
+  }
+  if (patch.pausado !== undefined) {
+    loja.pausado = patch.pausado;
   }
 
   await salvarBancoLocal(banco);

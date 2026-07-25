@@ -23,6 +23,8 @@ export function PainelRestaurante() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [acaoId, setAcaoId] = useState<string | null>(null);
+  const [pausado, setPausado] = useState(false);
+  const [pausando, setPausando] = useState(false);
 
   const carregar = useCallback(
     async (silencioso = false) => {
@@ -37,20 +39,27 @@ export function PainelRestaurante() {
           restauranteIdRef.current = user.restaurante_id;
         }
 
-        const dados =
+        const [dados, lojaRes] = await Promise.all([
           aba === "agora"
-            ? await listarPedidosDoRestaurante(
+            ? listarPedidosDoRestaurante(
                 restauranteIdRef.current,
                 ["novo", "aceito"],
                 "asc",
               )
-            : await listarPedidosDoRestaurante(
+            : listarPedidosDoRestaurante(
                 restauranteIdRef.current,
                 ["pronto", "a_caminho", "entregue", "cancelado"],
                 "desc",
-              );
+              ),
+          fetch("/api/restaurante/loja", { cache: "no-store" }).then((r) =>
+            r.json(),
+          ),
+        ]);
 
         setPedidos(dados);
+        if (lojaRes?.restaurante) {
+          setPausado(Boolean(lojaRes.restaurante.pausado));
+        }
         setErro(null);
       } catch (e) {
         const mensagem =
@@ -64,6 +73,32 @@ export function PainelRestaurante() {
     },
     [aba],
   );
+
+  async function alternarPausa() {
+    setPausando(true);
+    setErro(null);
+    try {
+      const resposta = await fetch("/api/restaurante/loja", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pausado: !pausado }),
+      });
+      const json = (await resposta.json()) as {
+        restaurante?: { pausado?: boolean };
+        erro?: string;
+      };
+      if (!resposta.ok) {
+        throw new Error(json.erro ?? "Não foi possível atualizar a pausa.");
+      }
+      setPausado(Boolean(json.restaurante?.pausado));
+    } catch (e) {
+      setErro(
+        e instanceof Error ? e.message : "Não foi possível atualizar a pausa.",
+      );
+    } finally {
+      setPausando(false);
+    }
+  }
 
   useEffect(() => {
     setCarregando(true);
@@ -143,6 +178,36 @@ export function PainelRestaurante() {
             : `Chegaram ${qtd} pedidos novos!`
         }
       />
+
+      <div
+        className={`rounded-2xl border px-4 py-3 ${
+          pausado
+            ? "border-dende/40 bg-dende-suave"
+            : "border-mar/30 bg-mar-suave/50"
+        }`}
+      >
+        <p className="text-sm font-medium text-foreground">
+          {pausado
+            ? "Pedidos pausados — clientes não conseguem pedir."
+            : "Loja recebendo pedidos (dentro do horário do app)."}
+        </p>
+        <button
+          type="button"
+          disabled={pausando}
+          onClick={() => void alternarPausa()}
+          className={`mt-2 w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60 ${
+            pausado
+              ? "bg-mar text-white"
+              : "border border-dende text-dende"
+          }`}
+        >
+          {pausando
+            ? "Salvando…"
+            : pausado
+              ? "Retomar pedidos"
+              : "Pausar pedidos"}
+        </button>
+      </div>
 
       <div className="flex gap-2">
         <button

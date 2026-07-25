@@ -30,6 +30,8 @@ export type Restaurante = {
   imagem_url: string | null;
   comissao_percentual: number;
   ativo: boolean;
+  /** Loja pausou pedidos manualmente (ainda aparece na lista) */
+  pausado: boolean;
   criado_em: string;
 };
 

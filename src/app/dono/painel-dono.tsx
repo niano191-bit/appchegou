@@ -348,6 +348,10 @@ export function PainelDono() {
                 />
               </label>
             </div>
+            <p className="text-xs text-muted">
+              Fora deste horário (fuso de Salvador) o cliente não consegue pedir.
+              Cada loja ainda pode pausar pedidos no painel dela.
+            </p>
 
             <div className="space-y-2 border-t border-linha pt-3">
               <p className="text-sm font-semibold text-foreground">

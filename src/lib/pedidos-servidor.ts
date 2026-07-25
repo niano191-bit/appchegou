@@ -12,6 +12,10 @@ import { gerarHashSenha } from "@/lib/senha";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { normalizarConfiguracao, type ItemNovoPedido } from "@/lib/local-db";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
+import {
+  mensagemBloqueioPedido,
+  statusOperacaoLoja,
+} from "@/lib/horario";
 
 export type PedidoComItens = Pedido & {
   itens_pedido: ItemPedido[];
@@ -145,6 +149,7 @@ export async function criarRestaurante(entrada: {
       endereco: entrada.endereco?.trim() || null,
       comissao_percentual: comissao,
       ativo: true,
+      pausado: false,
     })
     .select("*")
     .single();
@@ -268,6 +273,14 @@ export async function criarPedido(entrada: {
 }) {
   if (!entrada.itens.length) {
     throw new Error("Adicione pelo menos um item ao pedido.");
+  }
+
+  const loja = await buscarRestaurante(entrada.restauranteId);
+  if (!loja) throw new Error("Restaurante não encontrado.");
+  const config = await lerConfiguracao();
+  const status = statusOperacaoLoja(loja, config);
+  if (status !== "aberta") {
+    throw new Error(mensagemBloqueioPedido(status, config));
   }
 
   const supabase = createSupabaseClient();
@@ -624,6 +637,7 @@ export async function atualizarRestaurante(
     imagem_url?: string | null;
     comissao_percentual?: number;
     ativo?: boolean;
+    pausado?: boolean;
   },
 ) {
   const supabase = createSupabaseClient();
@@ -651,6 +665,7 @@ export async function atualizarRestaurante(
     limpo.comissao_percentual = valor;
   }
   if (patch.ativo !== undefined) limpo.ativo = patch.ativo;
+  if (patch.pausado !== undefined) limpo.pausado = patch.pausado;
 
   const { data, error } = await supabase
     .from("restaurantes")

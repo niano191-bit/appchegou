@@ -32,6 +32,7 @@ Se cadastro, LucPaguei no financeiro ou cancelar pedido falhar no Supabase, rode
 2. `supabase/migrations/005_fase13_gateways.sql`
 3. `supabase/migrations/006_fase14_cancelado.sql`
 4. `supabase/migrations/007_fase15_recusa.sql`
+5. `supabase/migrations/008_fase16_horario.sql`
 
 Guia curto: `docs/sql-pendente.md`
 
@@ -52,6 +53,7 @@ No `/dono`, além dos números do dia, o dono pode **criar lojas**, editar dados
    - `supabase/migrations/005_fase13_gateways.sql`
    - `supabase/migrations/006_fase14_cancelado.sql`
    - `supabase/migrations/007_fase15_recusa.sql`
+   - `supabase/migrations/008_fase16_horario.sql`
 3. Em **Project Settings → API**, copie a **URL** e a chave **anon**
 
 ### 2. Site na Vercel

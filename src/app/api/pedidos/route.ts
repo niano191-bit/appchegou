@@ -142,6 +142,12 @@ export async function POST(request: Request) {
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao criar pedido.";
-    return NextResponse.json({ erro: mensagem }, { status: 500 });
+    const status =
+      mensagem.includes("fechados") ||
+      mensagem.includes("pausou") ||
+      mensagem.includes("disponível")
+        ? 400
+        : 500;
+    return NextResponse.json({ erro: mensagem }, { status });
   }
 }

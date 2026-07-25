@@ -189,12 +189,19 @@ export async function salvarConfiguracaoDono(config: Configuracao) {
   return json.configuracao!;
 }
 
-export async function buscarTaxaEntrega() {
+export async function buscarConfiguracaoPublica() {
   const resposta = await fetch("/api/configuracao", { cache: "no-store" });
   const json = (await resposta.json()) as {
     configuracao?: Configuracao;
     erro?: string;
   };
-  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao carregar taxa.");
-  return Number(json.configuracao!.taxa_entrega);
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Erro ao carregar configuração.");
+  }
+  return json.configuracao!;
+}
+
+export async function buscarTaxaEntrega() {
+  const config = await buscarConfiguracaoPublica();
+  return Number(config.taxa_entrega);
 }

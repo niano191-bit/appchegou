@@ -4,13 +4,23 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buscarRestauranteComCardapio } from "@/lib/catalogo";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
-import { buscarTaxaEntrega } from "@/lib/dono";
+import { buscarConfiguracaoPublica, buscarTaxaEntrega } from "@/lib/dono";
 import {
   lerEnderecoSalvo,
   salvarEndereco,
 } from "@/lib/endereco-cliente";
+import {
+  mensagemBloqueioPedido,
+  rotuloStatusOperacao,
+  statusOperacaoLoja,
+  type StatusOperacaoLoja,
+} from "@/lib/horario";
 import { criarPedido } from "@/lib/pedidos";
-import type { ItemCardapio, Restaurante } from "@/types/database";
+import type {
+  Configuracao,
+  ItemCardapio,
+  Restaurante,
+} from "@/types/database";
 import { formatarReais } from "@/types/database";
 
 type ItemCarrinho = {
@@ -30,6 +40,7 @@ export function CardapioComCarrinho({
   const [endereco, setEndereco] = useState("");
   const [observacao, setObservacao] = useState("");
   const [taxaEntrega, setTaxaEntrega] = useState(TAXA_ENTREGA_PADRAO);
+  const [config, setConfig] = useState<Configuracao | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -44,13 +55,18 @@ export function CardapioComCarrinho({
     void (async () => {
       try {
         setErro(null);
-        const [dados, taxa] = await Promise.all([
+        const [dados, taxa, cfg] = await Promise.all([
           buscarRestauranteComCardapio(restauranteId),
           buscarTaxaEntrega().catch(() => TAXA_ENTREGA_PADRAO),
+          buscarConfiguracaoPublica().catch(() => null),
         ]);
-        setRestaurante(dados.restaurante);
+        setRestaurante({
+          ...dados.restaurante,
+          pausado: dados.restaurante.pausado ?? false,
+        });
         setCardapio(dados.cardapio);
         setTaxaEntrega(taxa);
+        setConfig(cfg);
       } catch (e) {
         setErro(
           e instanceof Error ? e.message : "Não foi possível carregar o cardápio.",
@@ -146,16 +162,43 @@ export function CardapioComCarrinho({
     );
   }
 
+  const statusLoja: StatusOperacaoLoja = config
+    ? statusOperacaoLoja(restaurante, config)
+    : restaurante.pausado
+      ? "pausada"
+      : "aberta";
+  const aceitaPedidos = statusLoja === "aberta";
+  const avisoFechado = config
+    ? mensagemBloqueioPedido(statusLoja, config)
+    : "";
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display text-3xl text-foreground">
-          {restaurante.nome}
-        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="font-display text-3xl text-foreground">
+            {restaurante.nome}
+          </h1>
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+              aceitaPedidos
+                ? "bg-mar-suave text-mar"
+                : "bg-dende-suave text-dende"
+            }`}
+          >
+            {rotuloStatusOperacao(statusLoja)}
+          </span>
+        </div>
         {restaurante.descricao ? (
           <p className="mt-1 text-sm text-muted">{restaurante.descricao}</p>
         ) : null}
       </div>
+
+      {!aceitaPedidos && avisoFechado ? (
+        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
+          {avisoFechado}
+        </div>
+      ) : null}
 
       {erro ? (
         <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
@@ -294,11 +337,17 @@ export function CardapioComCarrinho({
 
         <button
           type="button"
-          disabled={enviando || itensCarrinho.length === 0}
+          disabled={
+            enviando || itensCarrinho.length === 0 || !aceitaPedidos
+          }
           onClick={() => void enviarPedido()}
           className="mt-4 w-full rounded-xl bg-dende px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-dende-escuro disabled:opacity-60"
         >
-          {enviando ? "Enviando…" : "Ir para o pagamento"}
+          {enviando
+            ? "Enviando…"
+            : !aceitaPedidos
+              ? "Loja fechada agora"
+              : "Ir para o pagamento"}
         </button>
       </section>
     </div>
