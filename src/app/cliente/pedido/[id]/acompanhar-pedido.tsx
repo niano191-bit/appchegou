@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AvisoPedido } from "@/components/aviso-pedido";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
@@ -17,6 +18,10 @@ import {
   textoCobrancaDinheiro,
 } from "@/lib/pagamento-pedido";
 import { rotuloPedido } from "@/lib/pedido-rotulo";
+import {
+  rascunhoDePedido,
+  salvarRascunhoRepetir,
+} from "@/lib/repetir-pedido";
 import {
   formatarReais,
   STATUS_PAGAMENTO_LABEL,
@@ -68,6 +73,7 @@ function mensagemPagamentoCancelado(pedido: PedidoDetalhe) {
 }
 
 export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
+  const router = useRouter();
   const [pedido, setPedido] = useState<PedidoDetalhe | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -161,6 +167,19 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
     pedido.status_pagamento !== "pago" &&
     !dinheiroPendente;
   const podeCancelar = pedido.status === "novo";
+  const podeRepetir =
+    (pedido.status === "entregue" || cancelado) &&
+    pedido.itens_pedido.some((i) => i.item_cardapio_id && i.quantidade > 0);
+
+  function repetirPedido(atual: PedidoDetalhe) {
+    const rascunho = rascunhoDePedido(atual);
+    if (!rascunho) {
+      window.alert("Não foi possível repetir este pedido.");
+      return;
+    }
+    salvarRascunhoRepetir(rascunho);
+    router.push(`/cliente/${atual.restaurante_id}`);
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -329,6 +348,16 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
           className="rounded-xl border border-dende px-4 py-3 text-sm font-semibold text-dende disabled:opacity-60"
         >
           {cancelando ? "Cancelando…" : "Cancelar pedido"}
+        </button>
+      ) : null}
+
+      {podeRepetir ? (
+        <button
+          type="button"
+          onClick={() => repetirPedido(pedido)}
+          className="rounded-xl bg-dende px-4 py-3 text-sm font-semibold text-white"
+        >
+          Pedir de novo
         </button>
       ) : null}
     </div>

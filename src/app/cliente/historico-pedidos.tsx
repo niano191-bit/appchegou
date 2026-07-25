@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { pedidoEhDinheiroPendente } from "@/lib/pagamento-pedido";
 import { listarMeusPedidos, type PedidoCliente } from "@/lib/pedidos";
 import { rotuloPedido } from "@/lib/pedido-rotulo";
+import {
+  rascunhoDePedido,
+  salvarRascunhoRepetir,
+} from "@/lib/repetir-pedido";
 import {
   formatarReais,
   STATUS_PAGAMENTO_LABEL,
@@ -27,9 +32,22 @@ function formatarQuando(iso: string) {
 
 /** Lista pedidos anteriores do cliente */
 export function HistoricoPedidos() {
+  const router = useRouter();
   const [pedidos, setPedidos] = useState<PedidoCliente[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+
+  function repetir(pedido: PedidoCliente) {
+    const rascunho = rascunhoDePedido(pedido);
+    if (!rascunho) {
+      setErro(
+        "Não foi possível repetir este pedido (itens antigos indisponíveis).",
+      );
+      return;
+    }
+    salvarRascunhoRepetir(rascunho);
+    router.push(`/cliente/${pedido.restaurante_id}`);
+  }
 
   const carregar = useCallback(async () => {
     try {
@@ -82,11 +100,18 @@ export function HistoricoPedidos() {
             ? `/cliente/pedido/${p.id}/pagar`
             : `/cliente/pedido/${p.id}`;
 
+          const podeRepetir =
+            !pendente &&
+            p.itens_pedido.some((i) => i.item_cardapio_id && i.quantidade > 0);
+
           return (
-            <li key={p.id}>
+            <li
+              key={p.id}
+              className="rounded-2xl border border-linha bg-white px-4 py-3"
+            >
               <Link
                 href={href}
-                className="block rounded-2xl border border-linha bg-white px-4 py-3 transition hover:border-dende/50"
+                className="block transition hover:opacity-90"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -111,6 +136,15 @@ export function HistoricoPedidos() {
                   Pedido {rotuloPedido(p)}
                 </p>
               </Link>
+              {podeRepetir ? (
+                <button
+                  type="button"
+                  onClick={() => repetir(p)}
+                  className="mt-3 w-full rounded-xl border border-dende px-3 py-2 text-sm font-semibold text-dende"
+                >
+                  Repetir pedido
+                </button>
+              ) : null}
             </li>
           );
         })}

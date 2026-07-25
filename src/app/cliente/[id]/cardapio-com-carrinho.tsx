@@ -24,6 +24,7 @@ import {
   valorPedidoMinimo,
 } from "@/lib/pedido-minimo";
 import { criarPedido } from "@/lib/pedidos";
+import { consumirRascunhoRepetir } from "@/lib/repetir-pedido";
 import type {
   BairroEntrega,
   Configuracao,
@@ -56,6 +57,7 @@ export function CardapioComCarrinho({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+  const [avisoRepetir, setAvisoRepetir] = useState<string | null>(null);
 
   useEffect(() => {
     const salvo = lerEnderecoSalvo();
@@ -82,6 +84,44 @@ export function CardapioComCarrinho({
         setConfig(cfg);
         setBairros(zonas);
         if (zonas.length === 1) setBairroId(zonas[0]!.id);
+
+        const rascunho = consumirRascunhoRepetir(restauranteId);
+        if (rascunho) {
+          const porId = new Map(dados.cardapio.map((i) => [i.id, i]));
+          const novoCarrinho: Record<string, ItemCarrinho> = {};
+          let ok = 0;
+          let faltando = 0;
+          for (const linha of rascunho.itens) {
+            const item = porId.get(linha.item_cardapio_id);
+            if (!item || !item.disponivel) {
+              faltando += 1;
+              continue;
+            }
+            novoCarrinho[item.id] = {
+              item,
+              quantidade: linha.quantidade,
+            };
+            ok += 1;
+          }
+          if (ok > 0) {
+            setCarrinho(novoCarrinho);
+            if (rascunho.endereco_entrega) {
+              setEndereco(rascunho.endereco_entrega);
+            }
+            if (rascunho.observacao) {
+              setObservacao(rascunho.observacao);
+            }
+            setAvisoRepetir(
+              faltando > 0
+                ? `Pedido repetido com ${ok} item(ns). ${faltando} não está mais disponível.`
+                : "Pedido anterior carregado no carrinho. Confira e finalize.",
+            );
+          } else {
+            setAvisoRepetir(
+              "Nenhum item daquele pedido está disponível agora. Escolha outros pratos.",
+            );
+          }
+        }
       } catch (e) {
         setErro(
           e instanceof Error ? e.message : "Não foi possível carregar o cardápio.",
@@ -249,6 +289,12 @@ export function CardapioComCarrinho({
       {sucesso ? (
         <div className="rounded-2xl border border-[#2F6B3A]/40 bg-[#E8F5E9] px-5 py-4 text-sm text-[#1B4332]">
           {sucesso}
+        </div>
+      ) : null}
+
+      {avisoRepetir ? (
+        <div className="rounded-2xl border border-mar/30 bg-mar-suave px-5 py-4 text-sm text-mar">
+          {avisoRepetir}
         </div>
       ) : null}
 
