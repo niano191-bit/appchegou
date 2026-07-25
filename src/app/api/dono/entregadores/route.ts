@@ -1,22 +1,41 @@
 import { NextResponse } from "next/server";
-import { criarEntregador } from "@/lib/auth-servidor";
-import { listarEntregadoresLocal, usandoModoDemo } from "@/lib/local-db";
-import { listarEntregadores } from "@/lib/pedidos-servidor";
+import { criarEntregador, exigirSessao } from "@/lib/auth-servidor";
+import {
+  ganhosTodosEntregadoresHojeLocal,
+  listarEntregadoresLocal,
+  usandoModoDemo,
+} from "@/lib/local-db";
+import {
+  ganhosTodosEntregadoresHoje,
+  listarEntregadores,
+} from "@/lib/pedidos-servidor";
 
-/** Lista entregadores cadastrados */
+/** Lista entregadores + ganhos do dia */
 export async function GET() {
   try {
+    await exigirSessao("dono");
+
     if (usandoModoDemo()) {
-      const entregadores = await listarEntregadoresLocal();
-      return NextResponse.json({ modo: "demo", entregadores });
+      const [entregadores, ganhos] = await Promise.all([
+        listarEntregadoresLocal(),
+        ganhosTodosEntregadoresHojeLocal(),
+      ]);
+      return NextResponse.json({ modo: "demo", entregadores, ganhos });
     }
 
-    const entregadores = await listarEntregadores();
-    return NextResponse.json({ modo: "supabase", entregadores });
+    const [entregadores, ganhos] = await Promise.all([
+      listarEntregadores(),
+      ganhosTodosEntregadoresHoje(),
+    ]);
+    return NextResponse.json({ modo: "supabase", entregadores, ganhos });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao listar entregadores.";
-    return NextResponse.json({ erro: mensagem }, { status: 500 });
+    const status =
+      mensagem.includes("login") || mensagem.includes("permissão")
+        ? 401
+        : 500;
+    return NextResponse.json({ erro: mensagem }, { status });
   }
 }
 
@@ -43,6 +62,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    await exigirSessao("dono");
     const entregador = await criarEntregador({
       nome: corpo.nome,
       email: corpo.email,

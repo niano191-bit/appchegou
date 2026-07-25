@@ -11,6 +11,7 @@ import {
   buscarRestaurantesDono,
   criarEntregadorDono,
   salvarConfiguracaoDono,
+  type GanhosEntregadorDono,
   type PedidoDono,
   type ResumoDia,
 } from "@/lib/dono";
@@ -28,6 +29,9 @@ export function PainelDono() {
   const [pedidos, setPedidos] = useState<PedidoDono[]>([]);
   const [restaurantes, setRestaurantes] = useState<Restaurante[]>([]);
   const [entregadores, setEntregadores] = useState<Usuario[]>([]);
+  const [ganhosEntregadores, setGanhosEntregadores] = useState<
+    GanhosEntregadorDono[]
+  >([]);
   const [config, setConfig] = useState<Configuracao | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -53,7 +57,8 @@ export function PainelDono() {
       setResumo(r);
       setPedidos(p);
       setRestaurantes(lojas);
-      setEntregadores(ents);
+      setEntregadores(ents.entregadores);
+      setGanhosEntregadores(ents.ganhos);
       setConfig(cfg);
       setErro(null);
     } catch (e) {
@@ -190,6 +195,47 @@ export function PainelDono() {
         <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Entregadores
         </h2>
+
+        <div className="rounded-2xl border border-mar/30 bg-mar-suave/40 px-4 py-4">
+          <p className="text-xs font-medium tracking-wide text-muted uppercase">
+            Ganhos de hoje (taxas de entrega)
+          </p>
+          {ganhosEntregadores.length === 0 ? (
+            <p className="mt-2 text-sm text-muted">Nenhum entregador cadastrado.</p>
+          ) : (
+            <ul className="mt-3 flex flex-col gap-2">
+              {ganhosEntregadores.map((g) => (
+                <li
+                  key={g.entregador_id}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <div>
+                    <p className="font-semibold text-foreground">{g.nome}</p>
+                    <p className="text-xs text-muted">
+                      {g.entregas === 0
+                        ? "0 entregas"
+                        : g.entregas === 1
+                          ? "1 entrega"
+                          : `${g.entregas} entregas`}
+                    </p>
+                  </div>
+                  <p className="font-semibold text-mar">
+                    {formatarReais(g.valor)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 border-t border-mar/20 pt-2 text-sm font-semibold text-foreground">
+            Total do dia{" "}
+            <span className="text-mar">
+              {formatarReais(
+                ganhosEntregadores.reduce((s, g) => s + Number(g.valor), 0),
+              )}
+            </span>
+          </p>
+        </div>
+
         <div className="rounded-2xl border border-linha bg-white px-4 py-4 space-y-3">
           <p className="text-sm font-semibold text-foreground">
             Novo entregador

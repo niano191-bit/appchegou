@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AvisoFila } from "@/components/aviso-fila";
 import { ContatoPedido } from "@/components/contato-pedido";
 import { LinksNavegacao } from "@/components/links-navegacao";
+import { LinksWhatsAppPedido } from "@/components/links-whatsapp-pedido";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
@@ -173,6 +174,7 @@ export function PainelEntregador() {
                 enderecoLoja={corrida.restaurante_endereco}
                 mostrarLoja
               />
+              <LinksWhatsAppPedido pedido={corrida} />
 
               {corrida.restaurante_endereco ? (
                 <LinksNavegacao

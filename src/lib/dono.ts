@@ -139,15 +139,27 @@ export async function atualizarItemCardapioDono(
   if (!resposta.ok) throw new Error(json.erro ?? "Erro ao salvar prato.");
 }
 
+export type GanhosEntregadorDono = {
+  entregador_id: string;
+  nome: string;
+  telefone: string | null;
+  entregas: number;
+  valor: number;
+};
+
 export async function buscarEntregadoresDono() {
   const resposta = await fetch("/api/dono/entregadores", { cache: "no-store" });
   const json = (await resposta.json()) as {
     entregadores?: Usuario[];
+    ganhos?: GanhosEntregadorDono[];
     erro?: string;
   };
   if (!resposta.ok)
     throw new Error(json.erro ?? "Erro ao carregar entregadores.");
-  return json.entregadores ?? [];
+  return {
+    entregadores: json.entregadores ?? [],
+    ganhos: json.ganhos ?? [],
+  };
 }
 
 export async function criarEntregadorDono(entrada: {

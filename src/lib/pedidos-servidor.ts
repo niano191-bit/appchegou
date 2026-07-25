@@ -565,6 +565,54 @@ export async function ganhosEntregadorHoje(
   return { entregas: lista.length, valor };
 }
 
+export type GanhosEntregadorComNome = GanhosEntregadorDia & {
+  entregador_id: string;
+  nome: string;
+  telefone: string | null;
+};
+
+/** Ganhos de todos os entregadores hoje (painel do dono) */
+export async function ganhosTodosEntregadoresHoje(): Promise<
+  GanhosEntregadorComNome[]
+> {
+  const supabase = createSupabaseClient();
+  const { inicio, fim } = inicioFimDoDiaSalvador();
+  const entregadores = await listarEntregadores();
+
+  const { data, error } = await supabase
+    .from("pedidos")
+    .select("entregador_id, taxa_entrega")
+    .eq("status", "entregue")
+    .eq("status_pagamento", "pago")
+    .not("entregador_id", "is", null)
+    .gte("atualizado_em", inicio.toISOString())
+    .lte("atualizado_em", fim.toISOString());
+
+  if (error) throw new Error(error.message);
+
+  const porId = new Map<string, { entregas: number; valor: number }>();
+  for (const p of data ?? []) {
+    const id = p.entregador_id as string;
+    const atual = porId.get(id) ?? { entregas: 0, valor: 0 };
+    atual.entregas += 1;
+    atual.valor += Number(p.taxa_entrega);
+    porId.set(id, atual);
+  }
+
+  return entregadores
+    .map((e) => {
+      const g = porId.get(e.id) ?? { entregas: 0, valor: 0 };
+      return {
+        entregador_id: e.id,
+        nome: e.nome,
+        telefone: e.telefone,
+        entregas: g.entregas,
+        valor: g.valor,
+      };
+    })
+    .sort((a, b) => b.valor - a.valor || a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
 /** Corridas: prontas para pegar + as do entregador a caminho */
 export async function listarCorridas(entregadorId: string) {
   const supabase = createSupabaseClient();

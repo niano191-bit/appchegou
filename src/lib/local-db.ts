@@ -538,6 +538,32 @@ export async function ganhosEntregadorHojeLocal(entregadorId: string) {
   return { entregas: entregues.length, valor };
 }
 
+/** Ganhos de todos os entregadores hoje (painel do dono) */
+export async function ganhosTodosEntregadoresHojeLocal() {
+  const banco = await lerBancoLocal();
+  const { inicio, fim } = inicioFimDoDiaSalvador();
+  const entregadores = banco.usuarios.filter((u) => u.papel === "entregador");
+
+  return entregadores
+    .map((e) => {
+      const entregues = banco.pedidos.filter((p) => {
+        if (p.entregador_id !== e.id) return false;
+        if (p.status !== "entregue") return false;
+        if (p.status_pagamento !== "pago") return false;
+        const t = new Date(p.atualizado_em).getTime();
+        return t >= inicio.getTime() && t <= fim.getTime();
+      });
+      return {
+        entregador_id: e.id,
+        nome: e.nome,
+        telefone: e.telefone,
+        entregas: entregues.length,
+        valor: entregues.reduce((s, p) => s + Number(p.taxa_entrega), 0),
+      };
+    })
+    .sort((a, b) => b.valor - a.valor || a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
 /** Corridas disponíveis (pronto) + as do entregador (a caminho) */
 export async function listarCorridasLocal(entregadorId: string) {
   const banco = await lerBancoLocal();
