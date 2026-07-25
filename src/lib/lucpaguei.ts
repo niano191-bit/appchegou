@@ -84,24 +84,45 @@ export async function criarCheckoutLucPaguei(entrada: {
     throw new Error(`LucPaguei depósito: ${msg}`);
   }
 
-  const data =
-    (json.data as Record<string, unknown> | undefined) ?? json;
+  // Resposta SuitMoney/LucPaguei: { message, qrCodeResponse: { qrcode, ... } }
+  const nested =
+    (json.qrCodeResponse as Record<string, unknown> | undefined) ||
+    (json.data as Record<string, unknown> | undefined) ||
+    (json.pix as Record<string, unknown> | undefined);
 
-  const copiaECola =
-    str(data.qrcode) ||
-    str(data.qrCode) ||
-    str(data.qr_code) ||
-    str(data.copyPaste) ||
-    str(data.copy_paste) ||
-    str(data.emv);
+  const candidatos: Record<string, unknown>[] = [
+    ...(nested ? [nested] : []),
+    json,
+  ];
 
-  const transactionId =
-    str(data.transactionId) ||
-    str(data.transaction_id) ||
-    str(data.id);
+  let copiaECola: string | undefined;
+  let transactionId: string | undefined;
+
+  for (const data of candidatos) {
+    copiaECola =
+      copiaECola ||
+      str(data.qrcode) ||
+      str(data.qrCode) ||
+      str(data.qr_code) ||
+      str(data.pixCopiaECola) ||
+      str(data.pixCopiaCola) ||
+      str(data.brCode) ||
+      str(data.copyPaste) ||
+      str(data.copy_paste) ||
+      str(data.emv);
+
+    transactionId =
+      transactionId ||
+      str(data.transactionId) ||
+      str(data.transaction_id) ||
+      str(data.id);
+  }
 
   if (!copiaECola) {
-    throw new Error("LucPaguei respondeu sem código Pix (qrcode).");
+    const chaves = Object.keys(json).join(", ") || "(vazio)";
+    throw new Error(
+      `LucPaguei respondeu sem código Pix (qrcode). Chaves: ${chaves}`,
+    );
   }
 
   return {
