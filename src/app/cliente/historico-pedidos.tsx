@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { listarMeusPedidos, type PedidoCliente } from "@/lib/pedidos";
+import { rotuloPedido } from "@/lib/pedido-rotulo";
 import {
   formatarReais,
   STATUS_PAGAMENTO_LABEL,
@@ -103,7 +104,7 @@ export function HistoricoPedidos() {
                     ? STATUS_PAGAMENTO_LABEL[p.status_pagamento]
                     : STATUS_PEDIDO_LABEL[p.status]}
                   {" · "}
-                  Pedido #{p.id.slice(0, 8)}
+                  Pedido {rotuloPedido(p)}
                 </p>
               </Link>
             </li>

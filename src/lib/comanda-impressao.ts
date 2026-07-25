@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import { MARCA } from "@/lib/marca";
 import type { PedidoComItens } from "@/lib/pedidos";
+import { codigoPedido, rotuloPedido } from "@/lib/pedido-rotulo";
 import { formatarReais } from "@/types/database";
 
 function formatarHora(iso: string) {
@@ -21,7 +22,8 @@ function formatarHora(iso: string) {
 export function baixarComandaPdf(pedido: PedidoComItens) {
   if (typeof window === "undefined") return;
 
-  const codigo = pedido.id.slice(0, 8).toUpperCase();
+  const rotulo = rotuloPedido(pedido);
+  const arquivo = codigoPedido(pedido);
   const largura = 80; // mm
   const margem = 4;
   const maxW = largura - margem * 2;
@@ -68,7 +70,7 @@ export function baixarComandaPdf(pedido: PedidoComItens) {
   centro(MARCA.nome, 11, true);
   centro("Comanda da cozinha", 8);
   y += 1;
-  centro(`#${codigo}`, 16, true);
+  centro(rotulo, 16, true);
   centro(formatarHora(pedido.criado_em), 8);
   tracejado();
 
@@ -113,7 +115,7 @@ export function baixarComandaPdf(pedido: PedidoComItens) {
   y += 3;
   centro(MARCA.tagline, 7);
 
-  doc.save(`comanda-${codigo}.pdf`);
+  doc.save(`comanda-${arquivo}.pdf`);
 }
 
 /** Alias usado pelo painel — hoje baixa PDF */

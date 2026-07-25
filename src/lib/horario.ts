@@ -10,16 +10,21 @@ export function horaParaMinutos(hora: string): number | null {
   return h * 60 + min;
 }
 
+/** Data civil em Salvador: YYYY-MM-DD */
+export function dataPedidoSalvador(agora = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(agora);
+}
+
 /** Início e fim do dia civil em Salvador (UTC-3) */
 export function inicioFimDoDiaSalvador(agora = new Date()) {
-  const agoraSp = new Date(
-    agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
-  );
-  const y = agoraSp.getFullYear();
-  const m = String(agoraSp.getMonth() + 1).padStart(2, "0");
-  const d = String(agoraSp.getDate()).padStart(2, "0");
-  const inicio = new Date(`${y}-${m}-${d}T00:00:00-03:00`);
-  const fim = new Date(`${y}-${m}-${d}T23:59:59.999-03:00`);
+  const ymd = dataPedidoSalvador(agora);
+  const inicio = new Date(`${ymd}T00:00:00-03:00`);
+  const fim = new Date(`${ymd}T23:59:59.999-03:00`);
   return { inicio, fim };
 }
 

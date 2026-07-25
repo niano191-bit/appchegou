@@ -23,6 +23,7 @@ import {
   ordenarCriticosPrimeiro,
   textoMinutosParado,
 } from "@/lib/pedidos-criticos";
+import { rotuloPedido } from "@/lib/pedido-rotulo";
 import { linkWhatsAppEntregadorComanda } from "@/lib/resumo-whatsapp";
 import type { Configuracao, Restaurante, Usuario } from "@/types/database";
 import {
@@ -276,7 +277,7 @@ export function PainelDono() {
                         {p.restaurante_nome}
                       </p>
                       <p className="text-muted">
-                        #{p.id.slice(0, 8)} · {formatarReais(Number(p.total))}
+                        {rotuloPedido(p)} · {formatarReais(Number(p.total))}
                       </p>
                       <p className="text-xs text-muted">
                         Comissão {p.comissao_percentual}% ={" "}

@@ -16,6 +16,7 @@ import type {
 import { BAIRROS_SALVADOR_SEED } from "@/lib/bairros-seed";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import {
+  dataPedidoSalvador,
   inicioFimDoDiaSalvador,
   mensagemBloqueioPedido,
   statusOperacaoLoja,
@@ -230,6 +231,8 @@ function dadosIniciais(): BancoLocal {
         motivo_cancelamento: null,
         tempo_estimado_minutos: null,
         previsao_entrega_em: null,
+        numero_dia: 1,
+        data_pedido: null,
         criado_em: criado,
         atualizado_em: criado,
         itens_pedido: [
@@ -951,6 +954,13 @@ export async function criarPedidoLocal(entrada: {
     });
   }
 
+  const dataPedido = dataPedidoSalvador();
+  const numerosHoje = banco.pedidos
+    .filter((p) => p.data_pedido === dataPedido && p.numero_dia != null)
+    .map((p) => Number(p.numero_dia));
+  const numeroDia =
+    (numerosHoje.length ? Math.max(...numerosHoje) : 0) + 1;
+
   const pedido: PedidoLocal = {
     id: pedidoId,
     cliente_id: entrada.clienteId,
@@ -969,6 +979,8 @@ export async function criarPedidoLocal(entrada: {
     motivo_cancelamento: null,
     tempo_estimado_minutos: null,
     previsao_entrega_em: null,
+    numero_dia: numeroDia,
+    data_pedido: dataPedido,
     criado_em: criado,
     atualizado_em: criado,
     itens_pedido: itensPedido,

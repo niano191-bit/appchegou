@@ -103,7 +103,7 @@ export async function processarEstornoPedido(entrada: {
       externalId: `estorno-${pedido.id}-${Date.now()}`,
       pixKey: tipo === "PHONE" ? telefoneParaChavePix(chaveManual) || pixKey : pixKey,
       keyType: tipo,
-      description: `Estorno pedido ${pedido.id.slice(0, 8)}`,
+      description: `Estorno pedido ${pedido.numero_dia ?? pedido.id.slice(0, 8)}`,
     });
 
     if (saque.ok) {
@@ -122,7 +122,7 @@ export async function processarEstornoPedido(entrada: {
       externalId: `estorno-${pedido.id}-${Date.now()}`,
       pixKey: telefoneKey,
       keyType: "PHONE",
-      description: `Estorno pedido ${pedido.id.slice(0, 8)}`,
+      description: `Estorno pedido ${pedido.numero_dia ?? pedido.id.slice(0, 8)}`,
     });
     if (saque.ok) {
       await marcarEstornado(pedido.id, saque.transactionId ?? txId);
@@ -137,7 +137,7 @@ export async function processarEstornoPedido(entrada: {
       externalId: `estorno-${pedido.id}-${Date.now()}`,
       pixKey: email,
       keyType: "EMAIL",
-      description: `Estorno pedido ${pedido.id.slice(0, 8)}`,
+      description: `Estorno pedido ${pedido.numero_dia ?? pedido.id.slice(0, 8)}`,
     });
     if (saque.ok) {
       await marcarEstornado(pedido.id, saque.transactionId ?? txId);

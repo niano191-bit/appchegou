@@ -79,6 +79,10 @@ export type Pedido = {
   tempo_estimado_minutos?: number | null;
   /** Horario previsto de entrega (aceitacao + minutos) */
   previsao_entrega_em?: string | null;
+  /** Numero sequencial do dia em Salvador (1, 2, 3...) */
+  numero_dia?: number | null;
+  /** Data civil do pedido em Salvador (YYYY-MM-DD) */
+  data_pedido?: string | null;
   criado_em: string;
   atualizado_em: string;
 };

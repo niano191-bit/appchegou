@@ -12,6 +12,7 @@ import {
   solicitarEstornoPix,
   type PedidoDetalhe,
 } from "@/lib/pedidos";
+import { rotuloPedido } from "@/lib/pedido-rotulo";
 import {
   formatarReais,
   STATUS_PAGAMENTO_LABEL,
@@ -194,7 +195,7 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
           {pedido.restaurante_nome}
         </p>
         <p className="mt-1 text-lg font-semibold text-foreground">
-          Pedido #{pedido.id.slice(0, 8)}
+          Pedido {rotuloPedido(pedido)}
         </p>
         <p className="mt-2 text-sm text-muted">
           {aguardandoPagamento

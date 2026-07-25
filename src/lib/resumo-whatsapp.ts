@@ -1,11 +1,13 @@
 import { linkWhatsApp } from "@/lib/contato";
 import { MARCA } from "@/lib/marca";
 import type { PedidoComItens } from "@/lib/pedidos";
+import { rotuloPedido } from "@/lib/pedido-rotulo";
 import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
 
 type PedidoResumo = Pick<
   PedidoComItens,
   | "id"
+  | "numero_dia"
   | "status"
   | "total"
   | "taxa_entrega"
@@ -22,7 +24,6 @@ type PedidoResumo = Pick<
 
 /** Texto pronto para colar / enviar no WhatsApp */
 export function textoResumoPedidoWhatsApp(pedido: PedidoResumo) {
-  const codigo = pedido.id.slice(0, 8).toUpperCase();
   const total = Number(pedido.total) + Number(pedido.taxa_entrega);
   const itens = pedido.itens_pedido
     .map((i) => `• ${i.quantidade}x ${i.nome}`)
@@ -30,7 +31,7 @@ export function textoResumoPedidoWhatsApp(pedido: PedidoResumo) {
 
   const linhas = [
     `*${MARCA.nome}*`,
-    `Pedido #${codigo}`,
+    `Pedido ${rotuloPedido(pedido)}`,
     `Status: ${STATUS_PEDIDO_LABEL[pedido.status]}`,
     "",
     pedido.cliente_nome ? `Cliente: ${pedido.cliente_nome}` : null,

@@ -68,7 +68,9 @@ export async function POST(request: Request) {
     const cobranca = await criarCheckoutLucPaguei({
       pedidoId: pedido.id,
       valorTotal: total,
-      descricao: `Pedido ${pedido.restaurante_nome ?? ""} #${pedido.id.slice(0, 8)}`.trim(),
+      descricao: `Pedido ${pedido.restaurante_nome ?? ""} ${
+        pedido.numero_dia != null ? `#${pedido.numero_dia}` : `#${pedido.id.slice(0, 8)}`
+      }`.trim(),
       clienteNome: sessao.nome,
       clienteEmail: sessao.email ?? undefined,
     });

@@ -14,6 +14,7 @@ import {
   recusarPedido,
   type PedidoComItens,
 } from "@/lib/pedidos";
+import { rotuloPedido } from "@/lib/pedido-rotulo";
 import { obterSessaoCliente } from "@/lib/sessao-cliente";
 import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
 
@@ -281,7 +282,7 @@ export function PainelRestaurante() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-xs font-medium tracking-wide text-muted uppercase">
-                    Pedido #{pedido.id.slice(0, 8)}
+                    Pedido {rotuloPedido(pedido)}
                   </p>
                   <p className="mt-1 text-lg font-semibold text-foreground">
                     {formatarReais(totalComEntrega)}

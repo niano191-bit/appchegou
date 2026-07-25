@@ -14,6 +14,7 @@ import { normalizarConfiguracao, type ItemNovoPedido } from "@/lib/local-db";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import { buscarBairro, listarBairros } from "@/lib/bairros-servidor";
 import {
+  dataPedidoSalvador,
   inicioFimDoDiaSalvador,
   mensagemBloqueioPedido,
   statusOperacaoLoja,
@@ -25,6 +26,20 @@ export type PedidoComItens = Pedido & {
   cliente_telefone?: string | null;
   restaurante_endereco?: string | null;
 };
+
+async function proximoNumeroDia(dataPedido: string): Promise<number> {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .select("numero_dia")
+    .eq("data_pedido", dataPedido)
+    .order("numero_dia", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return Number(data?.numero_dia ?? 0) + 1;
+}
 
 export type Corrida = PedidoComItens & {
   restaurante_nome: string;
@@ -328,25 +343,49 @@ export async function criarPedido(entrada: {
     });
   }
 
-  const { data: pedido, error } = await supabase
-    .from("pedidos")
-    .insert({
-      cliente_id: entrada.clienteId,
-      restaurante_id: entrada.restauranteId,
-      status: "novo",
-      status_pagamento: "pendente",
-      forma_pagamento: null,
-      mp_payment_id: null,
-      total,
-      taxa_entrega: taxa,
-      endereco_entrega: entrada.endereco_entrega,
-      bairro_entrega: bairroNome,
-      observacao: entrada.observacao?.trim() || null,
-    })
-    .select("*")
-    .single();
+  const dataPedido = dataPedidoSalvador();
+  let numeroDia = await proximoNumeroDia(dataPedido);
+  let pedido: Pedido | null = null;
+  let ultimoErro: Error | null = null;
 
-  if (error) throw new Error(error.message);
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    const { data, error } = await supabase
+      .from("pedidos")
+      .insert({
+        cliente_id: entrada.clienteId,
+        restaurante_id: entrada.restauranteId,
+        status: "novo",
+        status_pagamento: "pendente",
+        forma_pagamento: null,
+        mp_payment_id: null,
+        total,
+        taxa_entrega: taxa,
+        endereco_entrega: entrada.endereco_entrega,
+        bairro_entrega: bairroNome,
+        observacao: entrada.observacao?.trim() || null,
+        numero_dia: numeroDia,
+        data_pedido: dataPedido,
+      })
+      .select("*")
+      .single();
+
+    if (!error && data) {
+      pedido = data as Pedido;
+      break;
+    }
+
+    ultimoErro = new Error(error?.message ?? "Erro ao criar pedido.");
+    // Conflito de número do dia — tenta o próximo
+    if (error?.code === "23505" || /duplicate|unique/i.test(error?.message ?? "")) {
+      numeroDia = await proximoNumeroDia(dataPedido);
+      continue;
+    }
+    throw ultimoErro;
+  }
+
+  if (!pedido) {
+    throw ultimoErro ?? new Error("Erro ao criar pedido.");
+  }
 
   const { error: erroItens } = await supabase.from("itens_pedido").insert(
     linhas.map((linha) => ({
