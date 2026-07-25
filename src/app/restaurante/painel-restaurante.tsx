@@ -5,7 +5,7 @@ import { AvisoFila } from "@/components/aviso-fila";
 import { ContatoPedido } from "@/components/contato-pedido";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
-import { imprimirComanda } from "@/lib/comanda-impressao";
+import { baixarComandaPdf } from "@/lib/comanda-impressao";
 import {
   atualizarStatusPedido,
   listarPedidosDoRestaurante,
@@ -121,7 +121,7 @@ export function PainelRestaurante() {
       const pedidoAntes = pedidos.find((p) => p.id === pedidoId);
       await atualizarStatusPedido(pedidoId, status);
       if (status === "aceito" && pedidoAntes) {
-        imprimirComanda(pedidoAntes);
+        baixarComandaPdf(pedidoAntes);
       }
       await carregar(true);
     } catch (e) {
@@ -328,10 +328,10 @@ export function PainelRestaurante() {
               <div className="mt-4 flex flex-col gap-2">
                 <button
                   type="button"
-                  onClick={() => imprimirComanda(pedido)}
+                  onClick={() => baixarComandaPdf(pedido)}
                   className="rounded-xl border border-mar/40 bg-mar-suave/40 px-4 py-2.5 text-sm font-semibold text-mar"
                 >
-                  Imprimir comanda
+                  Salvar PDF da comanda
                 </button>
 
                 {aba === "agora" ? (
@@ -344,7 +344,7 @@ export function PainelRestaurante() {
                           onClick={() => void mudarStatus(pedido.id, "aceito")}
                           className="flex-1 rounded-xl bg-dende px-4 py-3 text-sm font-semibold text-white transition hover:bg-dende-escuro disabled:opacity-60"
                         >
-                          {ocupado ? "Salvando…" : "Aceitar e imprimir"}
+                          {ocupado ? "Salvando…" : "Aceitar e salvar PDF"}
                         </button>
                       ) : null}
 

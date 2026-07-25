@@ -1,14 +1,7 @@
+import { jsPDF } from "jspdf";
 import { MARCA } from "@/lib/marca";
 import type { PedidoComItens } from "@/lib/pedidos";
 import { formatarReais } from "@/types/database";
-
-function esc(texto: string) {
-  return texto
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function formatarHora(iso: string) {
   try {
@@ -24,139 +17,106 @@ function formatarHora(iso: string) {
   }
 }
 
-/** Monta HTML da comanda (impressora térmica / A4) */
-export function htmlComanda(pedido: PedidoComItens) {
-  const codigo = pedido.id.slice(0, 8).toUpperCase();
-  const total =
-    Number(pedido.total) + Number(pedido.taxa_entrega);
-  const itens = pedido.itens_pedido
-    .map(
-      (item) =>
-        `<tr>
-          <td>${item.quantidade}x</td>
-          <td>${esc(item.nome)}</td>
-          <td class="dir">${esc(
-            formatarReais(Number(item.preco_unitario) * item.quantidade),
-          )}</td>
-        </tr>`,
-    )
-    .join("");
-
-  const cliente = pedido.cliente_nome
-    ? `<p><strong>Cliente:</strong> ${esc(pedido.cliente_nome)}</p>`
-    : "";
-  const telefone = pedido.cliente_telefone
-    ? `<p><strong>Tel:</strong> ${esc(pedido.cliente_telefone)}</p>`
-    : "";
-  const obs = pedido.observacao?.trim()
-    ? `<p class="obs"><strong>OBS:</strong> ${esc(pedido.observacao.trim())}</p>`
-    : "";
-  const bairro = pedido.bairro_entrega
-    ? ` (${esc(pedido.bairro_entrega)})`
-    : "";
-
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <title>Comanda #${esc(codigo)}</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: ui-monospace, "Courier New", monospace;
-      font-size: 13px;
-      line-height: 1.35;
-      color: #000;
-      padding: 12px;
-      width: 80mm;
-      max-width: 100%;
-    }
-    h1 { font-size: 16px; text-align: center; margin-bottom: 4px; }
-    .sub { text-align: center; font-size: 11px; margin-bottom: 10px; }
-    .linha { border-top: 1px dashed #000; margin: 8px 0; }
-    .cod { font-size: 22px; font-weight: 700; text-align: center; letter-spacing: 1px; }
-    p { margin: 3px 0; }
-    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-    td { padding: 3px 0; vertical-align: top; }
-    td:first-child { width: 2.2em; font-weight: 700; }
-    .dir { text-align: right; white-space: nowrap; }
-    .obs { margin-top: 8px; font-size: 14px; font-weight: 700; }
-    .total { font-size: 15px; font-weight: 700; margin-top: 6px; }
-    .rodape { text-align: center; font-size: 10px; margin-top: 12px; }
-    @media print {
-      body { padding: 0; width: 80mm; }
-      @page { margin: 4mm; size: auto; }
-    }
-  </style>
-</head>
-<body>
-  <h1>${esc(MARCA.nome)}</h1>
-  <p class="sub">Comanda da cozinha</p>
-  <p class="cod">#${esc(codigo)}</p>
-  <p class="sub">${esc(formatarHora(pedido.criado_em))}</p>
-  <div class="linha"></div>
-  ${cliente}
-  ${telefone}
-  <p><strong>Entrega:</strong> ${esc(pedido.endereco_entrega)}${bairro}</p>
-  <div class="linha"></div>
-  <table>${itens}</table>
-  ${obs}
-  <div class="linha"></div>
-  <p>Itens: ${esc(formatarReais(Number(pedido.total)))}</p>
-  <p>Entrega: ${esc(formatarReais(Number(pedido.taxa_entrega)))}</p>
-  <p class="total">TOTAL ${esc(formatarReais(total))}</p>
-  <p class="rodape">${esc(MARCA.tagline)}</p>
-  <script>
-    window.onload = function () {
-      window.focus();
-      window.print();
-    };
-  </script>
-</body>
-</html>`;
-}
-
-/** Abre janela de impressão da comanda */
-export function imprimirComanda(pedido: PedidoComItens) {
+/** Gera e baixa a comanda em PDF (sem precisar de impressora) */
+export function baixarComandaPdf(pedido: PedidoComItens) {
   if (typeof window === "undefined") return;
 
-  const html = htmlComanda(pedido);
-  const janela = window.open("", "_blank", "noopener,noreferrer,width=420,height=720");
+  const codigo = pedido.id.slice(0, 8).toUpperCase();
+  const largura = 80; // mm
+  const margem = 4;
+  const maxW = largura - margem * 2;
+  const itens = pedido.itens_pedido;
+  const alturaEstimada = Math.max(
+    120,
+    70 + itens.length * 8 + (pedido.observacao ? 16 : 0),
+  );
 
-  if (!janela) {
-    // Pop-up bloqueado: tenta iframe oculto
-    const iframe = document.createElement("iframe");
-    iframe.setAttribute("aria-hidden", "true");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    document.body.appendChild(iframe);
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) {
-      document.body.removeChild(iframe);
-      window.alert(
-        "Não foi possível abrir a impressão. Permita pop-ups neste site e tente de novo.",
-      );
-      return;
+  const doc = new jsPDF({
+    unit: "mm",
+    format: [largura, alturaEstimada],
+    orientation: "portrait",
+  });
+
+  let y = 8;
+
+  const centro = (texto: string, size: number, bold = false) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFontSize(size);
+    doc.text(texto, largura / 2, y, { align: "center", maxWidth: maxW });
+    y += size * 0.45 + 1.5;
+  };
+
+  const linha = (texto: string, size = 9, bold = false) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFontSize(size);
+    const partes = doc.splitTextToSize(texto, maxW) as string[];
+    for (const p of partes) {
+      doc.text(p, margem, y);
+      y += size * 0.4 + 1.2;
     }
-    doc.open();
-    doc.write(html);
-    doc.close();
-    setTimeout(() => {
-      try {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      } finally {
-        setTimeout(() => document.body.removeChild(iframe), 1000);
-      }
-    }, 250);
-    return;
+  };
+
+  const tracejado = () => {
+    y += 1;
+    doc.setDrawColor(0);
+    doc.setLineDashPattern([1, 1], 0);
+    doc.line(margem, y, largura - margem, y);
+    doc.setLineDashPattern([], 0);
+    y += 4;
+  };
+
+  centro(MARCA.nome, 11, true);
+  centro("Comanda da cozinha", 8);
+  y += 1;
+  centro(`#${codigo}`, 16, true);
+  centro(formatarHora(pedido.criado_em), 8);
+  tracejado();
+
+  if (pedido.cliente_nome) {
+    linha(`Cliente: ${pedido.cliente_nome}`, 9, true);
+  }
+  if (pedido.cliente_telefone) {
+    linha(`Tel: ${pedido.cliente_telefone}`, 9);
+  }
+  const bairro = pedido.bairro_entrega ? ` (${pedido.bairro_entrega})` : "";
+  linha(`Entrega: ${pedido.endereco_entrega}${bairro}`, 9);
+  tracejado();
+
+  for (const item of itens) {
+    const valor = formatarReais(
+      Number(item.preco_unitario) * item.quantidade,
+    );
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(`${item.quantidade}x`, margem, y);
+    doc.setFont("helvetica", "normal");
+    const nomePartes = doc.splitTextToSize(item.nome, maxW - 22) as string[];
+    doc.text(nomePartes[0] ?? "", margem + 8, y);
+    doc.text(valor, largura - margem, y, { align: "right" });
+    y += 5;
+    for (let i = 1; i < nomePartes.length; i++) {
+      doc.text(nomePartes[i]!, margem + 8, y);
+      y += 4.5;
+    }
   }
 
-  janela.document.open();
-  janela.document.write(html);
-  janela.document.close();
+  if (pedido.observacao?.trim()) {
+    y += 1;
+    linha(`OBS: ${pedido.observacao.trim()}`, 11, true);
+  }
+
+  tracejado();
+  linha(`Itens: ${formatarReais(Number(pedido.total))}`, 9);
+  linha(`Entrega: ${formatarReais(Number(pedido.taxa_entrega))}`, 9);
+  const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  linha(`TOTAL ${formatarReais(total)}`, 12, true);
+  y += 3;
+  centro(MARCA.tagline, 7);
+
+  doc.save(`comanda-${codigo}.pdf`);
+}
+
+/** Alias usado pelo painel — hoje baixa PDF */
+export function imprimirComanda(pedido: PedidoComItens) {
+  baixarComandaPdf(pedido);
 }
