@@ -236,6 +236,21 @@ export async function listarPedidosLocal(
     );
 }
 
+export async function buscarPedidoLocal(pedidoId: string) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) return null;
+
+  const restaurante = banco.restaurantes.find(
+    (r) => r.id === pedido.restaurante_id,
+  );
+
+  return {
+    ...pedido,
+    restaurante_nome: restaurante?.nome ?? "Restaurante",
+  };
+}
+
 export async function atualizarStatusPedidoLocal(
   pedidoId: string,
   status: StatusPedido,

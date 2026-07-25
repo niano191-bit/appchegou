@@ -55,6 +55,27 @@ export type CorridaComItens = PedidoComItens & {
   restaurante_nome: string;
 };
 
+export type PedidoDetalhe = PedidoComItens & {
+  restaurante_nome: string;
+};
+
+/** Busca um pedido pelo id */
+export async function buscarPedido(pedidoId: string) {
+  const resposta = await fetch(`/api/pedidos/${pedidoId}`, {
+    cache: "no-store",
+  });
+  const json = (await resposta.json()) as {
+    pedido?: PedidoDetalhe;
+    erro?: string;
+  };
+
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível carregar o pedido.");
+  }
+
+  return json.pedido!;
+}
+
 /** Lista corridas do entregador */
 export async function listarCorridas(entregadorId: string) {
   const params = new URLSearchParams({ entregadorId });

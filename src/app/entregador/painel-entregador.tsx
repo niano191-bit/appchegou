@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { SeloAoVivo } from "@/components/selo-ao-vivo";
+import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import { DEMO } from "@/lib/demo-ids";
 import {
   atualizarStatusPedido,
@@ -15,11 +17,12 @@ export function PainelEntregador() {
   const [erro, setErro] = useState<string | null>(null);
   const [acaoId, setAcaoId] = useState<string | null>(null);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (silencioso = false) => {
     try {
-      setErro(null);
+      if (!silencioso) setErro(null);
       const dados = await listarCorridas(DEMO.entregadorId);
       setCorridas(dados);
+      setErro(null);
     } catch (e) {
       setErro(
         e instanceof Error
@@ -32,8 +35,12 @@ export function PainelEntregador() {
   }, []);
 
   useEffect(() => {
-    void carregar();
+    void carregar(false);
   }, [carregar]);
+
+  useTempoRealPedidos(() => {
+    void carregar(true);
+  });
 
   async function acao(
     pedidoId: string,
@@ -46,7 +53,7 @@ export function PainelEntregador() {
       await atualizarStatusPedido(pedidoId, status, {
         entregadorId: DEMO.entregadorId,
       });
-      await carregar();
+      await carregar(true);
     } catch (e) {
       setErro(
         e instanceof Error
@@ -68,6 +75,8 @@ export function PainelEntregador() {
 
   return (
     <div className="flex w-full flex-col gap-4">
+      <SeloAoVivo />
+
       {erro ? (
         <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
           {erro}
@@ -155,17 +164,6 @@ export function PainelEntregador() {
           );
         })}
       </ul>
-
-      <button
-        type="button"
-        onClick={() => {
-          setCarregando(true);
-          void carregar();
-        }}
-        className="text-sm font-medium text-[#C45C26] underline-offset-2 hover:underline"
-      >
-        Atualizar lista
-      </button>
     </div>
   );
 }

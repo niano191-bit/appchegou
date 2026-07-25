@@ -103,12 +103,8 @@ export function CardapioComCarrinho({
       });
 
       setCarrinho({});
-      setSucesso(
-        `Pedido enviado! Código ${pedido.id.slice(0, 8)}. O restaurante já pode aceitar.`,
-      );
-      setTimeout(() => {
-        router.push("/restaurante");
-      }, 1500);
+      setSucesso("Pedido enviado! Abrindo acompanhamento ao vivo…");
+      router.push(`/cliente/pedido/${pedido.id}`);
     } catch (e) {
       setErro(
         e instanceof Error ? e.message : "Não foi possível fazer o pedido.",

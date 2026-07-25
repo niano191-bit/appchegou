@@ -119,6 +119,27 @@ export async function criarPedido(entrada: {
   return pedido as Pedido;
 }
 
+/** Busca um pedido pelo id (com itens e nome do restaurante) */
+export async function buscarPedido(pedidoId: string) {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .select("*, itens_pedido(*), restaurantes(nome)")
+    .eq("id", pedidoId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+
+  const restaurantes = data.restaurantes as { nome?: string } | null;
+  const { restaurantes: _, ...pedido } = data;
+
+  return {
+    ...(pedido as PedidoComItens),
+    restaurante_nome: restaurantes?.nome ?? "Restaurante",
+  };
+}
+
 /** Busca pedidos no Supabase (só no servidor / API) */
 export async function listarPedidosDoRestaurante(
   restauranteId: string,

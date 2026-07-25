@@ -61,7 +61,7 @@ export default function Home() {
         </div>
 
         <p className="text-sm text-[#8A7460]">
-          Fase 4 — Entregador: aceitar corrida e confirmar entrega.
+          Fase 5 — Tempo real: status atualiza sozinho nas telas.
         </p>
       </main>
     </div>

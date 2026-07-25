@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
-import { atualizarStatusPedidoLocal, usandoModoDemo } from "@/lib/local-db";
-import { atualizarStatusPedido } from "@/lib/pedidos-servidor";
+import {
+  atualizarStatusPedidoLocal,
+  buscarPedidoLocal,
+  usandoModoDemo,
+} from "@/lib/local-db";
+import {
+  atualizarStatusPedido,
+  buscarPedido,
+} from "@/lib/pedidos-servidor";
 import type { StatusPedido } from "@/types/database";
 
 const STATUS_VALIDOS: StatusPedido[] = [
@@ -10,6 +17,40 @@ const STATUS_VALIDOS: StatusPedido[] = [
   "a_caminho",
   "entregue",
 ];
+
+/** Busca um pedido pelo id */
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id } = await context.params;
+
+  try {
+    if (usandoModoDemo()) {
+      const pedido = await buscarPedidoLocal(id);
+      if (!pedido) {
+        return NextResponse.json(
+          { erro: "Pedido não encontrado." },
+          { status: 404 },
+        );
+      }
+      return NextResponse.json({ modo: "demo", pedido });
+    }
+
+    const pedido = await buscarPedido(id);
+    if (!pedido) {
+      return NextResponse.json(
+        { erro: "Pedido não encontrado." },
+        { status: 404 },
+      );
+    }
+    return NextResponse.json({ modo: "supabase", pedido });
+  } catch (e) {
+    const mensagem =
+      e instanceof Error ? e.message : "Erro ao buscar pedido.";
+    return NextResponse.json({ erro: mensagem }, { status: 500 });
+  }
+}
 
 /** Atualiza o status de um pedido */
 export async function PATCH(
