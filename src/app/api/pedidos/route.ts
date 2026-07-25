@@ -3,6 +3,7 @@ import { DEMO } from "@/lib/demo-ids";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import {
   criarPedidoLocal,
+  lerConfiguracaoLocal,
   listarPedidosLocal,
   usandoModoDemo,
   type ItemNovoPedido,
@@ -75,16 +76,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const entrada = {
-    clienteId: DEMO.clienteId,
-    restauranteId: corpo.restauranteId,
-    endereco_entrega: corpo.endereco_entrega.trim(),
-    observacao: corpo.observacao,
-    taxa_entrega: TAXA_ENTREGA_PADRAO,
-    itens: corpo.itens,
-  };
-
   try {
+    const taxa = usandoModoDemo()
+      ? (await lerConfiguracaoLocal()).taxa_entrega
+      : TAXA_ENTREGA_PADRAO;
+
+    const entrada = {
+      clienteId: DEMO.clienteId,
+      restauranteId: corpo.restauranteId,
+      endereco_entrega: corpo.endereco_entrega.trim(),
+      observacao: corpo.observacao,
+      taxa_entrega: Number(taxa),
+      itens: corpo.itens,
+    };
+
     if (usandoModoDemo()) {
       const pedido = await criarPedidoLocal(entrada);
       return NextResponse.json({ modo: "demo", pedido }, { status: 201 });

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buscarRestauranteComCardapio } from "@/lib/catalogo";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
+import { buscarTaxaEntrega } from "@/lib/dono";
 import { criarPedido } from "@/lib/pedidos";
 import type { ItemCardapio, Restaurante } from "@/types/database";
 import { formatarReais } from "@/types/database";
@@ -24,6 +25,7 @@ export function CardapioComCarrinho({
   const [carrinho, setCarrinho] = useState<Record<string, ItemCarrinho>>({});
   const [endereco, setEndereco] = useState("Rua Teste, 100 — Barra, Salvador");
   const [observacao, setObservacao] = useState("");
+  const [taxaEntrega, setTaxaEntrega] = useState(TAXA_ENTREGA_PADRAO);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -33,9 +35,13 @@ export function CardapioComCarrinho({
     void (async () => {
       try {
         setErro(null);
-        const dados = await buscarRestauranteComCardapio(restauranteId);
+        const [dados, taxa] = await Promise.all([
+          buscarRestauranteComCardapio(restauranteId),
+          buscarTaxaEntrega().catch(() => TAXA_ENTREGA_PADRAO),
+        ]);
         setRestaurante(dados.restaurante);
         setCardapio(dados.cardapio);
+        setTaxaEntrega(taxa);
       } catch (e) {
         setErro(
           e instanceof Error ? e.message : "Não foi possível carregar o cardápio.",
@@ -57,7 +63,7 @@ export function CardapioComCarrinho({
     [itensCarrinho],
   );
 
-  const total = subtotal + TAXA_ENTREGA_PADRAO;
+  const total = subtotal + taxaEntrega;
 
   function alterarQuantidade(item: ItemCardapio, delta: number) {
     setCarrinho((atual) => {
@@ -260,7 +266,7 @@ export function CardapioComCarrinho({
           </div>
           <div className="flex justify-between">
             <span>Taxa de entrega</span>
-            <span>{formatarReais(TAXA_ENTREGA_PADRAO)}</span>
+            <span>{formatarReais(taxaEntrega)}</span>
           </div>
           <div className="flex justify-between text-base font-semibold text-[#1A120C]">
             <span>Total</span>

@@ -1,0 +1,106 @@
+import type { Configuracao, Restaurante, Usuario } from "@/types/database";
+import type { PedidoComItens } from "@/lib/pedidos-servidor";
+
+export type ResumoDia = {
+  qtd_pedidos: number;
+  faturamento: number;
+  comissao: number;
+  ticket_medio: number;
+};
+
+export type PedidoDono = PedidoComItens & {
+  restaurante_nome: string;
+  comissao_percentual: number;
+  comissao_valor: number;
+};
+
+export async function buscarResumoDia() {
+  const resposta = await fetch("/api/dono/resumo", { cache: "no-store" });
+  const json = (await resposta.json()) as {
+    resumo?: ResumoDia;
+    erro?: string;
+  };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao carregar resumo.");
+  return json.resumo!;
+}
+
+export async function buscarPedidosDono() {
+  const resposta = await fetch("/api/dono/pedidos", { cache: "no-store" });
+  const json = (await resposta.json()) as {
+    pedidos?: PedidoDono[];
+    erro?: string;
+  };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao carregar pedidos.");
+  return json.pedidos ?? [];
+}
+
+export async function buscarRestaurantesDono() {
+  const resposta = await fetch("/api/dono/restaurantes", { cache: "no-store" });
+  const json = (await resposta.json()) as {
+    restaurantes?: Restaurante[];
+    erro?: string;
+  };
+  if (!resposta.ok)
+    throw new Error(json.erro ?? "Erro ao carregar restaurantes.");
+  return json.restaurantes ?? [];
+}
+
+export async function atualizarRestauranteDono(entrada: {
+  id: string;
+  comissao_percentual?: number;
+  ativo?: boolean;
+}) {
+  const resposta = await fetch("/api/dono/restaurantes", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entrada),
+  });
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao salvar restaurante.");
+}
+
+export async function buscarEntregadoresDono() {
+  const resposta = await fetch("/api/dono/entregadores", { cache: "no-store" });
+  const json = (await resposta.json()) as {
+    entregadores?: Usuario[];
+    erro?: string;
+  };
+  if (!resposta.ok)
+    throw new Error(json.erro ?? "Erro ao carregar entregadores.");
+  return json.entregadores ?? [];
+}
+
+export async function buscarConfiguracaoDono() {
+  const resposta = await fetch("/api/dono/configuracao", { cache: "no-store" });
+  const json = (await resposta.json()) as {
+    configuracao?: Configuracao;
+    erro?: string;
+  };
+  if (!resposta.ok)
+    throw new Error(json.erro ?? "Erro ao carregar configuração.");
+  return json.configuracao!;
+}
+
+export async function salvarConfiguracaoDono(config: Configuracao) {
+  const resposta = await fetch("/api/dono/configuracao", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  const json = (await resposta.json()) as {
+    configuracao?: Configuracao;
+    erro?: string;
+  };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao salvar configuração.");
+  return json.configuracao!;
+}
+
+export async function buscarTaxaEntrega() {
+  const resposta = await fetch("/api/configuracao", { cache: "no-store" });
+  const json = (await resposta.json()) as {
+    configuracao?: Configuracao;
+    erro?: string;
+  };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao carregar taxa.");
+  return Number(json.configuracao!.taxa_entrega);
+}

@@ -35,7 +35,7 @@ export default function Home() {
           <p className="mt-1 opacity-90">
             {supabase.configured
               ? supabase.message
-              : "Fluxo completo: cliente → restaurante → entregador."}
+              : "Fluxo completo: cliente → restaurante → entregador → dono."}
           </p>
         </div>
 
@@ -58,10 +58,16 @@ export default function Home() {
           >
             App do entregador
           </Link>
+          <Link
+            href="/dono"
+            className="inline-flex w-full items-center justify-center rounded-xl border border-[#1A120C] px-5 py-3.5 text-sm font-semibold text-[#1A120C] transition hover:bg-[#F5F0EA]"
+          >
+            Painel do dono
+          </Link>
         </div>
 
         <p className="text-sm text-[#8A7460]">
-          Fase 5 — Tempo real: status atualiza sozinho nas telas.
+          Fase 6 — Painel do dono: números, comissões e configurações.
         </p>
       </main>
     </div>

@@ -64,6 +64,13 @@ export type ItemPedido = {
   quantidade: number;
 };
 
+/** Configurações gerais do app (taxa e horário) */
+export type Configuracao = {
+  taxa_entrega: number;
+  horario_abertura: string;
+  horario_fechamento: string;
+};
+
 /** Formata valor em reais: R$ 0,00 */
 export function formatarReais(valor: number) {
   return valor.toLocaleString("pt-BR", {

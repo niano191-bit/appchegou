@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { DEMO } from "@/lib/demo-ids";
 import type {
+  Configuracao,
   ItemCardapio,
   ItemPedido,
   Pedido,
@@ -9,6 +10,7 @@ import type {
   StatusPedido,
   Usuario,
 } from "@/types/database";
+import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 
 export type PedidoLocal = Pedido & { itens_pedido: ItemPedido[] };
 
@@ -17,7 +19,16 @@ type BancoLocal = {
   usuarios: Usuario[];
   itens_cardapio: ItemCardapio[];
   pedidos: PedidoLocal[];
+  configuracao: Configuracao;
 };
+
+export function configuracaoPadrao(): Configuracao {
+  return {
+    taxa_entrega: TAXA_ENTREGA_PADRAO,
+    horario_abertura: "10:00",
+    horario_fechamento: "22:00",
+  };
+}
 
 const arquivoDb = path.join(process.cwd(), ".data", "db.json");
 
@@ -30,6 +41,7 @@ function dadosIniciais(): BancoLocal {
   const criado = agora();
 
   return {
+    configuracao: configuracaoPadrao(),
     restaurantes: [
       {
         id: DEMO.restauranteAcarajeId,
@@ -212,7 +224,15 @@ async function garantirArquivo() {
 export async function lerBancoLocal(): Promise<BancoLocal> {
   await garantirArquivo();
   const bruto = await fs.readFile(arquivoDb, "utf8");
-  return JSON.parse(bruto) as BancoLocal;
+  const banco = JSON.parse(bruto) as BancoLocal;
+
+  // Bancos antigos sem configuração ganham o padrão automaticamente
+  if (!banco.configuracao) {
+    banco.configuracao = configuracaoPadrao();
+    await fs.writeFile(arquivoDb, JSON.stringify(banco, null, 2), "utf8");
+  }
+
+  return banco;
 }
 
 async function salvarBancoLocal(banco: BancoLocal) {
@@ -419,6 +439,111 @@ export async function criarPedidoLocal(entrada: {
   banco.pedidos.push(pedido);
   await salvarBancoLocal(banco);
   return pedido;
+}
+
+export async function lerConfiguracaoLocal() {
+  const banco = await lerBancoLocal();
+  return banco.configuracao;
+}
+
+export async function salvarConfiguracaoLocal(config: Configuracao) {
+  const banco = await lerBancoLocal();
+  banco.configuracao = {
+    taxa_entrega: Number(config.taxa_entrega),
+    horario_abertura: config.horario_abertura,
+    horario_fechamento: config.horario_fechamento,
+  };
+  await salvarBancoLocal(banco);
+  return banco.configuracao;
+}
+
+export async function atualizarRestauranteLocal(
+  id: string,
+  patch: { comissao_percentual?: number; ativo?: boolean },
+) {
+  const banco = await lerBancoLocal();
+  const loja = banco.restaurantes.find((r) => r.id === id);
+  if (!loja) throw new Error("Restaurante não encontrado.");
+
+  if (patch.comissao_percentual !== undefined) {
+    const valor = Number(patch.comissao_percentual);
+    if (Number.isNaN(valor) || valor < 0 || valor > 100) {
+      throw new Error("Comissão deve ser entre 0 e 100.");
+    }
+    loja.comissao_percentual = valor;
+  }
+  if (patch.ativo !== undefined) {
+    loja.ativo = patch.ativo;
+  }
+
+  await salvarBancoLocal(banco);
+  return loja;
+}
+
+export async function listarEntregadoresLocal() {
+  const banco = await lerBancoLocal();
+  return banco.usuarios.filter((u) => u.papel === "entregador");
+}
+
+export async function listarTodosPedidosLocal() {
+  const banco = await lerBancoLocal();
+  const porRestaurante = new Map(
+    banco.restaurantes.map((r) => [r.id, r]),
+  );
+
+  return banco.pedidos
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime(),
+    )
+    .map((p) => {
+      const loja = porRestaurante.get(p.restaurante_id);
+      const comissaoPct = Number(loja?.comissao_percentual ?? 0);
+      const comissaoValor = (Number(p.total) * comissaoPct) / 100;
+      return {
+        ...p,
+        restaurante_nome: loja?.nome ?? "Restaurante",
+        comissao_percentual: comissaoPct,
+        comissao_valor: comissaoValor,
+      };
+    });
+}
+
+function inicioFimDoDiaSalvador() {
+  const agoraSp = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
+  );
+  const y = agoraSp.getFullYear();
+  const m = String(agoraSp.getMonth() + 1).padStart(2, "0");
+  const d = String(agoraSp.getDate()).padStart(2, "0");
+  // Intervalo do dia em Salvador, convertido para comparação ISO
+  const inicio = new Date(`${y}-${m}-${d}T00:00:00-03:00`);
+  const fim = new Date(`${y}-${m}-${d}T23:59:59.999-03:00`);
+  return { inicio, fim };
+}
+
+/** Números do dia: pedidos, comissão e ticket médio */
+export async function resumoDoDiaLocal() {
+  const pedidos = await listarTodosPedidosLocal();
+  const { inicio, fim } = inicioFimDoDiaSalvador();
+
+  const doDia = pedidos.filter((p) => {
+    const t = new Date(p.criado_em).getTime();
+    return t >= inicio.getTime() && t <= fim.getTime();
+  });
+
+  const qtdPedidos = doDia.length;
+  const faturamento = doDia.reduce((s, p) => s + Number(p.total), 0);
+  const comissao = doDia.reduce((s, p) => s + Number(p.comissao_valor), 0);
+  const ticketMedio = qtdPedidos > 0 ? faturamento / qtdPedidos : 0;
+
+  return {
+    qtd_pedidos: qtdPedidos,
+    faturamento,
+    comissao,
+    ticket_medio: ticketMedio,
+  };
 }
 
 /** Indica se estamos no modo demonstração (sem Supabase) */
