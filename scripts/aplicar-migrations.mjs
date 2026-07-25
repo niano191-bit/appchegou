@@ -23,6 +23,7 @@ const files = [
   ["014", "supabase/migrations/014_fase22_pedido_minimo.sql"],
   ["015", "supabase/migrations/015_fase23_cupons.sql"],
   ["016", "supabase/migrations/016_fase24_avaliacao_obs.sql"],
+  ["017", "supabase/migrations/017_fase25_horario_gorjeta.sql"],
 ];
 
 async function runQuery(query) {
@@ -59,7 +60,8 @@ const cols = await runQuery(`
       'numero_dia', 'data_pedido',
       'tempo_estimado_minutos', 'previsao_entrega_em',
       'cancelado_por', 'motivo_cancelamento',
-      'troco_para'
+      'troco_para',
+      'gorjeta'
     )
   order by 1
 `);
@@ -68,7 +70,10 @@ const colsLoja = await runQuery(`
   from information_schema.columns
   where table_schema = 'public'
     and table_name = 'restaurantes'
-    and column_name in ('pedido_minimo', 'pausado', 'comissao_percentual')
+    and column_name in (
+      'pedido_minimo', 'pausado', 'comissao_percentual',
+      'horario_abertura', 'horario_fechamento'
+    )
   order by 1
 `);
 console.log("Colunas chave em pedidos:", cols);

@@ -67,6 +67,7 @@ export function CardapioComCarrinho({
   } | null>(null);
   const [validandoCupom, setValidandoCupom] = useState(false);
   const [buscaPrato, setBuscaPrato] = useState("");
+  const [gorjeta, setGorjeta] = useState(0);
 
   useEffect(() => {
     const salvo = lerEnderecoSalvo();
@@ -173,7 +174,8 @@ export function CardapioComCarrinho({
     cupomAplicado && cupomAplicado.desconto > 0
       ? Math.min(cupomAplicado.desconto, subtotal)
       : 0;
-  const total = Math.max(0, subtotal - desconto) + taxaEntrega;
+  const total =
+    Math.max(0, subtotal - desconto) + taxaEntrega + Number(gorjeta || 0);
   const pedidoMinimo = valorPedidoMinimo(restaurante);
   const abaixoDoMinimo = pedidoMinimo > 0 && subtotal + 1e-9 < pedidoMinimo;
   const avisoMinimo = textoPedidoMinimo(pedidoMinimo);
@@ -325,6 +327,7 @@ export function CardapioComCarrinho({
         observacao: observacao.trim() || undefined,
         bairroId: bairroId || undefined,
         cupomCodigo: cupomAplicado?.codigo,
+        gorjeta: Number(gorjeta || 0),
         itens: itensCarrinho.map((linha) => ({
           item_cardapio_id: linha.item.id,
           quantidade: linha.quantidade,
@@ -368,7 +371,7 @@ export function CardapioComCarrinho({
       : "aberta";
   const aceitaPedidos = statusLoja === "aberta";
   const avisoFechado = config
-    ? mensagemBloqueioPedido(statusLoja, config)
+    ? mensagemBloqueioPedido(statusLoja, config, restaurante)
     : "";
 
   return (
@@ -614,6 +617,26 @@ export function CardapioComCarrinho({
               </p>
             ) : null}
           </div>
+
+          <div>
+            <p className="text-sm text-muted">Gorjeta ao entregador (opcional)</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[0, 2, 5, 10].map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setGorjeta(v)}
+                  className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                    gorjeta === v
+                      ? "bg-dende text-white"
+                      : "border border-linha bg-white text-muted"
+                  }`}
+                >
+                  {v === 0 ? "Sem gorjeta" : formatarReais(v)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="mt-4 space-y-1 text-sm text-muted">
@@ -638,6 +661,12 @@ export function CardapioComCarrinho({
                 : formatarReais(taxaEntrega)}
             </span>
           </div>
+          {gorjeta > 0 ? (
+            <div className="flex justify-between">
+              <span>Gorjeta (entregador)</span>
+              <span>{formatarReais(gorjeta)}</span>
+            </div>
+          ) : null}
           <div className="flex justify-between text-base font-semibold text-foreground">
             <span>Total</span>
             <span>{formatarReais(total)}</span>

@@ -71,20 +71,30 @@ export type StatusOperacaoLoja =
   | "fora_horario"
   | "inativa";
 
+/** Horario efetivo da loja (proprio ou geral do app) */
+export function horarioEfetivoLoja(
+  loja: Pick<Restaurante, "horario_abertura" | "horario_fechamento">,
+  config: Pick<Configuracao, "horario_abertura" | "horario_fechamento">,
+) {
+  const abertura =
+    loja.horario_abertura?.trim() || config.horario_abertura;
+  const fechamento =
+    loja.horario_fechamento?.trim() || config.horario_fechamento;
+  return { abertura, fechamento };
+}
+
 export function statusOperacaoLoja(
-  loja: Pick<Restaurante, "ativo" | "pausado">,
+  loja: Pick<
+    Restaurante,
+    "ativo" | "pausado" | "horario_abertura" | "horario_fechamento"
+  >,
   config: Pick<Configuracao, "horario_abertura" | "horario_fechamento">,
   agora = new Date(),
 ): StatusOperacaoLoja {
   if (!loja.ativo) return "inativa";
   if (loja.pausado) return "pausada";
-  if (
-    !estaDentroDoHorario(
-      config.horario_abertura,
-      config.horario_fechamento,
-      agora,
-    )
-  ) {
+  const { abertura, fechamento } = horarioEfetivoLoja(loja, config);
+  if (!estaDentroDoHorario(abertura, fechamento, agora)) {
     return "fora_horario";
   }
   return "aberta";
@@ -106,12 +116,19 @@ export function rotuloStatusOperacao(status: StatusOperacaoLoja): string {
 export function mensagemBloqueioPedido(
   status: StatusOperacaoLoja,
   config: Pick<Configuracao, "horario_abertura" | "horario_fechamento">,
+  loja?: Pick<Restaurante, "horario_abertura" | "horario_fechamento">,
 ): string {
+  const horario = loja
+    ? horarioEfetivoLoja(loja, config)
+    : {
+        abertura: config.horario_abertura,
+        fechamento: config.horario_fechamento,
+      };
   switch (status) {
     case "pausada":
       return "Esta loja pausou os pedidos por enquanto. Tente mais tarde.";
     case "fora_horario":
-      return `Estamos fechados agora. Funcionamento: ${config.horario_abertura} às ${config.horario_fechamento} (Salvador).`;
+      return `Estamos fechados agora. Funcionamento: ${horario.abertura} às ${horario.fechamento} (Salvador).`;
     case "inativa":
       return "Esta loja não está disponível.";
     default:

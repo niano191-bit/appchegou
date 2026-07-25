@@ -77,6 +77,7 @@ export async function POST(request: Request) {
     const pref = await criarPreferenciaCheckout({
       pedidoId: pedido.id,
       taxaEntrega: Number(pedido.taxa_entrega),
+      gorjeta: Number(pedido.gorjeta ?? 0),
       itens: pedido.itens_pedido.map((item) => ({
         title: item.nome,
         quantity: item.quantidade,

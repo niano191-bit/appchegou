@@ -187,6 +187,7 @@ export async function criarPedido(entrada: {
   observacao?: string;
   bairroId?: string;
   cupomCodigo?: string;
+  gorjeta?: number;
   itens: ItemCarrinhoEnvio[];
 }) {
   const resposta = await fetch("/api/pedidos", {

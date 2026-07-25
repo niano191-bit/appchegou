@@ -93,6 +93,7 @@ export async function POST(request: Request) {
     observacao?: string;
     bairroId?: string;
     cupomCodigo?: string;
+    gorjeta?: number;
     itens?: ItemNovoPedido[];
   };
 
@@ -133,6 +134,7 @@ export async function POST(request: Request) {
       bairroId: corpo.bairroId,
       taxa_entrega: Number(taxaPadrao),
       cupomCodigo: corpo.cupomCodigo,
+      gorjeta: corpo.gorjeta != null ? Number(corpo.gorjeta) : 0,
       itens: corpo.itens,
     };
 
@@ -155,7 +157,9 @@ export async function POST(request: Request) {
       mensagem.includes("Cupom") ||
       mensagem.includes("cupom") ||
       mensagem.includes("mínimo") ||
-      mensagem.includes("minimo")
+      mensagem.includes("minimo") ||
+      mensagem.includes("Gorjeta") ||
+      mensagem.includes("gorjeta")
         ? 400
         : 500;
     return NextResponse.json({ erro: mensagem }, { status });

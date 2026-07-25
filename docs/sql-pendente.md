@@ -1,6 +1,6 @@
 # SQL no Supabase (produção)
 
-**Atualizado:** migrations `004` → `016` (avaliacao + obs por item).
+**Atualizado:** migrations `004` → `017` (horario por loja + gorjeta).
 
 Se criar um projeto novo do zero, rode nesta ordem:
 
@@ -20,6 +20,7 @@ Se criar um projeto novo do zero, rode nesta ordem:
 14. `014_fase22_pedido_minimo.sql`
 15. `015_fase23_cupons.sql`
 16. `016_fase24_avaliacao_obs.sql`
+17. `017_fase25_horario_gorjeta.sql`
 
 Script local (com `SUPABASE_ACCESS_TOKEN`):
 

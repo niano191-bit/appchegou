@@ -62,6 +62,8 @@ export async function PATCH(request: Request) {
     imagem_url?: string | null;
     pausado?: boolean;
     pedido_minimo?: number;
+    horario_abertura?: string | null;
+    horario_fechamento?: string | null;
   };
 
   try {
@@ -86,6 +88,8 @@ export async function PATCH(request: Request) {
       imagem_url: corpo.imagem_url,
       pausado: corpo.pausado,
       pedido_minimo: corpo.pedido_minimo,
+      horario_abertura: corpo.horario_abertura,
+      horario_fechamento: corpo.horario_fechamento,
     };
 
     if (usandoModoDemo()) {

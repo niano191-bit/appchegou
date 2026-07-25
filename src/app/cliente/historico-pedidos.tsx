@@ -93,7 +93,8 @@ export function HistoricoPedidos() {
       </h2>
       <ul className="flex flex-col gap-3">
         {pedidos.map((p) => {
-          const total = Number(p.total) + Number(p.taxa_entrega);
+          const total =
+            Number(p.total) + Number(p.taxa_entrega) + Number(p.gorjeta ?? 0);
           const dinheiro = pedidoEhDinheiroPendente(p);
           const pendente = p.status_pagamento !== "pago" && !dinheiro;
           const href = pendente

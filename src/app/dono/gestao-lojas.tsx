@@ -104,6 +104,9 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
         endereco: String(dados.get("endereco") ?? ""),
         comissao_percentual: Number(dados.get("comissao") ?? 0),
         pedido_minimo: Number(dados.get("pedido_minimo") ?? 0),
+        horario_abertura: String(dados.get("horario_abertura") ?? "").trim() || null,
+        horario_fechamento:
+          String(dados.get("horario_fechamento") ?? "").trim() || null,
       });
       setMsg("Loja atualizada.");
       await onAtualizou();
@@ -361,6 +364,29 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
                         className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
                       />
                     </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="block text-sm text-muted">
+                        Abre (loja)
+                        <input
+                          name="horario_abertura"
+                          type="time"
+                          defaultValue={loja.horario_abertura ?? ""}
+                          className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+                        />
+                      </label>
+                      <label className="block text-sm text-muted">
+                        Fecha (loja)
+                        <input
+                          name="horario_fechamento"
+                          type="time"
+                          defaultValue={loja.horario_fechamento ?? ""}
+                          className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs text-muted">
+                      Vazio = usa o horário geral do app.
+                    </p>
                     <button
                       type="submit"
                       disabled={salvando}

@@ -256,7 +256,10 @@ export function TelaPagamento({
     );
   }
 
-  const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  const total =
+    Number(pedido.total) +
+    Number(pedido.taxa_entrega) +
+    Number(pedido.gorjeta ?? 0);
   const mpAtivo = opcoes?.mercadopago.ativo ?? true;
   const lpAtivo = opcoes?.lucpaguei.ativo ?? true;
   const lpConfigurado = opcoes?.lucpaguei.configurado ?? false;
@@ -293,6 +296,11 @@ export function TelaPagamento({
           <p className="mt-1 text-xs text-mar">
             Cupom {pedido.cupom_codigo} (−
             {formatarReais(Number(pedido.desconto))})
+          </p>
+        ) : null}
+        {Number(pedido.gorjeta ?? 0) > 0 ? (
+          <p className="mt-1 text-xs text-muted">
+            Gorjeta ao entregador: {formatarReais(Number(pedido.gorjeta))}
           </p>
         ) : null}
         <p className="mt-1 text-sm text-muted">

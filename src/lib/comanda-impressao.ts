@@ -117,7 +117,12 @@ export function baixarComandaPdf(pedido: PedidoComItens) {
   tracejado();
   linha(`Itens: ${formatarReais(Number(pedido.total))}`, 9);
   linha(`Entrega: ${formatarReais(Number(pedido.taxa_entrega))}`, 9);
-  const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  const gorjeta = Number(pedido.gorjeta ?? 0);
+  if (gorjeta > 0) {
+    linha(`Gorjeta: ${formatarReais(gorjeta)}`, 9);
+  }
+  const total =
+    Number(pedido.total) + Number(pedido.taxa_entrega) + gorjeta;
   linha(`TOTAL ${formatarReais(total)}`, 12, true);
   if (pedidoEhDinheiroPendente(pedido)) {
     y += 1;

@@ -24,6 +24,7 @@ import {
 import { montarFechamentoDia } from "@/lib/fechamento";
 import {
   dataPedidoSalvador,
+  horaParaMinutos,
   inicioFimDoDiaSalvador,
   mensagemBloqueioPedido,
   statusOperacaoLoja,
@@ -117,6 +118,8 @@ function dadosIniciais(): BancoLocal {
         ativo: true,
         pausado: false,
         pedido_minimo: 0,
+        horario_abertura: null,
+        horario_fechamento: null,
         criado_em: criado,
       },
       {
@@ -129,6 +132,8 @@ function dadosIniciais(): BancoLocal {
         ativo: true,
         pausado: false,
         pedido_minimo: 0,
+        horario_abertura: null,
+        horario_fechamento: null,
         criado_em: criado,
       },
     ],
@@ -335,6 +340,14 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
     }
     if (loja.pedido_minimo === undefined) {
       loja.pedido_minimo = 0;
+      mudou = true;
+    }
+    if (loja.horario_abertura === undefined) {
+      loja.horario_abertura = null;
+      mudou = true;
+    }
+    if (loja.horario_fechamento === undefined) {
+      loja.horario_fechamento = null;
       mudou = true;
     }
   }
@@ -593,7 +606,10 @@ export async function ganhosEntregadorHojeLocal(entregadorId: string) {
     return t >= inicio.getTime() && t <= fim.getTime();
   });
 
-  const valor = entregues.reduce((s, p) => s + Number(p.taxa_entrega), 0);
+  const valor = entregues.reduce(
+    (s, p) => s + Number(p.taxa_entrega) + Number(p.gorjeta ?? 0),
+    0,
+  );
   return { entregas: entregues.length, valor };
 }
 
@@ -617,7 +633,10 @@ export async function ganhosTodosEntregadoresHojeLocal() {
         nome: e.nome,
         telefone: e.telefone,
         entregas: entregues.length,
-        valor: entregues.reduce((s, p) => s + Number(p.taxa_entrega), 0),
+        valor: entregues.reduce(
+          (s, p) => s + Number(p.taxa_entrega) + Number(p.gorjeta ?? 0),
+          0,
+        ),
       };
     })
     .sort((a, b) => b.valor - a.valor || a.nome.localeCompare(b.nome, "pt-BR"));
@@ -766,6 +785,8 @@ export async function criarRestauranteLocal(entrada: {
     ativo: true,
     pausado: false,
     pedido_minimo: 0,
+    horario_abertura: null,
+    horario_fechamento: null,
     criado_em: criado,
   };
 
@@ -944,6 +965,7 @@ export async function criarPedidoLocal(entrada: {
   /** Ignorado se houver bairros ativos — taxa vem do bairro */
   taxa_entrega?: number;
   cupomCodigo?: string | null;
+  gorjeta?: number;
   itens: ItemNovoPedido[];
 }) {
   if (!entrada.itens.length) {
@@ -962,7 +984,7 @@ export async function criarPedidoLocal(entrada: {
   const config = normalizarConfiguracao(banco.configuracao);
   const status = statusOperacaoLoja(restaurante, config);
   if (status !== "aberta") {
-    throw new Error(mensagemBloqueioPedido(status, config));
+    throw new Error(mensagemBloqueioPedido(status, config, restaurante));
   }
 
   const ativos = banco.bairros.filter((b) => b.ativo);
@@ -980,6 +1002,12 @@ export async function criarPedidoLocal(entrada: {
     taxa = Number(bairro.taxa);
     bairroNome = bairro.nome;
   }
+
+  let gorjeta = Number(entrada.gorjeta ?? 0);
+  if (!Number.isFinite(gorjeta) || gorjeta < 0) {
+    throw new Error("Gorjeta inválida.");
+  }
+  gorjeta = Number(gorjeta.toFixed(2));
 
   const criado = agora();
   const pedidoId = crypto.randomUUID();
@@ -1061,6 +1089,7 @@ export async function criarPedidoLocal(entrada: {
     troco_para: null,
     desconto,
     cupom_codigo: cupomCodigo,
+    gorjeta,
     avaliacao_nota: null,
     avaliacao_comentario: null,
     avaliado_em: null,
@@ -1149,7 +1178,10 @@ export async function escolherDinheiroLocal(
     throw new Error("Pedido cancelado.");
   }
 
-  const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  const total =
+    Number(pedido.total) +
+    Number(pedido.taxa_entrega) +
+    Number(pedido.gorjeta ?? 0);
   let troco: number | null = null;
   if (trocoPara != null && Number(trocoPara) > 0) {
     troco = Number(trocoPara);
@@ -1241,6 +1273,8 @@ export type PatchRestaurante = {
   ativo?: boolean;
   pausado?: boolean;
   pedido_minimo?: number;
+  horario_abertura?: string | null;
+  horario_fechamento?: string | null;
 };
 
 export async function atualizarRestauranteLocal(
@@ -1284,6 +1318,20 @@ export async function atualizarRestauranteLocal(
       throw new Error("Pedido mínimo inválido.");
     }
     loja.pedido_minimo = Number(valor.toFixed(2));
+  }
+  if (patch.horario_abertura !== undefined) {
+    const h = patch.horario_abertura?.trim() || null;
+    if (h && horaParaMinutos(h) === null) {
+      throw new Error("Horário de abertura inválido (use HH:MM).");
+    }
+    loja.horario_abertura = h;
+  }
+  if (patch.horario_fechamento !== undefined) {
+    const h = patch.horario_fechamento?.trim() || null;
+    if (h && horaParaMinutos(h) === null) {
+      throw new Error("Horário de fechamento inválido (use HH:MM).");
+    }
+    loja.horario_fechamento = h;
   }
 
   await salvarBancoLocal(banco);

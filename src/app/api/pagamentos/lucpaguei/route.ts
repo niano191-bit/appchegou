@@ -64,7 +64,10 @@ export async function POST(request: Request) {
       });
     }
 
-    const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+    const total =
+      Number(pedido.total) +
+      Number(pedido.taxa_entrega) +
+      Number(pedido.gorjeta ?? 0);
     const cobranca = await criarCheckoutLucPaguei({
       pedidoId: pedido.id,
       valorTotal: total,

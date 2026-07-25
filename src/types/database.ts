@@ -34,6 +34,9 @@ export type Restaurante = {
   pausado: boolean;
   /** Valor minimo do subtotal (sem taxa de entrega); 0 = sem minimo */
   pedido_minimo: number;
+  /** Horario da loja (HH:MM). Null/vazio = usa o horario geral do app */
+  horario_abertura?: string | null;
+  horario_fechamento?: string | null;
   criado_em: string;
 };
 
@@ -91,6 +94,8 @@ export type Pedido = {
   desconto?: number;
   /** Codigo do cupom aplicado */
   cupom_codigo?: string | null;
+  /** Gorjeta opcional para o entregador */
+  gorjeta?: number;
   /** Nota 1-5 do cliente apos entrega */
   avaliacao_nota?: number | null;
   /** Comentario opcional da avaliacao */

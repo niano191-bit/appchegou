@@ -28,6 +28,7 @@ export async function criarPreferenciaCheckout(entrada: {
   pedidoId: string;
   itens: ItemPreferencia[];
   taxaEntrega: number;
+  gorjeta?: number;
 }) {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
   if (!token) {
@@ -51,6 +52,16 @@ export async function criarPreferenciaCheckout(entrada: {
       title: "Taxa de entrega",
       quantity: 1,
       unit_price: Number(entrada.taxaEntrega),
+      currency_id: "BRL",
+    });
+  }
+
+  const gorjeta = Number(entrada.gorjeta ?? 0);
+  if (gorjeta > 0) {
+    items.push({
+      title: "Gorjeta ao entregador",
+      quantity: 1,
+      unit_price: gorjeta,
       currency_id: "BRL",
     });
   }

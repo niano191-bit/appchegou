@@ -124,8 +124,8 @@ export function PainelEntregador() {
           {ganhos.entregas === 0
             ? "Nenhuma entrega concluída ainda hoje."
             : ganhos.entregas === 1
-              ? "1 entrega concluída"
-              : `${ganhos.entregas} entregas concluídas`}
+              ? "1 entrega concluída (taxas + gorjetas)"
+              : `${ganhos.entregas} entregas concluídas (taxas + gorjetas)`}
         </p>
       </div>
 
@@ -147,6 +147,8 @@ export function PainelEntregador() {
         {corridas.map((corrida) => {
           const ocupado = acaoId === corrida.id;
           const taxa = Number(corrida.taxa_entrega);
+          const gorjeta = Number(corrida.gorjeta ?? 0);
+          const ganho = taxa + gorjeta;
 
           return (
             <li
@@ -159,8 +161,13 @@ export function PainelEntregador() {
                     {corrida.restaurante_nome} · {rotuloPedido(corrida)}
                   </p>
                   <p className="mt-1 text-lg font-semibold text-foreground">
-                    Seu ganho: {formatarReais(taxa)}
+                    Seu ganho: {formatarReais(ganho)}
                   </p>
+                  {gorjeta > 0 ? (
+                    <p className="mt-0.5 text-xs text-mar">
+                      Inclui gorjeta de {formatarReais(gorjeta)}
+                    </p>
+                  ) : null}
                   {pedidoEhDinheiroPendente(corrida) ? (
                     <p className="mt-1 text-xs font-semibold text-dende">
                       {textoCobrancaDinheiro(corrida)}

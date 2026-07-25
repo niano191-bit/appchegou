@@ -26,6 +26,7 @@ export type FechamentoDia = {
   comissao: number;
   ticket_medio: number;
   taxa_entrega_total: number;
+  gorjeta_total: number;
   entregues: number;
   cancelados: number;
   em_andamento: number;
@@ -40,6 +41,7 @@ type PedidoFechamento = Pick<
   | "forma_pagamento"
   | "total"
   | "taxa_entrega"
+  | "gorjeta"
   | "criado_em"
 > & {
   restaurante_nome?: string;
@@ -94,6 +96,10 @@ export function montarFechamentoDia(entrada: {
     (s, p) => s + Number(p.taxa_entrega),
     0,
   );
+  const gorjeta_total = doDia.reduce(
+    (s, p) => s + Number(p.gorjeta ?? 0),
+    0,
+  );
   const entregues = doDia.filter((p) => p.status === "entregue").length;
   const em_andamento = doDia.filter((p) =>
     EM_ANDAMENTO.includes(p.status),
@@ -146,6 +152,7 @@ export function montarFechamentoDia(entrada: {
     comissao,
     ticket_medio: qtd > 0 ? faturamento / qtd : 0,
     taxa_entrega_total,
+    gorjeta_total,
     entregues,
     cancelados,
     em_andamento,
@@ -171,6 +178,9 @@ export function textoFechamentoWhatsApp(f: FechamentoDia) {
     `  Dinheiro: ${formatarReais(f.faturamento_dinheiro)}`,
     `Comissão: ${formatarReais(f.comissao)}`,
     `Taxas de entrega: ${formatarReais(f.taxa_entrega_total)}`,
+    f.gorjeta_total > 0
+      ? `Gorjetas: ${formatarReais(f.gorjeta_total)}`
+      : null,
     `Ticket médio: ${formatarReais(f.ticket_medio)}`,
   ];
 

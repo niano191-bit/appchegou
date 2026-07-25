@@ -89,6 +89,8 @@ export async function PATCH(request: Request) {
     comissao_percentual?: number;
     ativo?: boolean;
     pedido_minimo?: number;
+    horario_abertura?: string | null;
+    horario_fechamento?: string | null;
   };
 
   try {
@@ -112,6 +114,8 @@ export async function PATCH(request: Request) {
     comissao_percentual: corpo.comissao_percentual,
     ativo: corpo.ativo,
     pedido_minimo: corpo.pedido_minimo,
+    horario_abertura: corpo.horario_abertura,
+    horario_fechamento: corpo.horario_fechamento,
   };
 
   try {

@@ -80,6 +80,8 @@ export async function atualizarRestauranteDono(entrada: {
   comissao_percentual?: number;
   ativo?: boolean;
   pedido_minimo?: number;
+  horario_abertura?: string | null;
+  horario_fechamento?: string | null;
 }) {
   const resposta = await fetch("/api/dono/restaurantes", {
     method: "PATCH",

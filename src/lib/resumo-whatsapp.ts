@@ -18,6 +18,7 @@ type PedidoResumo = Pick<
   | "troco_para"
   | "total"
   | "taxa_entrega"
+  | "gorjeta"
   | "endereco_entrega"
   | "bairro_entrega"
   | "observacao"
@@ -31,7 +32,10 @@ type PedidoResumo = Pick<
 
 /** Texto pronto para colar / enviar no WhatsApp */
 export function textoResumoPedidoWhatsApp(pedido: PedidoResumo) {
-  const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  const total =
+    Number(pedido.total) +
+    Number(pedido.taxa_entrega) +
+    Number(pedido.gorjeta ?? 0);
   const itens = pedido.itens_pedido
     .map((i) => {
       const obs = i.observacao?.trim()
@@ -62,6 +66,9 @@ export function textoResumoPedidoWhatsApp(pedido: PedidoResumo) {
     "",
     `Itens: ${formatarReais(Number(pedido.total))}`,
     `Entrega: ${formatarReais(Number(pedido.taxa_entrega))}`,
+    Number(pedido.gorjeta ?? 0) > 0
+      ? `Gorjeta: ${formatarReais(Number(pedido.gorjeta))}`
+      : null,
     `*Total: ${formatarReais(total)}*`,
     pedidoEhDinheiroPendente(pedido)
       ? `*${textoCobrancaDinheiro(pedido)}*`

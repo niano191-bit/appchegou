@@ -22,6 +22,7 @@ import {
 import { montarFechamentoDia } from "@/lib/fechamento";
 import {
   dataPedidoSalvador,
+  horaParaMinutos,
   inicioFimDoDiaSalvador,
   mensagemBloqueioPedido,
   statusOperacaoLoja,
@@ -298,6 +299,7 @@ export async function criarPedido(entrada: {
   bairroId?: string;
   taxa_entrega?: number;
   cupomCodigo?: string | null;
+  gorjeta?: number;
   itens: ItemNovoPedido[];
 }) {
   if (!entrada.itens.length) {
@@ -309,7 +311,7 @@ export async function criarPedido(entrada: {
   const config = await lerConfiguracao();
   const status = statusOperacaoLoja(loja, config);
   if (status !== "aberta") {
-    throw new Error(mensagemBloqueioPedido(status, config));
+    throw new Error(mensagemBloqueioPedido(status, config, loja));
   }
 
   const ativos = await listarBairros(true);
@@ -327,6 +329,12 @@ export async function criarPedido(entrada: {
     taxa = Number(bairro.taxa);
     bairroNome = bairro.nome;
   }
+
+  let gorjeta = Number(entrada.gorjeta ?? 0);
+  if (!Number.isFinite(gorjeta) || gorjeta < 0) {
+    throw new Error("Gorjeta inválida.");
+  }
+  gorjeta = Number(gorjeta.toFixed(2));
 
   const supabase = createSupabaseClient();
   const cardapio = await listarCardapio(entrada.restauranteId);
@@ -394,6 +402,7 @@ export async function criarPedido(entrada: {
         data_pedido: dataPedido,
         desconto,
         cupom_codigo: cupomCodigo,
+        gorjeta,
       })
       .select("*")
       .single();
@@ -697,7 +706,7 @@ export async function ganhosEntregadorHoje(
 
   const { data, error } = await supabase
     .from("pedidos")
-    .select("taxa_entrega")
+    .select("taxa_entrega, gorjeta")
     .eq("entregador_id", entregadorId)
     .eq("status", "entregue")
     .eq("status_pagamento", "pago")
@@ -707,7 +716,10 @@ export async function ganhosEntregadorHoje(
   if (error) throw new Error(error.message);
 
   const lista = data ?? [];
-  const valor = lista.reduce((s, p) => s + Number(p.taxa_entrega), 0);
+  const valor = lista.reduce(
+    (s, p) => s + Number(p.taxa_entrega) + Number(p.gorjeta ?? 0),
+    0,
+  );
   return { entregas: lista.length, valor };
 }
 
@@ -727,7 +739,7 @@ export async function ganhosTodosEntregadoresHoje(): Promise<
 
   const { data, error } = await supabase
     .from("pedidos")
-    .select("entregador_id, taxa_entrega")
+    .select("entregador_id, taxa_entrega, gorjeta")
     .eq("status", "entregue")
     .eq("status_pagamento", "pago")
     .not("entregador_id", "is", null)
@@ -741,7 +753,7 @@ export async function ganhosTodosEntregadoresHoje(): Promise<
     const id = p.entregador_id as string;
     const atual = porId.get(id) ?? { entregas: 0, valor: 0 };
     atual.entregas += 1;
-    atual.valor += Number(p.taxa_entrega);
+    atual.valor += Number(p.taxa_entrega) + Number(p.gorjeta ?? 0);
     porId.set(id, atual);
   }
 
@@ -829,7 +841,10 @@ export async function escolherDinheiro(
     throw new Error("Pedido cancelado.");
   }
 
-  const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  const total =
+    Number(pedido.total) +
+    Number(pedido.taxa_entrega) +
+    Number(pedido.gorjeta ?? 0);
   let troco: number | null = null;
   if (trocoPara != null && Number(trocoPara) > 0) {
     troco = Number(Number(trocoPara).toFixed(2));
@@ -1017,6 +1032,8 @@ export async function atualizarRestaurante(
     ativo?: boolean;
     pausado?: boolean;
     pedido_minimo?: number;
+    horario_abertura?: string | null;
+    horario_fechamento?: string | null;
   },
 ) {
   const supabase = createSupabaseClient();
@@ -1051,6 +1068,20 @@ export async function atualizarRestaurante(
       throw new Error("Pedido mínimo inválido.");
     }
     limpo.pedido_minimo = Number(valor.toFixed(2));
+  }
+  if (patch.horario_abertura !== undefined) {
+    const h = patch.horario_abertura?.trim() || null;
+    if (h && horaParaMinutos(h) === null) {
+      throw new Error("Horário de abertura inválido (use HH:MM).");
+    }
+    limpo.horario_abertura = h;
+  }
+  if (patch.horario_fechamento !== undefined) {
+    const h = patch.horario_fechamento?.trim() || null;
+    if (h && horaParaMinutos(h) === null) {
+      throw new Error("Horário de fechamento inválido (use HH:MM).");
+    }
+    limpo.horario_fechamento = h;
   }
 
   const { data, error } = await supabase

@@ -35,6 +35,9 @@ export function PainelRestaurante() {
   const [pausando, setPausando] = useState(false);
   const [pedidoMinimo, setPedidoMinimo] = useState("0");
   const [salvandoMinimo, setSalvandoMinimo] = useState(false);
+  const [horarioAbertura, setHorarioAbertura] = useState("");
+  const [horarioFechamento, setHorarioFechamento] = useState("");
+  const [salvandoHorario, setSalvandoHorario] = useState(false);
   /** Pedido aguardando escolha do tempo estimado */
   const [escolhendoEtaId, setEscolhendoEtaId] = useState<string | null>(null);
 
@@ -72,6 +75,8 @@ export function PainelRestaurante() {
         if (lojaRes?.restaurante) {
           setPausado(Boolean(lojaRes.restaurante.pausado));
           setPedidoMinimo(String(Number(lojaRes.restaurante.pedido_minimo ?? 0)));
+          setHorarioAbertura(lojaRes.restaurante.horario_abertura ?? "");
+          setHorarioFechamento(lojaRes.restaurante.horario_fechamento ?? "");
         }
         setErro(null);
       } catch (e) {
@@ -142,6 +147,39 @@ export function PainelRestaurante() {
       );
     } finally {
       setSalvandoMinimo(false);
+    }
+  }
+
+  async function salvarHorarioLoja() {
+    setSalvandoHorario(true);
+    setErro(null);
+    try {
+      const resposta = await fetch("/api/restaurante/loja", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          horario_abertura: horarioAbertura.trim() || null,
+          horario_fechamento: horarioFechamento.trim() || null,
+        }),
+      });
+      const json = (await resposta.json()) as {
+        restaurante?: {
+          horario_abertura?: string | null;
+          horario_fechamento?: string | null;
+        };
+        erro?: string;
+      };
+      if (!resposta.ok) {
+        throw new Error(json.erro ?? "Não foi possível salvar o horário.");
+      }
+      setHorarioAbertura(json.restaurante?.horario_abertura ?? "");
+      setHorarioFechamento(json.restaurante?.horario_fechamento ?? "");
+    } catch (e) {
+      setErro(
+        e instanceof Error ? e.message : "Não foi possível salvar o horário.",
+      );
+    } finally {
+      setSalvandoHorario(false);
     }
   }
 
@@ -245,7 +283,7 @@ export function PainelRestaurante() {
         <p className="text-sm font-medium text-foreground">
           {pausado
             ? "Pedidos pausados — clientes não conseguem pedir."
-            : "Loja recebendo pedidos (dentro do horário do app)."}
+            : "Loja recebendo pedidos (dentro do horário de funcionamento)."}
         </p>
         <button
           type="button"
@@ -289,6 +327,44 @@ export function PainelRestaurante() {
             {salvandoMinimo ? "…" : "Salvar"}
           </button>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-linha bg-white px-4 py-3">
+        <p className="text-sm font-medium text-foreground">
+          Horário desta loja
+        </p>
+        <p className="mt-1 text-xs text-muted">
+          Deixe em branco para usar o horário geral do app. Formato HH:MM
+          (Salvador).
+        </p>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <label className="block text-xs text-muted">
+            Abre
+            <input
+              type="time"
+              value={horarioAbertura}
+              onChange={(e) => setHorarioAbertura(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
+            />
+          </label>
+          <label className="block text-xs text-muted">
+            Fecha
+            <input
+              type="time"
+              value={horarioFechamento}
+              onChange={(e) => setHorarioFechamento(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
+            />
+          </label>
+        </div>
+        <button
+          type="button"
+          disabled={salvandoHorario}
+          onClick={() => void salvarHorarioLoja()}
+          className="mt-2 w-full rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {salvandoHorario ? "Salvando…" : "Salvar horário"}
+        </button>
       </div>
 
       <div className="flex gap-2">
@@ -340,7 +416,9 @@ export function PainelRestaurante() {
         {pedidos.map((pedido) => {
           const ocupado = acaoId === pedido.id;
           const totalComEntrega =
-            Number(pedido.total) + Number(pedido.taxa_entrega);
+            Number(pedido.total) +
+            Number(pedido.taxa_entrega) +
+            Number(pedido.gorjeta ?? 0);
 
           return (
             <li

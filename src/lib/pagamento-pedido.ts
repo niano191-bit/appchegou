@@ -22,10 +22,21 @@ export function pedidoEhDinheiroPendente(
   );
 }
 
-export function textoCobrancaDinheiro(
-  pedido: Pick<Pedido, "total" | "taxa_entrega" | "troco_para">,
+/** Total cobrado do cliente: itens + entrega + gorjeta */
+export function totalAPagar(
+  pedido: Pick<Pedido, "total" | "taxa_entrega" | "gorjeta">,
 ) {
-  const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  return (
+    Number(pedido.total) +
+    Number(pedido.taxa_entrega) +
+    Number(pedido.gorjeta ?? 0)
+  );
+}
+
+export function textoCobrancaDinheiro(
+  pedido: Pick<Pedido, "total" | "taxa_entrega" | "gorjeta" | "troco_para">,
+) {
+  const total = totalAPagar(pedido);
   const trocoPara = pedido.troco_para != null ? Number(pedido.troco_para) : null;
   if (trocoPara != null && trocoPara > total) {
     const troco = trocoPara - total;

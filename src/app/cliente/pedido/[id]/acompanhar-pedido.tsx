@@ -164,7 +164,10 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
 
   const cancelado = pedido.status === "cancelado";
   const indiceAtual = cancelado ? -1 : ETAPAS.indexOf(pedido.status);
-  const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  const total =
+    Number(pedido.total) +
+    Number(pedido.taxa_entrega) +
+    Number(pedido.gorjeta ?? 0);
   const dinheiroPendente = pedidoEhDinheiroPendente(pedido);
   const aguardandoPagamento =
     !cancelado &&
@@ -370,6 +373,11 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
           <p className="mt-3 text-sm text-mar">
             Cupom {pedido.cupom_codigo}: −
             {formatarReais(Number(pedido.desconto))}
+          </p>
+        ) : null}
+        {Number(pedido.gorjeta ?? 0) > 0 ? (
+          <p className="mt-2 text-sm text-muted">
+            Gorjeta: {formatarReais(Number(pedido.gorjeta))}
           </p>
         ) : null}
         <p className="mt-3 font-semibold text-foreground">
