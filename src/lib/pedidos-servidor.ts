@@ -338,6 +338,7 @@ export async function criarPedido(entrada: {
     nome: string;
     preco_unitario: number;
     quantidade: number;
+    observacao: string | null;
   }[] = [];
 
   for (const item of entrada.itens) {
@@ -351,6 +352,7 @@ export async function criarPedido(entrada: {
       nome: doCardapio.nome,
       preco_unitario: Number(doCardapio.preco),
       quantidade: item.quantidade,
+      observacao: item.observacao?.trim() || null,
     });
   }
 
@@ -1226,4 +1228,46 @@ export async function excluirCupom(id: string) {
   const supabase = createSupabaseClient();
   const { error } = await supabase.from("cupons").delete().eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** Cliente avalia pedido entregue */
+export async function avaliarPedido(
+  pedidoId: string,
+  clienteId: string,
+  nota: number,
+  comentario?: string | null,
+) {
+  const pedido = await buscarPedido(pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.cliente_id !== clienteId) {
+    throw new Error("Este pedido não é seu.");
+  }
+  if (pedido.status !== "entregue") {
+    throw new Error("Só é possível avaliar pedidos entregues.");
+  }
+  if (pedido.avaliacao_nota != null) {
+    throw new Error("Este pedido já foi avaliado.");
+  }
+  const n = Math.round(Number(nota));
+  if (!Number.isFinite(n) || n < 1 || n > 5) {
+    throw new Error("Informe uma nota de 1 a 5.");
+  }
+
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .update({
+      avaliacao_nota: n,
+      avaliacao_comentario: comentario?.trim() || null,
+      avaliado_em: new Date().toISOString(),
+      atualizado_em: new Date().toISOString(),
+    })
+    .eq("id", pedidoId)
+    .eq("cliente_id", clienteId)
+    .eq("status", "entregue")
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as Pedido;
 }

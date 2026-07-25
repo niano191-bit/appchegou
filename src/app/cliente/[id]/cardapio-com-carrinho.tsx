@@ -36,6 +36,7 @@ import { formatarReais } from "@/types/database";
 type ItemCarrinho = {
   item: ItemCardapio;
   quantidade: number;
+  observacao?: string;
 };
 
 export function CardapioComCarrinho({
@@ -65,6 +66,7 @@ export function CardapioComCarrinho({
     rotulo: string;
   } | null>(null);
   const [validandoCupom, setValidandoCupom] = useState(false);
+  const [buscaPrato, setBuscaPrato] = useState("");
 
   useEffect(() => {
     const salvo = lerEnderecoSalvo();
@@ -107,6 +109,7 @@ export function CardapioComCarrinho({
             novoCarrinho[item.id] = {
               item,
               quantidade: linha.quantidade,
+              observacao: "",
             };
             ok += 1;
           }
@@ -140,6 +143,16 @@ export function CardapioComCarrinho({
   }, [restauranteId]);
 
   const itensCarrinho = useMemo(() => Object.values(carrinho), [carrinho]);
+
+  const cardapioFiltrado = useMemo(() => {
+    const q = buscaPrato.trim().toLowerCase();
+    if (!q) return cardapio;
+    return cardapio.filter(
+      (i) =>
+        i.nome.toLowerCase().includes(q) ||
+        (i.descricao ?? "").toLowerCase().includes(q),
+    );
+  }, [cardapio, buscaPrato]);
 
   const subtotal = useMemo(
     () =>
@@ -207,7 +220,8 @@ export function CardapioComCarrinho({
 
   function alterarQuantidade(item: ItemCardapio, delta: number) {
     setCarrinho((atual) => {
-      const atualQtd = atual[item.id]?.quantidade ?? 0;
+      const linha = atual[item.id];
+      const atualQtd = linha?.quantidade ?? 0;
       const nova = atualQtd + delta;
 
       if (nova <= 0) {
@@ -217,7 +231,22 @@ export function CardapioComCarrinho({
 
       return {
         ...atual,
-        [item.id]: { item, quantidade: nova },
+        [item.id]: {
+          item,
+          quantidade: nova,
+          observacao: linha?.observacao ?? "",
+        },
+      };
+    });
+  }
+
+  function alterarObsItem(itemId: string, observacao: string) {
+    setCarrinho((atual) => {
+      const linha = atual[itemId];
+      if (!linha) return atual;
+      return {
+        ...atual,
+        [itemId]: { ...linha, observacao },
       };
     });
   }
@@ -299,6 +328,7 @@ export function CardapioComCarrinho({
         itens: itensCarrinho.map((linha) => ({
           item_cardapio_id: linha.item.id,
           quantidade: linha.quantidade,
+          observacao: linha.observacao?.trim() || undefined,
         })),
       });
 
@@ -394,8 +424,19 @@ export function CardapioComCarrinho({
         <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Cardápio
         </h2>
+        <input
+          value={buscaPrato}
+          onChange={(e) => setBuscaPrato(e.target.value)}
+          placeholder="Buscar prato…"
+          className="w-full rounded-xl border border-linha bg-white px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
+        />
+        {cardapioFiltrado.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-linha bg-white/60 px-5 py-6 text-center text-sm text-muted">
+            Nenhum prato encontrado.
+          </p>
+        ) : null}
         <ul className="flex flex-col gap-3">
-          {cardapio.map((item) => {
+          {cardapioFiltrado.map((item) => {
             const qtd = carrinho[item.id]?.quantidade ?? 0;
             return (
               <li
@@ -448,6 +489,18 @@ export function CardapioComCarrinho({
                     </button>
                   </div>
                 </div>
+                {qtd > 0 ? (
+                  <div className="border-t border-linha px-4 py-2">
+                    <input
+                      value={carrinho[item.id]?.observacao ?? ""}
+                      onChange={(e) =>
+                        alterarObsItem(item.id, e.target.value)
+                      }
+                      placeholder="Obs. deste item (ex.: sem pimenta)"
+                      className="w-full rounded-lg border border-linha px-2.5 py-2 text-xs text-foreground outline-none focus:border-dende"
+                    />
+                  </div>
+                ) : null}
               </li>
             );
           })}
@@ -464,15 +517,22 @@ export function CardapioComCarrinho({
             Seu carrinho está vazio. Toque no + para adicionar.
           </p>
         ) : (
-          <ul className="mt-3 flex flex-col gap-1 text-sm">
+          <ul className="mt-3 flex flex-col gap-2 text-sm">
             {itensCarrinho.map((linha) => (
-              <li key={linha.item.id} className="flex justify-between gap-3">
-                <span>
-                  {linha.quantidade}× {linha.item.nome}
-                </span>
-                <span>
-                  {formatarReais(Number(linha.item.preco) * linha.quantidade)}
-                </span>
+              <li key={linha.item.id}>
+                <div className="flex justify-between gap-3">
+                  <span>
+                    {linha.quantidade}× {linha.item.nome}
+                  </span>
+                  <span>
+                    {formatarReais(Number(linha.item.preco) * linha.quantidade)}
+                  </span>
+                </div>
+                {linha.observacao?.trim() ? (
+                  <p className="text-xs text-muted">
+                    Obs.: {linha.observacao.trim()}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>

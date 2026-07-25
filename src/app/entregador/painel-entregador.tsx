@@ -223,6 +223,11 @@ export function PainelEntregador() {
                 {corrida.itens_pedido.map((item) => (
                   <li key={item.id} className="py-0.5">
                     {item.quantidade}× {item.nome}
+                    {item.observacao?.trim() ? (
+                      <span className="mt-0.5 block text-xs text-dende">
+                        Obs.: {item.observacao.trim()}
+                      </span>
+                    ) : null}
                   </li>
                 ))}
               </ul>

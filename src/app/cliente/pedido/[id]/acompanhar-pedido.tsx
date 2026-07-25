@@ -8,6 +8,7 @@ import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import { textoPrevisaoEntrega } from "@/lib/eta";
 import {
+  avaliarPedidoCliente,
   buscarPedido,
   cancelarPedido,
   solicitarEstornoPix,
@@ -80,6 +81,9 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
   const [cancelando, setCancelando] = useState(false);
   const [chavePix, setChavePix] = useState("");
   const [estornando, setEstornando] = useState(false);
+  const [nota, setNota] = useState(5);
+  const [comentarioAvaliacao, setComentarioAvaliacao] = useState("");
+  const [avaliando, setAvaliando] = useState(false);
   /** Atualiza o texto “chega em X min” a cada minuto */
   const [, setTick] = useState(0);
 
@@ -150,7 +154,7 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
     );
   }
 
-  if (erro || !pedido) {
+  if (!pedido) {
     return (
       <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
         {erro ?? "Pedido não encontrado."}
@@ -181,9 +185,31 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
     router.push(`/cliente/${atual.restaurante_id}`);
   }
 
+  async function enviarAvaliacao(atual: PedidoDetalhe) {
+    setAvaliando(true);
+    setErro(null);
+    try {
+      await avaliarPedidoCliente(
+        atual.id,
+        nota,
+        comentarioAvaliacao.trim() || undefined,
+      );
+      await carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao avaliar.");
+    } finally {
+      setAvaliando(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <SeloAoVivo />
+      {erro ? (
+        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
+          {erro}
+        </div>
+      ) : null}
       <AvisoPedido
         ativo={
           !aguardandoPagamento &&
@@ -332,6 +358,11 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
           {pedido.itens_pedido.map((item) => (
             <li key={item.id}>
               {item.quantidade}× {item.nome}
+              {item.observacao?.trim() ? (
+                <span className="block text-xs text-muted">
+                  Obs.: {item.observacao.trim()}
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -355,6 +386,56 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
         >
           {cancelando ? "Cancelando…" : "Cancelar pedido"}
         </button>
+      ) : null}
+
+      {pedido.status === "entregue" && pedido.avaliacao_nota == null ? (
+        <div className="rounded-2xl border border-linha bg-white px-5 py-4">
+          <p className="text-sm font-semibold text-foreground">
+            Como foi o pedido?
+          </p>
+          <div className="mt-3 flex gap-2">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setNota(n)}
+                className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
+                  nota >= n
+                    ? "bg-dende text-white"
+                    : "border border-linha text-muted"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <label className="mt-3 block text-sm text-muted">
+            Comentário (opcional)
+            <input
+              value={comentarioAvaliacao}
+              onChange={(e) => setComentarioAvaliacao(e.target.value)}
+              placeholder="Ex.: chegou quente e rápido"
+              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={avaliando}
+            onClick={() => void enviarAvaliacao(pedido)}
+            className="mt-3 w-full rounded-xl bg-mar px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {avaliando ? "Enviando…" : "Enviar avaliação"}
+          </button>
+        </div>
+      ) : null}
+
+      {pedido.avaliacao_nota != null ? (
+        <div className="rounded-2xl border border-mar/30 bg-mar-suave px-5 py-4 text-sm text-mar">
+          Sua nota: {pedido.avaliacao_nota}/5
+          {pedido.avaliacao_comentario?.trim()
+            ? ` — ${pedido.avaliacao_comentario.trim()}`
+            : ""}
+        </div>
       ) : null}
 
       {podeRepetir ? (

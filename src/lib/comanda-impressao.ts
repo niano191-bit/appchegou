@@ -104,6 +104,9 @@ export function baixarComandaPdf(pedido: PedidoComItens) {
       doc.text(nomePartes[i]!, margem + 8, y);
       y += 4.5;
     }
+    if (item.observacao?.trim()) {
+      linha(`  > ${item.observacao.trim()}`, 8);
+    }
   }
 
   if (pedido.observacao?.trim()) {

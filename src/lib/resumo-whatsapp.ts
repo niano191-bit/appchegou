@@ -33,7 +33,12 @@ type PedidoResumo = Pick<
 export function textoResumoPedidoWhatsApp(pedido: PedidoResumo) {
   const total = Number(pedido.total) + Number(pedido.taxa_entrega);
   const itens = pedido.itens_pedido
-    .map((i) => `• ${i.quantidade}x ${i.nome}`)
+    .map((i) => {
+      const obs = i.observacao?.trim()
+        ? `\n  _Obs: ${i.observacao.trim()}_`
+        : "";
+      return `• ${i.quantidade}x ${i.nome}${obs}`;
+    })
     .join("\n");
 
   const linhas = [

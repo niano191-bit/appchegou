@@ -6,6 +6,7 @@ export type { PedidoComItens };
 export type ItemCarrinhoEnvio = {
   item_cardapio_id: string;
   quantidade: number;
+  observacao?: string;
 };
 
 /** Busca pedidos via API (usa demo local ou Supabase, conforme config) */
@@ -146,6 +147,23 @@ export async function recusarPedido(pedidoId: string, motivo?: string) {
   const json = (await resposta.json()) as { erro?: string };
   if (!resposta.ok) {
     throw new Error(json.erro ?? "Não foi possível recusar o pedido.");
+  }
+}
+
+/** Cliente avalia pedido entregue */
+export async function avaliarPedidoCliente(
+  pedidoId: string,
+  nota: number,
+  comentario?: string,
+) {
+  const resposta = await fetch(`/api/pedidos/${pedidoId}/avaliar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nota, comentario }),
+  });
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Nao foi possivel avaliar o pedido.");
   }
 }
 

@@ -398,6 +398,11 @@ export function PainelRestaurante() {
                   >
                     <span>
                       {item.quantidade}× {item.nome}
+                      {item.observacao?.trim() ? (
+                        <span className="mt-0.5 block text-xs text-dende">
+                          Obs.: {item.observacao.trim()}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="text-muted">
                       {formatarReais(

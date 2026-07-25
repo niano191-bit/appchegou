@@ -91,6 +91,12 @@ export type Pedido = {
   desconto?: number;
   /** Codigo do cupom aplicado */
   cupom_codigo?: string | null;
+  /** Nota 1-5 do cliente apos entrega */
+  avaliacao_nota?: number | null;
+  /** Comentario opcional da avaliacao */
+  avaliacao_comentario?: string | null;
+  /** Quando o cliente avaliou */
+  avaliado_em?: string | null;
   criado_em: string;
   atualizado_em: string;
 };
@@ -114,6 +120,8 @@ export type ItemPedido = {
   nome: string;
   preco_unitario: number;
   quantidade: number;
+  /** Observacao do cliente para este item */
+  observacao?: string | null;
 };
 
 export type GatewayPagamento = "mercadopago" | "lucpaguei";

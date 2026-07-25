@@ -367,6 +367,14 @@ export function PainelDono() {
                       <p className="text-muted">
                         {rotuloPedido(p)} · {formatarReais(Number(p.total))}
                       </p>
+                      {p.avaliacao_nota != null ? (
+                        <p className="text-xs font-medium text-mar">
+                          Nota {p.avaliacao_nota}/5
+                          {p.avaliacao_comentario?.trim()
+                            ? ` — ${p.avaliacao_comentario.trim()}`
+                            : ""}
+                        </p>
+                      ) : null}
                       {pedidoEhDinheiroPendente(p) ? (
                         <p className="text-xs font-semibold text-dende">
                           {textoCobrancaDinheiro(p)}

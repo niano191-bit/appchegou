@@ -931,6 +931,7 @@ export async function atualizarItemCardapioLocal(
 export type ItemNovoPedido = {
   item_cardapio_id: string;
   quantidade: number;
+  observacao?: string | null;
 };
 
 /** Cria pedido com status novo no banco local */
@@ -1009,6 +1010,7 @@ export async function criarPedidoLocal(entrada: {
       nome: doCardapio.nome,
       preco_unitario: Number(doCardapio.preco),
       quantidade: item.quantidade,
+      observacao: item.observacao?.trim() || null,
     });
   }
 
@@ -1059,12 +1061,46 @@ export async function criarPedidoLocal(entrada: {
     troco_para: null,
     desconto,
     cupom_codigo: cupomCodigo,
+    avaliacao_nota: null,
+    avaliacao_comentario: null,
+    avaliado_em: null,
     criado_em: criado,
     atualizado_em: criado,
     itens_pedido: itensPedido,
   };
 
   banco.pedidos.push(pedido);
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
+/** Cliente avalia pedido entregue */
+export async function avaliarPedidoLocal(
+  pedidoId: string,
+  clienteId: string,
+  nota: number,
+  comentario?: string | null,
+) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.cliente_id !== clienteId) {
+    throw new Error("Este pedido não é seu.");
+  }
+  if (pedido.status !== "entregue") {
+    throw new Error("Só é possível avaliar pedidos entregues.");
+  }
+  if (pedido.avaliacao_nota != null) {
+    throw new Error("Este pedido já foi avaliado.");
+  }
+  const n = Math.round(Number(nota));
+  if (!Number.isFinite(n) || n < 1 || n > 5) {
+    throw new Error("Informe uma nota de 1 a 5.");
+  }
+  pedido.avaliacao_nota = n;
+  pedido.avaliacao_comentario = comentario?.trim() || null;
+  pedido.avaliado_em = agora();
+  pedido.atualizado_em = agora();
   await salvarBancoLocal(banco);
   return pedido;
 }
