@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSupabaseStatus } from "@/lib/supabase/status";
 
 export default function Home() {
@@ -34,12 +35,15 @@ export default function Home() {
           <p className="mt-1 opacity-90">{supabase.message}</p>
         </div>
 
+        <Link
+          href="/restaurante"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-[#C45C26] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#A84C1E]"
+        >
+          Abrir painel do restaurante
+        </Link>
+
         <p className="text-sm text-[#8A7460]">
-          Fase 1 — Script do banco pronto em{" "}
-          <code className="rounded bg-black/5 px-1.5 py-0.5 text-xs">
-            supabase/migrations/001_fase1_schema.sql
-          </code>
-          . Cole no SQL Editor do Supabase para criar as tabelas.
+          Fase 2 — Painel do restaurante: aceitar pedidos e marcar como pronto.
         </p>
       </main>
     </div>
