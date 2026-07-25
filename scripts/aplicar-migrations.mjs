@@ -20,6 +20,7 @@ const files = [
   ["011", "supabase/migrations/011_fase19_eta.sql"],
   ["012", "supabase/migrations/012_fase20_numero_pedido.sql"],
   ["013", "supabase/migrations/013_fase21_dinheiro.sql"],
+  ["014", "supabase/migrations/014_fase22_pedido_minimo.sql"],
 ];
 
 async function runQuery(query) {
@@ -60,4 +61,13 @@ const cols = await runQuery(`
     )
   order by 1
 `);
+const colsLoja = await runQuery(`
+  select column_name
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'restaurantes'
+    and column_name in ('pedido_minimo', 'pausado', 'comissao_percentual')
+  order by 1
+`);
 console.log("Colunas chave em pedidos:", cols);
+console.log("Colunas chave em restaurantes:", colsLoja);

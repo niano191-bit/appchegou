@@ -1,6 +1,6 @@
 # SQL no Supabase (produção)
 
-**Atualizado:** migrations `004` → `013` (dinheiro na entrega).
+**Atualizado:** migrations `004` → `014` (pedido mínimo por loja).
 
 Se criar um projeto novo do zero, rode nesta ordem:
 
@@ -17,6 +17,7 @@ Se criar um projeto novo do zero, rode nesta ordem:
 11. `011_fase19_eta.sql`
 12. `012_fase20_numero_pedido.sql`
 13. `013_fase21_dinheiro.sql`
+14. `014_fase22_pedido_minimo.sql`
 
 Script local (com `SUPABASE_ACCESS_TOKEN`):
 

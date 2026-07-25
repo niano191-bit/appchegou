@@ -33,6 +33,8 @@ export function PainelRestaurante() {
   const [acaoId, setAcaoId] = useState<string | null>(null);
   const [pausado, setPausado] = useState(false);
   const [pausando, setPausando] = useState(false);
+  const [pedidoMinimo, setPedidoMinimo] = useState("0");
+  const [salvandoMinimo, setSalvandoMinimo] = useState(false);
   /** Pedido aguardando escolha do tempo estimado */
   const [escolhendoEtaId, setEscolhendoEtaId] = useState<string | null>(null);
 
@@ -69,6 +71,7 @@ export function PainelRestaurante() {
         setPedidos(dados);
         if (lojaRes?.restaurante) {
           setPausado(Boolean(lojaRes.restaurante.pausado));
+          setPedidoMinimo(String(Number(lojaRes.restaurante.pedido_minimo ?? 0)));
         }
         setErro(null);
       } catch (e) {
@@ -107,6 +110,38 @@ export function PainelRestaurante() {
       );
     } finally {
       setPausando(false);
+    }
+  }
+
+  async function salvarPedidoMinimo() {
+    setSalvandoMinimo(true);
+    setErro(null);
+    try {
+      const valor = Number(String(pedidoMinimo).replace(",", "."));
+      if (Number.isNaN(valor) || valor < 0) {
+        throw new Error("Pedido mínimo inválido.");
+      }
+      const resposta = await fetch("/api/restaurante/loja", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pedido_minimo: valor }),
+      });
+      const json = (await resposta.json()) as {
+        restaurante?: { pedido_minimo?: number };
+        erro?: string;
+      };
+      if (!resposta.ok) {
+        throw new Error(json.erro ?? "Não foi possível salvar o pedido mínimo.");
+      }
+      setPedidoMinimo(String(Number(json.restaurante?.pedido_minimo ?? valor)));
+    } catch (e) {
+      setErro(
+        e instanceof Error
+          ? e.message
+          : "Não foi possível salvar o pedido mínimo.",
+      );
+    } finally {
+      setSalvandoMinimo(false);
     }
   }
 
@@ -228,6 +263,32 @@ export function PainelRestaurante() {
               ? "Retomar pedidos"
               : "Pausar pedidos"}
         </button>
+      </div>
+
+      <div className="rounded-2xl border border-linha bg-white px-4 py-3">
+        <p className="text-sm font-medium text-foreground">Pedido mínimo</p>
+        <p className="mt-1 text-xs text-muted">
+          Subtotal mínimo para o cliente pedir (sem a taxa de entrega). Use 0
+          para não ter mínimo.
+        </p>
+        <div className="mt-2 flex gap-2">
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            value={pedidoMinimo}
+            onChange={(e) => setPedidoMinimo(e.target.value)}
+            className="w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
+          />
+          <button
+            type="button"
+            disabled={salvandoMinimo}
+            onClick={() => void salvarPedidoMinimo()}
+            className="shrink-0 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {salvandoMinimo ? "…" : "Salvar"}
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2">

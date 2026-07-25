@@ -88,6 +88,7 @@ export async function PATCH(request: Request) {
     imagem_url?: string | null;
     comissao_percentual?: number;
     ativo?: boolean;
+    pedido_minimo?: number;
   };
 
   try {
@@ -110,6 +111,7 @@ export async function PATCH(request: Request) {
     imagem_url: corpo.imagem_url,
     comissao_percentual: corpo.comissao_percentual,
     ativo: corpo.ativo,
+    pedido_minimo: corpo.pedido_minimo,
   };
 
   try {

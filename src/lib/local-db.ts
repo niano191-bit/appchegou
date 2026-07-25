@@ -23,6 +23,7 @@ import {
   statusOperacaoLoja,
 } from "@/lib/horario";
 import { pedidoVisivelNaOperacao } from "@/lib/pagamento-pedido";
+import { exigirPedidoMinimo } from "@/lib/pedido-minimo";
 
 export type PedidoLocal = Pedido & { itens_pedido: ItemPedido[] };
 
@@ -98,6 +99,7 @@ function dadosIniciais(): BancoLocal {
         comissao_percentual: 12,
         ativo: true,
         pausado: false,
+        pedido_minimo: 0,
         criado_em: criado,
       },
       {
@@ -109,6 +111,7 @@ function dadosIniciais(): BancoLocal {
         comissao_percentual: 15,
         ativo: true,
         pausado: false,
+        pedido_minimo: 0,
         criado_em: criado,
       },
     ],
@@ -309,6 +312,10 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
   for (const loja of banco.restaurantes) {
     if (loja.pausado === undefined) {
       loja.pausado = false;
+      mudou = true;
+    }
+    if (loja.pedido_minimo === undefined) {
+      loja.pedido_minimo = 0;
       mudou = true;
     }
   }
@@ -720,6 +727,7 @@ export async function criarRestauranteLocal(entrada: {
     comissao_percentual: comissao,
     ativo: true,
     pausado: false,
+    pedido_minimo: 0,
     criado_em: criado,
   };
 
@@ -965,6 +973,8 @@ export async function criarPedidoLocal(entrada: {
     });
   }
 
+  exigirPedidoMinimo(restaurante, total);
+
   const dataPedido = dataPedidoSalvador();
   const numerosHoje = banco.pedidos
     .filter((p) => p.data_pedido === dataPedido && p.numero_dia != null)
@@ -1138,6 +1148,7 @@ export type PatchRestaurante = {
   comissao_percentual?: number;
   ativo?: boolean;
   pausado?: boolean;
+  pedido_minimo?: number;
 };
 
 export async function atualizarRestauranteLocal(
@@ -1174,6 +1185,13 @@ export async function atualizarRestauranteLocal(
   }
   if (patch.pausado !== undefined) {
     loja.pausado = patch.pausado;
+  }
+  if (patch.pedido_minimo !== undefined) {
+    const valor = Number(patch.pedido_minimo);
+    if (Number.isNaN(valor) || valor < 0) {
+      throw new Error("Pedido mínimo inválido.");
+    }
+    loja.pedido_minimo = Number(valor.toFixed(2));
   }
 
   await salvarBancoLocal(banco);

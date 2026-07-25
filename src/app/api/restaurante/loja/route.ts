@@ -61,6 +61,7 @@ export async function PATCH(request: Request) {
     endereco?: string | null;
     imagem_url?: string | null;
     pausado?: boolean;
+    pedido_minimo?: number;
   };
 
   try {
@@ -84,6 +85,7 @@ export async function PATCH(request: Request) {
       endereco: corpo.endereco,
       imagem_url: corpo.imagem_url,
       pausado: corpo.pausado,
+      pedido_minimo: corpo.pedido_minimo,
     };
 
     if (usandoModoDemo()) {

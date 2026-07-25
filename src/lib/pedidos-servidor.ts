@@ -21,6 +21,7 @@ import {
   statusOperacaoLoja,
 } from "@/lib/horario";
 import { pedidoVisivelNaOperacao } from "@/lib/pagamento-pedido";
+import { exigirPedidoMinimo } from "@/lib/pedido-minimo";
 
 export type PedidoComItens = Pedido & {
   itens_pedido: ItemPedido[];
@@ -169,6 +170,7 @@ export async function criarRestaurante(entrada: {
       comissao_percentual: comissao,
       ativo: true,
       pausado: false,
+      pedido_minimo: 0,
     })
     .select("*")
     .single();
@@ -344,6 +346,8 @@ export async function criarPedido(entrada: {
       quantidade: item.quantidade,
     });
   }
+
+  exigirPedidoMinimo(loja, total);
 
   const dataPedido = dataPedidoSalvador();
   let numeroDia = await proximoNumeroDia(dataPedido);
@@ -989,6 +993,7 @@ export async function atualizarRestaurante(
     comissao_percentual?: number;
     ativo?: boolean;
     pausado?: boolean;
+    pedido_minimo?: number;
   },
 ) {
   const supabase = createSupabaseClient();
@@ -1017,6 +1022,13 @@ export async function atualizarRestaurante(
   }
   if (patch.ativo !== undefined) limpo.ativo = patch.ativo;
   if (patch.pausado !== undefined) limpo.pausado = patch.pausado;
+  if (patch.pedido_minimo !== undefined) {
+    const valor = Number(patch.pedido_minimo);
+    if (Number.isNaN(valor) || valor < 0) {
+      throw new Error("Pedido mínimo inválido.");
+    }
+    limpo.pedido_minimo = Number(valor.toFixed(2));
+  }
 
   const { data, error } = await supabase
     .from("restaurantes")

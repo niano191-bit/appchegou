@@ -77,6 +77,7 @@ export async function atualizarRestauranteDono(entrada: {
   endereco?: string | null;
   comissao_percentual?: number;
   ativo?: boolean;
+  pedido_minimo?: number;
 }) {
   const resposta = await fetch("/api/dono/restaurantes", {
     method: "PATCH",

@@ -8,6 +8,7 @@ import {
   rotuloStatusOperacao,
   statusOperacaoLoja,
 } from "@/lib/horario";
+import { textoPedidoMinimo, valorPedidoMinimo } from "@/lib/pedido-minimo";
 import type { Configuracao, Restaurante } from "@/types/database";
 
 export function ListaRestaurantes() {
@@ -25,7 +26,11 @@ export function ListaRestaurantes() {
           buscarConfiguracaoPublica().catch(() => null),
         ]);
         setRestaurantes(
-          lojas.map((l) => ({ ...l, pausado: l.pausado ?? false })),
+          lojas.map((l) => ({
+            ...l,
+            pausado: l.pausado ?? false,
+            pedido_minimo: Number(l.pedido_minimo ?? 0),
+          })),
         );
         setConfig(cfg);
       } catch (e) {
@@ -97,6 +102,11 @@ export function ListaRestaurantes() {
                 </div>
                 {loja.descricao ? (
                   <p className="mt-1 text-sm text-muted">{loja.descricao}</p>
+                ) : null}
+                {textoPedidoMinimo(valorPedidoMinimo(loja)) ? (
+                  <p className="mt-1 text-xs font-medium text-dende">
+                    {textoPedidoMinimo(valorPedidoMinimo(loja))}
+                  </p>
                 ) : null}
                 {loja.endereco ? (
                   <p className="mt-2 text-xs text-muted">{loja.endereco}</p>

@@ -103,6 +103,7 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
         descricao: String(dados.get("descricao") ?? ""),
         endereco: String(dados.get("endereco") ?? ""),
         comissao_percentual: Number(dados.get("comissao") ?? 0),
+        pedido_minimo: Number(dados.get("pedido_minimo") ?? 0),
       });
       setMsg("Loja atualizada.");
       await onAtualizou();
@@ -279,6 +280,9 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
                   <p className="text-xs text-muted">
                     {loja.ativo ? "Ativo" : "Inativo"} · comissão{" "}
                     {loja.comissao_percentual}%
+                    {Number(loja.pedido_minimo) > 0
+                      ? ` · mín. ${formatarReais(Number(loja.pedido_minimo))}`
+                      : ""}
                   </p>
                 </div>
                 <button
@@ -343,6 +347,17 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
                         max={100}
                         step={0.5}
                         defaultValue={loja.comissao_percentual}
+                        className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+                      />
+                    </label>
+                    <label className="block text-sm text-muted">
+                      Pedido mínimo (R$) — 0 = sem mínimo
+                      <input
+                        name="pedido_minimo"
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        defaultValue={Number(loja.pedido_minimo ?? 0)}
                         className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
                       />
                     </label>

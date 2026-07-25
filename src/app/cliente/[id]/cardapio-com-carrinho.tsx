@@ -19,6 +19,10 @@ import {
   statusOperacaoLoja,
   type StatusOperacaoLoja,
 } from "@/lib/horario";
+import {
+  textoPedidoMinimo,
+  valorPedidoMinimo,
+} from "@/lib/pedido-minimo";
 import { criarPedido } from "@/lib/pedidos";
 import type {
   BairroEntrega,
@@ -71,6 +75,7 @@ export function CardapioComCarrinho({
         setRestaurante({
           ...dados.restaurante,
           pausado: dados.restaurante.pausado ?? false,
+          pedido_minimo: Number(dados.restaurante.pedido_minimo ?? 0),
         });
         setCardapio(dados.cardapio);
         setTaxaPadrao(taxa);
@@ -105,6 +110,9 @@ export function CardapioComCarrinho({
       ? 0
       : taxaPadrao;
   const total = subtotal + taxaEntrega;
+  const pedidoMinimo = valorPedidoMinimo(restaurante);
+  const abaixoDoMinimo = pedidoMinimo > 0 && subtotal + 1e-9 < pedidoMinimo;
+  const avisoMinimo = textoPedidoMinimo(pedidoMinimo);
 
   function alterarQuantidade(item: ItemCardapio, delta: number) {
     setCarrinho((atual) => {
@@ -136,6 +144,13 @@ export function CardapioComCarrinho({
 
     if (bairros.length > 0 && !bairroId) {
       setErro("Escolha o bairro de entrega.");
+      return;
+    }
+
+    if (abaixoDoMinimo) {
+      setErro(
+        `Pedido mínimo desta loja: ${formatarReais(pedidoMinimo)}. Falta ${formatarReais(pedidoMinimo - subtotal)} no subtotal.`,
+      );
       return;
     }
 
@@ -213,6 +228,9 @@ export function CardapioComCarrinho({
         </div>
         {restaurante.descricao ? (
           <p className="mt-1 text-sm text-muted">{restaurante.descricao}</p>
+        ) : null}
+        {avisoMinimo ? (
+          <p className="mt-2 text-sm font-medium text-dende">{avisoMinimo}</p>
         ) : null}
       </div>
 
@@ -379,6 +397,12 @@ export function CardapioComCarrinho({
             <span>Total</span>
             <span>{formatarReais(total)}</span>
           </div>
+          {abaixoDoMinimo ? (
+            <p className="pt-1 text-xs font-medium text-dende">
+              Falta {formatarReais(pedidoMinimo - subtotal)} para o pedido
+              mínimo ({formatarReais(pedidoMinimo)}).
+            </p>
+          ) : null}
         </div>
 
         <button
@@ -387,6 +411,7 @@ export function CardapioComCarrinho({
             enviando ||
             itensCarrinho.length === 0 ||
             !aceitaPedidos ||
+            abaixoDoMinimo ||
             (bairros.length > 0 && !bairroId)
           }
           onClick={() => void enviarPedido()}
@@ -396,7 +421,9 @@ export function CardapioComCarrinho({
             ? "Enviando…"
             : !aceitaPedidos
               ? "Loja fechada agora"
-              : "Ir para o pagamento"}
+              : abaixoDoMinimo
+                ? `Mínimo ${formatarReais(pedidoMinimo)}`
+                : "Ir para o pagamento"}
         </button>
       </section>
     </div>
