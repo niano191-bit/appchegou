@@ -1,0 +1,53 @@
+import { NextResponse } from "next/server";
+import { atualizarStatusPedidoLocal, usandoModoDemo } from "@/lib/local-db";
+import { atualizarStatusPedido } from "@/lib/pedidos-servidor";
+import type { StatusPedido } from "@/types/database";
+
+const STATUS_VALIDOS: StatusPedido[] = [
+  "novo",
+  "aceito",
+  "pronto",
+  "a_caminho",
+  "entregue",
+];
+
+/** Atualiza o status de um pedido */
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id } = await context.params;
+
+  let corpo: { status?: string };
+  try {
+    corpo = (await request.json()) as { status?: string };
+  } catch {
+    return NextResponse.json(
+      { erro: "Dados inválidos. Envie um JSON com o status." },
+      { status: 400 },
+    );
+  }
+
+  if (!corpo.status || !STATUS_VALIDOS.includes(corpo.status as StatusPedido)) {
+    return NextResponse.json(
+      { erro: "Status inválido." },
+      { status: 400 },
+    );
+  }
+
+  const status = corpo.status as StatusPedido;
+
+  try {
+    if (usandoModoDemo()) {
+      const pedido = await atualizarStatusPedidoLocal(id, status);
+      return NextResponse.json({ modo: "demo", pedido });
+    }
+
+    await atualizarStatusPedido(id, status);
+    return NextResponse.json({ modo: "supabase", ok: true });
+  } catch (e) {
+    const mensagem =
+      e instanceof Error ? e.message : "Erro ao atualizar pedido.";
+    return NextResponse.json({ erro: mensagem }, { status: 500 });
+  }
+}

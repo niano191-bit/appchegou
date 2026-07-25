@@ -7,7 +7,6 @@ import {
   listarPedidosDoRestaurante,
   type PedidoComItens,
 } from "@/lib/pedidos";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
 
 export function PainelRestaurante() {
@@ -17,14 +16,6 @@ export function PainelRestaurante() {
   const [acaoId, setAcaoId] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
-    if (!isSupabaseConfigured()) {
-      setErro(
-        "Supabase ainda não está configurado. Crie o arquivo .env.local com as chaves e rode o SQL da Fase 1.",
-      );
-      setCarregando(false);
-      return;
-    }
-
     try {
       setErro(null);
       const dados = await listarPedidosDoRestaurante(

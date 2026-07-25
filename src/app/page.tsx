@@ -30,9 +30,13 @@ export default function Home() {
           <p className="font-medium">
             {supabase.configured
               ? "Supabase conectado"
-              : "Supabase ainda não configurado"}
+              : "Modo demonstração (banco local)"}
           </p>
-          <p className="mt-1 opacity-90">{supabase.message}</p>
+          <p className="mt-1 opacity-90">
+            {supabase.configured
+              ? supabase.message
+              : "Você já pode testar o painel sem Docker/Supabase. Os pedidos ficam salvos neste computador."}
+          </p>
         </div>
 
         <Link
