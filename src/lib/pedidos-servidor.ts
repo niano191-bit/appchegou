@@ -10,7 +10,7 @@ import type {
 import { SENHA_DEMO } from "@/lib/auth";
 import { gerarHashSenha } from "@/lib/senha";
 import { createSupabaseClient } from "@/lib/supabase/client";
-import type { ItemNovoPedido } from "@/lib/local-db";
+import { normalizarConfiguracao, type ItemNovoPedido } from "@/lib/local-db";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 
 export type PedidoComItens = Pedido & {
@@ -439,40 +439,47 @@ export async function lerConfiguracao() {
 
   if (error) throw new Error(error.message);
   if (!data) {
-    return {
+    return normalizarConfiguracao({
       taxa_entrega: TAXA_ENTREGA_PADRAO,
       horario_abertura: "10:00",
       horario_fechamento: "22:00",
-    } satisfies Configuracao;
+    });
   }
 
-  return {
+  return normalizarConfiguracao({
     taxa_entrega: Number(data.taxa_entrega),
     horario_abertura: data.horario_abertura,
     horario_fechamento: data.horario_fechamento,
-  } satisfies Configuracao;
+    pagamento_mercadopago: data.pagamento_mercadopago,
+    pagamento_lucpaguei: data.pagamento_lucpaguei,
+  });
 }
 
 export async function salvarConfiguracao(config: Configuracao) {
   const supabase = createSupabaseClient();
+  const limpa = normalizarConfiguracao(config);
   const { data, error } = await supabase
     .from("configuracao")
     .upsert({
       id: 1,
-      taxa_entrega: config.taxa_entrega,
-      horario_abertura: config.horario_abertura,
-      horario_fechamento: config.horario_fechamento,
+      taxa_entrega: limpa.taxa_entrega,
+      horario_abertura: limpa.horario_abertura,
+      horario_fechamento: limpa.horario_fechamento,
+      pagamento_mercadopago: limpa.pagamento_mercadopago,
+      pagamento_lucpaguei: limpa.pagamento_lucpaguei,
       atualizado_em: new Date().toISOString(),
     })
     .select("*")
     .single();
 
   if (error) throw new Error(error.message);
-  return {
+  return normalizarConfiguracao({
     taxa_entrega: Number(data.taxa_entrega),
     horario_abertura: data.horario_abertura,
     horario_fechamento: data.horario_fechamento,
-  } satisfies Configuracao;
+    pagamento_mercadopago: data.pagamento_mercadopago,
+    pagamento_lucpaguei: data.pagamento_lucpaguei,
+  });
 }
 
 export async function listarTodosRestaurantes() {

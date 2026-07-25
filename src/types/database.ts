@@ -74,11 +74,17 @@ export type ItemPedido = {
   quantidade: number;
 };
 
-/** Configurações gerais do app (taxa e horário) */
+export type GatewayPagamento = "mercadopago" | "lucpaguei";
+
+/** Configurações gerais do app (taxa, horário e gateways) */
 export type Configuracao = {
   taxa_entrega: number;
   horario_abertura: string;
   horario_fechamento: string;
+  /** Aceitar Mercado Pago no checkout */
+  pagamento_mercadopago: boolean;
+  /** Aceitar LucPaguei no checkout */
+  pagamento_lucpaguei: boolean;
 };
 
 /** Formata valor em reais: R$ 0,00 */

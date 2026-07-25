@@ -5,13 +5,10 @@ import {
   lerConfiguracaoLocal,
   usandoModoDemo,
 } from "@/lib/local-db";
-import {
-  criarPreferenciaCheckout,
-  isMercadoPagoConfigured,
-} from "@/lib/mercadopago";
+import { criarCheckoutLucPaguei, isLucPagueiConfigured } from "@/lib/lucpaguei";
 import { buscarPedido, lerConfiguracao } from "@/lib/pedidos-servidor";
 
-/** Cria link de pagamento no Mercado Pago (sandbox) */
+/** Cria link de pagamento LucPaguei */
 export async function POST(request: Request) {
   let corpo: { pedidoId?: string };
 
@@ -34,9 +31,9 @@ export async function POST(request: Request) {
       ? await lerConfiguracaoLocal()
       : await lerConfiguracao();
 
-    if (!config.pagamento_mercadopago) {
+    if (!config.pagamento_lucpaguei) {
       return NextResponse.json(
-        { erro: "Mercado Pago está desligado nas configurações do dono." },
+        { erro: "LucPaguei está desligado nas configurações do dono." },
         { status: 400 },
       );
     }
@@ -45,17 +42,10 @@ export async function POST(request: Request) {
       ? await buscarPedidoLocal(corpo.pedidoId)
       : await buscarPedido(corpo.pedidoId);
 
-    if (!pedido) {
+    if (!pedido || pedido.cliente_id !== sessao.id) {
       return NextResponse.json(
         { erro: "Pedido não encontrado." },
         { status: 404 },
-      );
-    }
-
-    if (pedido.cliente_id !== sessao.id) {
-      return NextResponse.json(
-        { erro: "Este pedido não é seu." },
-        { status: 403 },
       );
     }
 
@@ -66,31 +56,25 @@ export async function POST(request: Request) {
       });
     }
 
-    if (!isMercadoPagoConfigured()) {
+    if (!isLucPagueiConfigured()) {
       return NextResponse.json({
         simular: true,
         mensagem:
-          "Mercado Pago sem chave no servidor. Use o botão de teste Mercado Pago.",
+          "LucPaguei sem chave no servidor. Use o botão de teste LucPaguei.",
       });
     }
 
-    const pref = await criarPreferenciaCheckout({
+    const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+    const { checkoutUrl } = await criarCheckoutLucPaguei({
       pedidoId: pedido.id,
-      taxaEntrega: Number(pedido.taxa_entrega),
-      itens: pedido.itens_pedido.map((item) => ({
-        title: item.nome,
-        quantity: item.quantidade,
-        unit_price: Number(item.preco_unitario),
-      })),
+      valorTotal: total,
+      descricao: `Pedido ${pedido.restaurante_nome ?? ""} #${pedido.id.slice(0, 8)}`.trim(),
     });
 
-    return NextResponse.json({
-      checkoutUrl: pref.checkoutUrl,
-      preferenceId: pref.preferenceId,
-    });
+    return NextResponse.json({ checkoutUrl, gateway: "lucpaguei" });
   } catch (e) {
     const mensagem =
-      e instanceof Error ? e.message : "Erro ao criar preferência.";
+      e instanceof Error ? e.message : "Erro ao abrir LucPaguei.";
     return NextResponse.json({ erro: mensagem }, { status: 500 });
   }
 }

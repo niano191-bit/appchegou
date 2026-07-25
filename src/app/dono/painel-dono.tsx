@@ -348,6 +348,44 @@ export function PainelDono() {
                 />
               </label>
             </div>
+
+            <div className="space-y-2 border-t border-linha pt-3">
+              <p className="text-sm font-semibold text-foreground">
+                Financeiro — como o cliente paga
+              </p>
+              <label className="flex items-center gap-3 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={config.pagamento_mercadopago ?? true}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      pagamento_mercadopago: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 accent-dende"
+                />
+                Mercado Pago
+              </label>
+              <label className="flex items-center gap-3 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={config.pagamento_lucpaguei ?? true}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      pagamento_lucpaguei: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 accent-mar"
+                />
+                LucPaguei
+              </label>
+              <p className="text-xs text-muted">
+                Os dois podem ficar ligados. O cliente escolhe na hora de pagar.
+              </p>
+            </div>
+
             <button
               type="button"
               disabled={salvando}

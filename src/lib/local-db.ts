@@ -29,6 +29,22 @@ export function configuracaoPadrao(): Configuracao {
     taxa_entrega: TAXA_ENTREGA_PADRAO,
     horario_abertura: "10:00",
     horario_fechamento: "22:00",
+    pagamento_mercadopago: true,
+    pagamento_lucpaguei: true,
+  };
+}
+
+/** Garante campos novos em configs antigas salvas no disco */
+export function normalizarConfiguracao(
+  cfg: Partial<Configuracao> | null | undefined,
+): Configuracao {
+  const base = configuracaoPadrao();
+  return {
+    taxa_entrega: Number(cfg?.taxa_entrega ?? base.taxa_entrega),
+    horario_abertura: cfg?.horario_abertura ?? base.horario_abertura,
+    horario_fechamento: cfg?.horario_fechamento ?? base.horario_fechamento,
+    pagamento_mercadopago: cfg?.pagamento_mercadopago ?? true,
+    pagamento_lucpaguei: cfg?.pagamento_lucpaguei ?? true,
   };
 }
 
@@ -244,6 +260,15 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
   if (!banco.configuracao) {
     banco.configuracao = configuracaoPadrao();
     mudou = true;
+  } else {
+    const normalizada = normalizarConfiguracao(banco.configuracao);
+    if (
+      banco.configuracao.pagamento_mercadopago === undefined ||
+      banco.configuracao.pagamento_lucpaguei === undefined
+    ) {
+      banco.configuracao = normalizada;
+      mudou = true;
+    }
   }
 
   // Pedidos antigos sem campo de pagamento: considera pagos
@@ -736,16 +761,12 @@ export async function marcarPedidoPagamentoFalhouLocal(pedidoId: string) {
 
 export async function lerConfiguracaoLocal() {
   const banco = await lerBancoLocal();
-  return banco.configuracao;
+  return normalizarConfiguracao(banco.configuracao);
 }
 
 export async function salvarConfiguracaoLocal(config: Configuracao) {
   const banco = await lerBancoLocal();
-  banco.configuracao = {
-    taxa_entrega: Number(config.taxa_entrega),
-    horario_abertura: config.horario_abertura,
-    horario_fechamento: config.horario_fechamento,
-  };
+  banco.configuracao = normalizarConfiguracao(config);
   await salvarBancoLocal(banco);
   return banco.configuracao;
 }

@@ -38,6 +38,7 @@ No `/dono`, além dos números do dia, o dono pode **criar lojas**, editar dados
    - `supabase/migrations/002_fase6_configuracao.sql`
    - `supabase/migrations/003_fase8_pagamentos.sql`
    - `supabase/migrations/004_fase12_senha.sql`
+   - `supabase/migrations/005_fase13_gateways.sql`
 3. Em **Project Settings → API**, copie a **URL** e a chave **anon**
 
 ### 2. Site na Vercel
@@ -53,6 +54,8 @@ No `/dono`, além dos números do dia, o dono pode **criar lojas**, editar dados
 | `NEXT_PUBLIC_APP_URL` | URL do site na Vercel (ex: `https://seu-app.vercel.app`) |
 | `MERCADOPAGO_ACCESS_TOKEN` | (opcional) token de **TESTE** |
 | `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | (opcional) chave pública de **TESTE** |
+| `LUC_PAGUEI_API_KEY` | (opcional) chave LucPaguei |
+| `LUC_PAGUEI_API_URL` | (opcional) URL da API LucPaguei |
 
 4. Clique em **Deploy**
 

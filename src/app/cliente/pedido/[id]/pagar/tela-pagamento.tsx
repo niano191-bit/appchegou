@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { criarCheckoutMercadoPago, simularPagamento } from "@/lib/pagamentos";
+import {
+  buscarOpcoesPagamento,
+  criarCheckoutLucPaguei,
+  criarCheckoutMercadoPago,
+  simularPagamento,
+  type OpcoesPagamento,
+} from "@/lib/pagamentos";
 import { buscarPedido, type PedidoDetalhe } from "@/lib/pedidos";
 import { formatarReais, STATUS_PAGAMENTO_LABEL } from "@/types/database";
 
@@ -15,6 +21,7 @@ export function TelaPagamento({
 }) {
   const router = useRouter();
   const [pedido, setPedido] = useState<PedidoDetalhe | null>(null);
+  const [opcoes, setOpcoes] = useState<OpcoesPagamento | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [acao, setAcao] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -22,8 +29,12 @@ export function TelaPagamento({
 
   const carregar = useCallback(async () => {
     try {
-      const dados = await buscarPedido(pedidoId);
+      const [dados, gates] = await Promise.all([
+        buscarPedido(pedidoId),
+        buscarOpcoesPagamento(),
+      ]);
       setPedido(dados);
+      setOpcoes(gates);
       setErro(null);
     } catch (e) {
       setErro(
@@ -40,7 +51,7 @@ export function TelaPagamento({
 
   useEffect(() => {
     if (resultado === "sucesso") {
-      setInfo("Retorno do Mercado Pago: sucesso. Confirmando…");
+      setInfo("Retorno do pagamento: sucesso. Confirmando…");
       void (async () => {
         try {
           await fetch("/api/pagamentos/confirmar", {
@@ -54,9 +65,9 @@ export function TelaPagamento({
         }
       })();
     } else if (resultado === "falhou") {
-      setErro("Pagamento não concluído no Mercado Pago. Tente de novo.");
+      setErro("Pagamento não concluído. Tente de novo.");
     } else if (resultado === "pendente") {
-      setInfo("Pagamento pendente no Mercado Pago. Aguarde a confirmação.");
+      setInfo("Pagamento pendente. Aguarde a confirmação.");
     }
   }, [resultado, pedidoId, router]);
 
@@ -82,6 +93,11 @@ export function TelaPagamento({
         router.push(res.destino);
         return;
       }
+      if (res.simular) {
+        await simularPagamento(pedidoId, "pix");
+        router.push(`/cliente/pedido/${pedidoId}`);
+        return;
+      }
       if (res.checkoutUrl) {
         window.location.href = res.checkoutUrl;
         return;
@@ -92,6 +108,33 @@ export function TelaPagamento({
         e instanceof Error
           ? e.message
           : "Não foi possível abrir o Mercado Pago.",
+      );
+    } finally {
+      setAcao(null);
+    }
+  }
+
+  async function pagarLucPaguei() {
+    setAcao("lp");
+    setErro(null);
+    try {
+      const res = await criarCheckoutLucPaguei(pedidoId);
+      if (res.ja_pago && res.destino) {
+        router.push(res.destino);
+        return;
+      }
+      if (res.simular || !res.checkoutUrl) {
+        // Sem chave ainda: marca como pago em modo teste
+        await simularPagamento(pedidoId, "pix");
+        router.push(`/cliente/pedido/${pedidoId}`);
+        return;
+      }
+      window.location.href = res.checkoutUrl;
+    } catch (e) {
+      setErro(
+        e instanceof Error
+          ? e.message
+          : "Não foi possível abrir o LucPaguei.",
       );
     } finally {
       setAcao(null);
@@ -115,10 +158,12 @@ export function TelaPagamento({
   }
 
   const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  const mpAtivo = opcoes?.mercadopago.ativo ?? true;
+  const lpAtivo = opcoes?.lucpaguei.ativo ?? true;
 
   if (pedido.status_pagamento === "pago") {
     return (
-      <div className="rounded-2xl border border-[#2F6B3A]/40 bg-[#E8F5E9] px-5 py-4 text-sm text-[#1B4332]">
+      <div className="rounded-2xl border border-mar/40 bg-mar-suave px-5 py-4 text-sm text-mar">
         Este pedido já está pago.{" "}
         <button
           type="button"
@@ -143,7 +188,7 @@ export function TelaPagamento({
         <p className="mt-1 text-sm text-muted">
           {STATUS_PAGAMENTO_LABEL[pedido.status_pagamento]}
         </p>
-        <ul className="mt-3 space-y-1 border-t border-[#F0E6D8] pt-3 text-sm text-foreground">
+        <ul className="mt-3 space-y-1 border-t border-linha pt-3 text-sm text-foreground">
           {pedido.itens_pedido.map((item) => (
             <li key={item.id}>
               {item.quantidade}× {item.nome}
@@ -158,7 +203,7 @@ export function TelaPagamento({
         </div>
       ) : null}
       {info ? (
-        <div className="rounded-2xl border border-[#1565C0]/30 bg-[#E3F2FD] px-5 py-4 text-sm text-[#1565C0]">
+        <div className="rounded-2xl border border-mar/30 bg-mar-suave px-5 py-4 text-sm text-mar">
           {info}
         </div>
       ) : null}
@@ -185,23 +230,55 @@ export function TelaPagamento({
         </button>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-dashed border-[#C4A882] bg-white/60 px-5 py-4">
-        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
-          Mercado Pago (sandbox)
-        </h2>
-        <p className="text-sm text-muted">
-          Quando você colocar a chave de teste no arquivo .env.local, este botão
-          abre o checkout oficial.
-        </p>
-        <button
-          type="button"
-          disabled={Boolean(acao)}
-          onClick={() => void pagarMercadoPago()}
-          className="rounded-xl bg-foreground px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {acao === "mp" ? "Abrindo…" : "Pagar no Mercado Pago (teste)"}
-        </button>
-      </section>
+      {mpAtivo ? (
+        <section className="flex flex-col gap-3 rounded-2xl border border-dashed border-linha bg-white/60 px-5 py-4">
+          <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
+            Mercado Pago
+          </h2>
+          <p className="text-sm text-muted">
+            {opcoes?.mercadopago.configurado
+              ? "Abre o checkout oficial do Mercado Pago."
+              : "Sem chave no servidor: o botão usa modo teste."}
+          </p>
+          <button
+            type="button"
+            disabled={Boolean(acao)}
+            onClick={() => void pagarMercadoPago()}
+            className="rounded-xl bg-foreground px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {acao === "mp"
+              ? "Abrindo…"
+              : opcoes?.mercadopago.configurado
+                ? "Pagar no Mercado Pago"
+                : "Pagar no Mercado Pago (teste)"}
+          </button>
+        </section>
+      ) : null}
+
+      {lpAtivo ? (
+        <section className="flex flex-col gap-3 rounded-2xl border border-dashed border-mar/40 bg-mar-suave/40 px-5 py-4">
+          <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
+            LucPaguei
+          </h2>
+          <p className="text-sm text-muted">
+            {opcoes?.lucpaguei.configurado
+              ? "Abre o checkout oficial do LucPaguei."
+              : "Sem chave no servidor: o botão confirma em modo teste. Quando tiver a API, colocamos as chaves no .env."}
+          </p>
+          <button
+            type="button"
+            disabled={Boolean(acao)}
+            onClick={() => void pagarLucPaguei()}
+            className="rounded-xl bg-mar px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {acao === "lp"
+              ? "Abrindo…"
+              : opcoes?.lucpaguei.configurado
+                ? "Pagar no LucPaguei"
+                : "Pagar no LucPaguei (teste)"}
+          </button>
+        </section>
+      ) : null}
     </div>
   );
 }

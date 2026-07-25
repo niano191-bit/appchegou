@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   lerConfiguracaoLocal,
+  normalizarConfiguracao,
   salvarConfiguracaoLocal,
   usandoModoDemo,
 } from "@/lib/local-db";
@@ -49,11 +50,13 @@ export async function PUT(request: Request) {
     );
   }
 
-  const config: Configuracao = {
+  const config: Configuracao = normalizarConfiguracao({
     taxa_entrega: taxa,
     horario_abertura: corpo.horario_abertura,
     horario_fechamento: corpo.horario_fechamento,
-  };
+    pagamento_mercadopago: corpo.pagamento_mercadopago,
+    pagamento_lucpaguei: corpo.pagamento_lucpaguei,
+  });
 
   try {
     if (usandoModoDemo()) {
