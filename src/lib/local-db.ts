@@ -30,7 +30,10 @@ export function configuracaoPadrao(): Configuracao {
   };
 }
 
-const arquivoDb = path.join(process.cwd(), ".data", "db.json");
+/** Na Vercel o disco é temporário (/tmp); no PC usamos a pasta .data */
+const arquivoDb = process.env.VERCEL
+  ? path.join("/tmp", "chegou-db.json")
+  : path.join(process.cwd(), ".data", "db.json");
 
 function agora() {
   return new Date().toISOString();
