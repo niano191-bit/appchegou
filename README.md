@@ -22,6 +22,10 @@ Sem Supabase, o app usa **modo demonstração** (dados salvos neste PC).
 | Entregador | `entregador.teste@chegou.local` |
 | Dono | `dono.teste@chegou.local` |
 
+## Painel do dono
+
+No `/dono`, além dos números do dia, o dono pode **criar lojas**, editar dados/comissão e montar o **cardápio** de cada restaurante. Ao criar uma loja, o app gera um login (`loja....@chegou.local`) com senha `teste123`.
+
 ## Publicar (Fase 9)
 
 ### 1. Banco no Supabase (produção)

@@ -387,6 +387,150 @@ export async function listarCardapioLocal(restauranteId: string) {
   );
 }
 
+/** Cardápio completo (inclui indisponíveis) — painel do dono */
+export async function listarCardapioAdminLocal(restauranteId: string) {
+  const banco = await lerBancoLocal();
+  return banco.itens_cardapio
+    .filter((item) => item.restaurante_id === restauranteId)
+    .slice()
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+function slugEmailLoja(nome: string) {
+  const base = nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "")
+    .slice(0, 40);
+  return base || "loja";
+}
+
+/** Cria restaurante e conta de login da loja (senha teste123) */
+export async function criarRestauranteLocal(entrada: {
+  nome: string;
+  descricao?: string | null;
+  endereco?: string | null;
+  comissao_percentual?: number;
+}) {
+  const nome = entrada.nome.trim();
+  if (!nome) throw new Error("Informe o nome do restaurante.");
+
+  const comissao = Number(entrada.comissao_percentual ?? 10);
+  if (Number.isNaN(comissao) || comissao < 0 || comissao > 100) {
+    throw new Error("Comissão deve ser entre 0 e 100.");
+  }
+
+  const banco = await lerBancoLocal();
+  const criado = agora();
+  const id = crypto.randomUUID();
+
+  const restaurante: Restaurante = {
+    id,
+    nome,
+    descricao: entrada.descricao?.trim() || null,
+    endereco: entrada.endereco?.trim() || null,
+    imagem_url: null,
+    comissao_percentual: comissao,
+    ativo: true,
+    criado_em: criado,
+  };
+
+  let slug = slugEmailLoja(nome);
+  let email = `loja.${slug}@chegou.local`;
+  let n = 2;
+  while (
+    banco.usuarios.some((u) => u.email?.toLowerCase() === email.toLowerCase())
+  ) {
+    email = `loja.${slug}${n}@chegou.local`;
+    n += 1;
+  }
+
+  const usuario: Usuario = {
+    id: crypto.randomUUID(),
+    nome: `Loja ${nome}`,
+    email,
+    telefone: null,
+    papel: "restaurante",
+    restaurante_id: id,
+    criado_em: criado,
+  };
+
+  banco.restaurantes.push(restaurante);
+  banco.usuarios.push(usuario);
+  await salvarBancoLocal(banco);
+  return { restaurante, usuario };
+}
+
+export async function criarItemCardapioLocal(entrada: {
+  restaurante_id: string;
+  nome: string;
+  descricao?: string | null;
+  preco: number;
+  disponivel?: boolean;
+}) {
+  const nome = entrada.nome.trim();
+  if (!nome) throw new Error("Informe o nome do prato.");
+  const preco = Number(entrada.preco);
+  if (Number.isNaN(preco) || preco < 0) {
+    throw new Error("Preço inválido.");
+  }
+
+  const banco = await lerBancoLocal();
+  if (!banco.restaurantes.some((r) => r.id === entrada.restaurante_id)) {
+    throw new Error("Restaurante não encontrado.");
+  }
+
+  const item: ItemCardapio = {
+    id: crypto.randomUUID(),
+    restaurante_id: entrada.restaurante_id,
+    nome,
+    descricao: entrada.descricao?.trim() || null,
+    preco,
+    disponivel: entrada.disponivel ?? true,
+    imagem_url: null,
+    criado_em: agora(),
+  };
+  banco.itens_cardapio.push(item);
+  await salvarBancoLocal(banco);
+  return item;
+}
+
+export async function atualizarItemCardapioLocal(
+  id: string,
+  patch: {
+    nome?: string;
+    descricao?: string | null;
+    preco?: number;
+    disponivel?: boolean;
+  },
+) {
+  const banco = await lerBancoLocal();
+  const item = banco.itens_cardapio.find((i) => i.id === id);
+  if (!item) throw new Error("Item do cardápio não encontrado.");
+
+  if (patch.nome !== undefined) {
+    const nome = patch.nome.trim();
+    if (!nome) throw new Error("Informe o nome do prato.");
+    item.nome = nome;
+  }
+  if (patch.descricao !== undefined) {
+    item.descricao = patch.descricao?.trim() || null;
+  }
+  if (patch.preco !== undefined) {
+    const preco = Number(patch.preco);
+    if (Number.isNaN(preco) || preco < 0) throw new Error("Preço inválido.");
+    item.preco = preco;
+  }
+  if (patch.disponivel !== undefined) {
+    item.disponivel = patch.disponivel;
+  }
+
+  await salvarBancoLocal(banco);
+  return item;
+}
+
 export type ItemNovoPedido = {
   item_cardapio_id: string;
   quantidade: number;
@@ -520,14 +664,33 @@ export async function salvarConfiguracaoLocal(config: Configuracao) {
   return banco.configuracao;
 }
 
+export type PatchRestaurante = {
+  nome?: string;
+  descricao?: string | null;
+  endereco?: string | null;
+  comissao_percentual?: number;
+  ativo?: boolean;
+};
+
 export async function atualizarRestauranteLocal(
   id: string,
-  patch: { comissao_percentual?: number; ativo?: boolean },
+  patch: PatchRestaurante,
 ) {
   const banco = await lerBancoLocal();
   const loja = banco.restaurantes.find((r) => r.id === id);
   if (!loja) throw new Error("Restaurante não encontrado.");
 
+  if (patch.nome !== undefined) {
+    const nome = patch.nome.trim();
+    if (!nome) throw new Error("Informe o nome do restaurante.");
+    loja.nome = nome;
+  }
+  if (patch.descricao !== undefined) {
+    loja.descricao = patch.descricao?.trim() || null;
+  }
+  if (patch.endereco !== undefined) {
+    loja.endereco = patch.endereco?.trim() || null;
+  }
   if (patch.comissao_percentual !== undefined) {
     const valor = Number(patch.comissao_percentual);
     if (Number.isNaN(valor) || valor < 0 || valor > 100) {

@@ -1,4 +1,9 @@
-import type { Configuracao, Restaurante, Usuario } from "@/types/database";
+import type {
+  Configuracao,
+  ItemCardapio,
+  Restaurante,
+  Usuario,
+} from "@/types/database";
 import type { PedidoComItens } from "@/lib/pedidos-servidor";
 
 export type ResumoDia = {
@@ -47,6 +52,9 @@ export async function buscarRestaurantesDono() {
 
 export async function atualizarRestauranteDono(entrada: {
   id: string;
+  nome?: string;
+  descricao?: string | null;
+  endereco?: string | null;
   comissao_percentual?: number;
   ativo?: boolean;
 }) {
@@ -57,6 +65,77 @@ export async function atualizarRestauranteDono(entrada: {
   });
   const json = (await resposta.json()) as { erro?: string };
   if (!resposta.ok) throw new Error(json.erro ?? "Erro ao salvar restaurante.");
+}
+
+export async function criarRestauranteDono(entrada: {
+  nome: string;
+  descricao?: string;
+  endereco?: string;
+  comissao_percentual?: number;
+}) {
+  const resposta = await fetch("/api/dono/restaurantes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entrada),
+  });
+  const json = (await resposta.json()) as {
+    restaurante?: Restaurante;
+    usuario?: Usuario;
+    erro?: string;
+  };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao criar restaurante.");
+  return { restaurante: json.restaurante!, usuario: json.usuario! };
+}
+
+export async function buscarCardapioDono(restauranteId: string) {
+  const resposta = await fetch(`/api/dono/restaurantes/${restauranteId}/cardapio`, {
+    cache: "no-store",
+  });
+  const json = (await resposta.json()) as {
+    cardapio?: ItemCardapio[];
+    erro?: string;
+  };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao carregar cardápio.");
+  return json.cardapio ?? [];
+}
+
+export async function criarItemCardapioDono(
+  restauranteId: string,
+  entrada: {
+    nome: string;
+    descricao?: string;
+    preco: number;
+    disponivel?: boolean;
+  },
+) {
+  const resposta = await fetch(
+    `/api/dono/restaurantes/${restauranteId}/cardapio`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entrada),
+    },
+  );
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao criar prato.");
+}
+
+export async function atualizarItemCardapioDono(
+  itemId: string,
+  entrada: {
+    nome?: string;
+    descricao?: string | null;
+    preco?: number;
+    disponivel?: boolean;
+  },
+) {
+  const resposta = await fetch(`/api/dono/cardapio/${itemId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entrada),
+  });
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao salvar prato.");
 }
 
 export async function buscarEntregadoresDono() {

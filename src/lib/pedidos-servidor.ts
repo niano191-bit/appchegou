@@ -56,6 +56,158 @@ export async function listarCardapio(restauranteId: string) {
   return (data ?? []) as ItemCardapio[];
 }
 
+export async function listarCardapioAdmin(restauranteId: string) {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("itens_cardapio")
+    .select("*")
+    .eq("restaurante_id", restauranteId)
+    .order("nome");
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ItemCardapio[];
+}
+
+function slugEmailLoja(nome: string) {
+  const base = nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "")
+    .slice(0, 40);
+  return base || "loja";
+}
+
+export async function criarRestaurante(entrada: {
+  nome: string;
+  descricao?: string | null;
+  endereco?: string | null;
+  comissao_percentual?: number;
+}) {
+  const nome = entrada.nome.trim();
+  if (!nome) throw new Error("Informe o nome do restaurante.");
+
+  const comissao = Number(entrada.comissao_percentual ?? 10);
+  if (Number.isNaN(comissao) || comissao < 0 || comissao > 100) {
+    throw new Error("Comissão deve ser entre 0 e 100.");
+  }
+
+  const supabase = createSupabaseClient();
+  const { data: restaurante, error } = await supabase
+    .from("restaurantes")
+    .insert({
+      nome,
+      descricao: entrada.descricao?.trim() || null,
+      endereco: entrada.endereco?.trim() || null,
+      comissao_percentual: comissao,
+      ativo: true,
+    })
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  let slug = slugEmailLoja(nome);
+  let email = `loja.${slug}@chegou.local`;
+  let n = 2;
+  for (;;) {
+    const { data: existente } = await supabase
+      .from("usuarios")
+      .select("id")
+      .ilike("email", email)
+      .maybeSingle();
+    if (!existente) break;
+    email = `loja.${slug}${n}@chegou.local`;
+    n += 1;
+  }
+
+  const { data: usuario, error: erroUser } = await supabase
+    .from("usuarios")
+    .insert({
+      nome: `Loja ${nome}`,
+      email,
+      telefone: null,
+      papel: "restaurante",
+      restaurante_id: restaurante.id,
+    })
+    .select("*")
+    .single();
+
+  if (erroUser) throw new Error(erroUser.message);
+
+  return {
+    restaurante: restaurante as Restaurante,
+    usuario: usuario as Usuario,
+  };
+}
+
+export async function criarItemCardapio(entrada: {
+  restaurante_id: string;
+  nome: string;
+  descricao?: string | null;
+  preco: number;
+  disponivel?: boolean;
+}) {
+  const nome = entrada.nome.trim();
+  if (!nome) throw new Error("Informe o nome do prato.");
+  const preco = Number(entrada.preco);
+  if (Number.isNaN(preco) || preco < 0) throw new Error("Preço inválido.");
+
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("itens_cardapio")
+    .insert({
+      restaurante_id: entrada.restaurante_id,
+      nome,
+      descricao: entrada.descricao?.trim() || null,
+      preco,
+      disponivel: entrada.disponivel ?? true,
+    })
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as ItemCardapio;
+}
+
+export async function atualizarItemCardapio(
+  id: string,
+  patch: {
+    nome?: string;
+    descricao?: string | null;
+    preco?: number;
+    disponivel?: boolean;
+  },
+) {
+  const supabase = createSupabaseClient();
+  const limpo: Record<string, unknown> = {};
+  if (patch.nome !== undefined) {
+    const nome = patch.nome.trim();
+    if (!nome) throw new Error("Informe o nome do prato.");
+    limpo.nome = nome;
+  }
+  if (patch.descricao !== undefined) {
+    limpo.descricao = patch.descricao?.trim() || null;
+  }
+  if (patch.preco !== undefined) {
+    const preco = Number(patch.preco);
+    if (Number.isNaN(preco) || preco < 0) throw new Error("Preço inválido.");
+    limpo.preco = preco;
+  }
+  if (patch.disponivel !== undefined) limpo.disponivel = patch.disponivel;
+
+  const { data, error } = await supabase
+    .from("itens_cardapio")
+    .update(limpo)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as ItemCardapio;
+}
+
 export async function criarPedido(entrada: {
   clienteId: string;
   restauranteId: string;
@@ -310,12 +462,40 @@ export async function listarTodosRestaurantes() {
 
 export async function atualizarRestaurante(
   id: string,
-  patch: { comissao_percentual?: number; ativo?: boolean },
+  patch: {
+    nome?: string;
+    descricao?: string | null;
+    endereco?: string | null;
+    comissao_percentual?: number;
+    ativo?: boolean;
+  },
 ) {
   const supabase = createSupabaseClient();
+  const limpo: Record<string, unknown> = {};
+
+  if (patch.nome !== undefined) {
+    const nome = patch.nome.trim();
+    if (!nome) throw new Error("Informe o nome do restaurante.");
+    limpo.nome = nome;
+  }
+  if (patch.descricao !== undefined) {
+    limpo.descricao = patch.descricao?.trim() || null;
+  }
+  if (patch.endereco !== undefined) {
+    limpo.endereco = patch.endereco?.trim() || null;
+  }
+  if (patch.comissao_percentual !== undefined) {
+    const valor = Number(patch.comissao_percentual);
+    if (Number.isNaN(valor) || valor < 0 || valor > 100) {
+      throw new Error("Comissão deve ser entre 0 e 100.");
+    }
+    limpo.comissao_percentual = valor;
+  }
+  if (patch.ativo !== undefined) limpo.ativo = patch.ativo;
+
   const { data, error } = await supabase
     .from("restaurantes")
-    .update(patch)
+    .update(limpo)
     .eq("id", id)
     .select("*")
     .single();

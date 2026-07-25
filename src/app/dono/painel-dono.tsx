@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
-  atualizarRestauranteDono,
   buscarConfiguracaoDono,
   buscarEntregadoresDono,
   buscarPedidosDono,
@@ -20,6 +19,7 @@ import {
   STATUS_PAGAMENTO_LABEL,
   STATUS_PEDIDO_LABEL,
 } from "@/types/database";
+import { GestaoLojas } from "./gestao-lojas";
 
 export function PainelDono() {
   const [resumo, setResumo] = useState<ResumoDia | null>(null);
@@ -64,34 +64,6 @@ export function PainelDono() {
   useTempoRealPedidos(() => {
     void carregar(true);
   });
-
-  async function salvarComissao(id: string, valor: number) {
-    setSalvando(true);
-    setMsg(null);
-    setErro(null);
-    try {
-      await atualizarRestauranteDono({ id, comissao_percentual: valor });
-      setMsg("Comissão atualizada.");
-      await carregar(true);
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro ao salvar comissão.");
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  async function alternarAtivo(loja: Restaurante) {
-    setSalvando(true);
-    setErro(null);
-    try {
-      await atualizarRestauranteDono({ id: loja.id, ativo: !loja.ativo });
-      await carregar(true);
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro ao atualizar loja.");
-    } finally {
-      setSalvando(false);
-    }
-  }
 
   async function salvarConfig() {
     if (!config) return;
@@ -198,64 +170,10 @@ export function PainelDono() {
         )}
       </section>
 
-      {/* Restaurantes */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
-          Restaurantes
-        </h2>
-        <ul className="flex flex-col gap-3">
-          {restaurantes.map((loja) => (
-            <li
-              key={loja.id}
-              className="rounded-2xl border border-linha bg-white px-4 py-3"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-foreground">{loja.nome}</p>
-                  <p className="text-xs text-muted">
-                    {loja.ativo ? "Ativo" : "Inativo"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={salvando}
-                  onClick={() => void alternarAtivo(loja)}
-                  className="text-xs font-medium text-dende underline-offset-2 hover:underline"
-                >
-                  {loja.ativo ? "Desativar" : "Ativar"}
-                </button>
-              </div>
-              <label className="mt-3 block text-sm text-muted">
-                Comissão (%)
-                <div className="mt-1 flex gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.5}
-                    defaultValue={loja.comissao_percentual}
-                    id={`comissao-${loja.id}`}
-                    className="w-28 rounded-xl border border-linha px-3 py-2 text-foreground outline-none focus:border-dende"
-                  />
-                  <button
-                    type="button"
-                    disabled={salvando}
-                    onClick={() => {
-                      const input = document.getElementById(
-                        `comissao-${loja.id}`,
-                      ) as HTMLInputElement | null;
-                      void salvarComissao(loja.id, Number(input?.value ?? 0));
-                    }}
-                    className="rounded-xl bg-dende px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                  >
-                    Salvar
-                  </button>
-                </div>
-              </label>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <GestaoLojas
+        restaurantes={restaurantes}
+        onAtualizou={() => carregar(true)}
+      />
 
       {/* Entregadores */}
       <section className="flex flex-col gap-3">
