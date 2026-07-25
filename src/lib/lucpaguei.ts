@@ -1,73 +1,158 @@
 import { getAppUrl } from "@/lib/mercadopago";
 
-/** Integração LucPaguei — chave em LUC_PAGUEI_API_KEY (quando disponível) */
+/** LucPaguei (SuitMoney white-label) — client id + secret + URL da API */
 export function isLucPagueiConfigured() {
-  return Boolean(process.env.LUC_PAGUEI_API_KEY?.trim());
+  return Boolean(
+    process.env.LUC_PAGUEI_CLIENT_ID?.trim() &&
+      process.env.LUC_PAGUEI_SECRET_KEY?.trim() &&
+      process.env.LUC_PAGUEI_API_URL?.trim(),
+  );
 }
 
+export type CobrançaLucPaguei = {
+  checkoutUrl?: string;
+  qrCode?: string;
+  qrCodeBase64?: string;
+  transactionId?: string;
+  copiaECola?: string;
+};
+
 /**
- * Cria cobrança / link de checkout no LucPaguei.
- * Se a API ainda não estiver ligada, o app usa simulação de teste.
- *
- * Variáveis opcionais:
- * - LUC_PAGUEI_API_KEY
- * - LUC_PAGUEI_API_URL (padrão: vazio → só simulação até configurar)
+ * Fluxo oficial (docs em /api-docs):
+ * 1) POST /api/auth/login  { client_id, client_secret } → JWT
+ * 2) POST /api/payments/deposit  Bearer JWT → { transactionId, qrcode }
  */
 export async function criarCheckoutLucPaguei(entrada: {
   pedidoId: string;
   valorTotal: number;
   descricao: string;
-}) {
-  const apiKey = process.env.LUC_PAGUEI_API_KEY?.trim();
-  const apiUrl = process.env.LUC_PAGUEI_API_URL?.trim();
+  clienteNome?: string;
+  clienteEmail?: string;
+  clienteDocumento?: string;
+}): Promise<CobrançaLucPaguei> {
+  const clientId = process.env.LUC_PAGUEI_CLIENT_ID?.trim();
+  const secret = process.env.LUC_PAGUEI_SECRET_KEY?.trim();
+  const apiBase = process.env.LUC_PAGUEI_API_URL?.trim()?.replace(/\/$/, "");
 
-  if (!apiKey || !apiUrl) {
+  if (!clientId || !secret || !apiBase) {
     throw new Error(
-      "LucPaguei ainda não está com a chave configurada. Use o botão de teste LucPaguei ou preencha LUC_PAGUEI_API_KEY e LUC_PAGUEI_API_URL.",
+      "LucPaguei incompleto. Configure LUC_PAGUEI_CLIENT_ID, LUC_PAGUEI_SECRET_KEY e LUC_PAGUEI_API_URL.",
     );
   }
 
-  const base = getAppUrl().replace(/\/$/, "");
-  const resposta = await fetch(apiUrl, {
+  const token = await autenticarLucPaguei(apiBase, clientId, secret);
+  const appUrl = getAppUrl().replace(/\/$/, "");
+  const amount = Number(entrada.valorTotal.toFixed(2));
+  const callbackUrl = `${appUrl}/api/pagamentos/lucpaguei/webhook`;
+
+  const depositPath =
+    process.env.LUC_PAGUEI_PIX_PATH?.trim() || "/api/payments/deposit";
+  const depositUrl = depositPath.startsWith("http")
+    ? depositPath
+    : `${apiBase}${depositPath.startsWith("/") ? "" : "/"}${depositPath}`;
+
+  const resposta = await fetch(depositUrl, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "X-API-Key": apiKey,
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
-      amount: Number(entrada.valorTotal.toFixed(2)),
+      amount,
+      external_id: entrada.pedidoId,
+      clientCallbackUrl: callbackUrl,
+      payer: {
+        name: entrada.clienteNome ?? "Cliente",
+        email: entrada.clienteEmail ?? "cliente@chegou.local",
+        document: entrada.clienteDocumento?.replace(/\D/g, "") || "00000000000",
+      },
       description: entrada.descricao,
-      external_reference: entrada.pedidoId,
-      success_url: `${base}/cliente/pedido/${entrada.pedidoId}/pagar?resultado=sucesso&gateway=lucpaguei`,
-      failure_url: `${base}/cliente/pedido/${entrada.pedidoId}/pagar?resultado=falhou&gateway=lucpaguei`,
-      pending_url: `${base}/cliente/pedido/${entrada.pedidoId}/pagar?resultado=pendente&gateway=lucpaguei`,
     }),
   });
 
-  const json = (await resposta.json().catch(() => ({}))) as {
-    checkout_url?: string;
-    checkoutUrl?: string;
-    url?: string;
-    link?: string;
-    message?: string;
-    error?: string;
-  };
+  const json = (await resposta.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
 
   if (!resposta.ok) {
-    throw new Error(
-      json.message ||
-        json.error ||
-        "Erro ao criar pagamento no LucPaguei.",
-    );
+    const msg =
+      (typeof json.message === "string" && json.message) ||
+      (typeof json.error === "string" && json.error) ||
+      `HTTP ${resposta.status}`;
+    throw new Error(`LucPaguei depósito: ${msg}`);
   }
 
-  const checkoutUrl =
-    json.checkout_url || json.checkoutUrl || json.url || json.link;
+  const data =
+    (json.data as Record<string, unknown> | undefined) ?? json;
 
-  if (!checkoutUrl) {
-    throw new Error("LucPaguei não retornou o link de pagamento.");
+  const copiaECola =
+    str(data.qrcode) ||
+    str(data.qrCode) ||
+    str(data.qr_code) ||
+    str(data.copyPaste) ||
+    str(data.copy_paste) ||
+    str(data.emv);
+
+  const transactionId =
+    str(data.transactionId) ||
+    str(data.transaction_id) ||
+    str(data.id);
+
+  if (!copiaECola) {
+    throw new Error("LucPaguei respondeu sem código Pix (qrcode).");
   }
 
-  return { checkoutUrl };
+  return {
+    copiaECola,
+    qrCode: copiaECola,
+    transactionId,
+  };
+}
+
+async function autenticarLucPaguei(
+  apiBase: string,
+  clientId: string,
+  secret: string,
+): Promise<string> {
+  const resposta = await fetch(`${apiBase}/api/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: secret,
+    }),
+  });
+
+  const json = (await resposta.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
+
+  if (!resposta.ok) {
+    const msg =
+      (typeof json.message === "string" && json.message) ||
+      (typeof json.error === "string" && json.error) ||
+      `HTTP ${resposta.status}`;
+    throw new Error(`LucPaguei login: ${msg}`);
+  }
+
+  const token =
+    str(json.token) ||
+    str(json.access_token) ||
+    str((json.data as Record<string, unknown> | undefined)?.token);
+
+  if (!token) {
+    throw new Error("LucPaguei login não retornou token.");
+  }
+
+  return token;
+}
+
+function str(v: unknown): string | undefined {
+  return typeof v === "string" && v.trim() ? v.trim() : undefined;
 }

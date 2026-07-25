@@ -26,6 +26,10 @@ export function TelaPagamento({
   const [acao, setAcao] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [pixLuc, setPixLuc] = useState<{
+    copiaECola?: string;
+    qrCodeBase64?: string;
+  } | null>(null);
 
   const carregar = useCallback(async () => {
     try {
@@ -117,19 +121,33 @@ export function TelaPagamento({
   async function pagarLucPaguei() {
     setAcao("lp");
     setErro(null);
+    setPixLuc(null);
     try {
       const res = await criarCheckoutLucPaguei(pedidoId);
       if (res.ja_pago && res.destino) {
         router.push(res.destino);
         return;
       }
-      if (res.simular || !res.checkoutUrl) {
-        // Sem chave ainda: marca como pago em modo teste
+      if (res.simular) {
         await simularPagamento(pedidoId, "pix");
         router.push(`/cliente/pedido/${pedidoId}`);
         return;
       }
-      window.location.href = res.checkoutUrl;
+      if (res.checkoutUrl && !res.copiaECola) {
+        window.location.href = res.checkoutUrl;
+        return;
+      }
+      if (res.copiaECola || res.qrCodeBase64) {
+        setPixLuc({
+          copiaECola: res.copiaECola,
+          qrCodeBase64: res.qrCodeBase64,
+        });
+        setInfo(
+          "Pix LucPaguei gerado. Pague e aguarde a confirmação automática.",
+        );
+        return;
+      }
+      throw new Error("LucPaguei não retornou Pix nem link de pagamento.");
     } catch (e) {
       setErro(
         e instanceof Error
@@ -262,8 +280,8 @@ export function TelaPagamento({
           </h2>
           <p className="text-sm text-muted">
             {opcoes?.lucpaguei.configurado
-              ? "Abre o checkout oficial do LucPaguei."
-              : "Sem chave no servidor: o botão confirma em modo teste. Quando tiver a API, colocamos as chaves no .env."}
+              ? "Gera Pix pelo LucPaguei (copia e cola)."
+              : "LucPaguei sem chaves no servidor — o botão usa modo teste."}
           </p>
           <button
             type="button"
@@ -272,11 +290,48 @@ export function TelaPagamento({
             className="rounded-xl bg-mar px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
           >
             {acao === "lp"
-              ? "Abrindo…"
+              ? "Gerando Pix…"
               : opcoes?.lucpaguei.configurado
                 ? "Pagar no LucPaguei"
                 : "Pagar no LucPaguei (teste)"}
           </button>
+
+          {pixLuc?.qrCodeBase64 ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={
+                pixLuc.qrCodeBase64.startsWith("data:")
+                  ? pixLuc.qrCodeBase64
+                  : `data:image/png;base64,${pixLuc.qrCodeBase64}`
+              }
+              alt="QR Code Pix"
+              className="mx-auto h-48 w-48 rounded-xl bg-white p-2"
+            />
+          ) : null}
+
+          {pixLuc?.copiaECola ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted uppercase">
+                Pix copia e cola
+              </p>
+              <textarea
+                readOnly
+                value={pixLuc.copiaECola}
+                rows={3}
+                className="w-full rounded-xl border border-linha bg-white px-3 py-2 text-xs text-foreground"
+              />
+              <button
+                type="button"
+                className="w-full rounded-xl border border-mar px-3 py-2 text-sm font-semibold text-mar"
+                onClick={() => {
+                  void navigator.clipboard.writeText(pixLuc.copiaECola!);
+                  setInfo("Código Pix copiado.");
+                }}
+              >
+                Copiar código Pix
+              </button>
+            </div>
+          ) : null}
         </section>
       ) : null}
     </div>

@@ -44,7 +44,7 @@ export async function criarCheckoutMercadoPago(pedidoId: string) {
   return json;
 }
 
-/** Abre Checkout do LucPaguei */
+/** Abre Checkout / Pix do LucPaguei */
 export async function criarCheckoutLucPaguei(pedidoId: string) {
   const resposta = await fetch("/api/pagamentos/lucpaguei", {
     method: "POST",
@@ -53,6 +53,9 @@ export async function criarCheckoutLucPaguei(pedidoId: string) {
   });
   const json = (await resposta.json()) as {
     checkoutUrl?: string;
+    copiaECola?: string;
+    qrCodeBase64?: string;
+    transactionId?: string;
     ja_pago?: boolean;
     destino?: string;
     simular?: boolean;

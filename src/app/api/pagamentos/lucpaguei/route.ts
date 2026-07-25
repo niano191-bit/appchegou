@@ -8,7 +8,7 @@ import {
 import { criarCheckoutLucPaguei, isLucPagueiConfigured } from "@/lib/lucpaguei";
 import { buscarPedido, lerConfiguracao } from "@/lib/pedidos-servidor";
 
-/** Cria link de pagamento LucPaguei */
+/** Cria cobrança LucPaguei (link ou Pix copia-e-cola) */
 export async function POST(request: Request) {
   let corpo: { pedidoId?: string };
 
@@ -60,18 +60,26 @@ export async function POST(request: Request) {
       return NextResponse.json({
         simular: true,
         mensagem:
-          "LucPaguei sem chave no servidor. Use o botão de teste LucPaguei.",
+          "LucPaguei incompleto no servidor. Confira CLIENT_ID, SECRET_KEY e API_URL.",
       });
     }
 
     const total = Number(pedido.total) + Number(pedido.taxa_entrega);
-    const { checkoutUrl } = await criarCheckoutLucPaguei({
+    const cobranca = await criarCheckoutLucPaguei({
       pedidoId: pedido.id,
       valorTotal: total,
       descricao: `Pedido ${pedido.restaurante_nome ?? ""} #${pedido.id.slice(0, 8)}`.trim(),
+      clienteNome: sessao.nome,
+      clienteEmail: sessao.email ?? undefined,
     });
 
-    return NextResponse.json({ checkoutUrl, gateway: "lucpaguei" });
+    return NextResponse.json({
+      gateway: "lucpaguei",
+      checkoutUrl: cobranca.checkoutUrl,
+      copiaECola: cobranca.copiaECola ?? cobranca.qrCode,
+      qrCodeBase64: cobranca.qrCodeBase64,
+      transactionId: cobranca.transactionId,
+    });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao abrir LucPaguei.";
