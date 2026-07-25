@@ -351,12 +351,40 @@ export async function listarPedidosDoCliente(clienteId: string) {
   });
 }
 
+/** Cliente cancela pedido ainda em status novo */
+export async function cancelarPedido(pedidoId: string, clienteId: string) {
+  const pedido = await buscarPedido(pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.cliente_id !== clienteId) {
+    throw new Error("Este pedido não é seu.");
+  }
+  if (pedido.status !== "novo") {
+    throw new Error(
+      "Só é possível cancelar enquanto o restaurante ainda não aceitou.",
+    );
+  }
+
+  const supabase = createSupabaseClient();
+  const { error } = await supabase
+    .from("pedidos")
+    .update({ status: "cancelado", atualizado_em: new Date().toISOString() })
+    .eq("id", pedidoId)
+    .eq("cliente_id", clienteId)
+    .eq("status", "novo");
+
+  if (error) throw new Error(error.message);
+}
+
 /** Atualiza status no Supabase (e entregador, se informado) */
 export async function atualizarStatusPedido(
   pedidoId: string,
   status: StatusPedido,
   extras?: { entregadorId?: string | null },
 ) {
+  if (status === "cancelado") {
+    throw new Error("Use o cancelamento pelo cliente.");
+  }
+
   const supabase = createSupabaseClient();
   const patch: { status: StatusPedido; entregador_id?: string } = { status };
 
@@ -370,7 +398,8 @@ export async function atualizarStatusPedido(
   const { error } = await supabase
     .from("pedidos")
     .update(patch)
-    .eq("id", pedidoId);
+    .eq("id", pedidoId)
+    .neq("status", "cancelado");
 
   if (error) {
     throw new Error(error.message);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AvisoFila } from "@/components/aviso-fila";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
@@ -80,9 +81,23 @@ export function PainelEntregador() {
     );
   }
 
+  const contarProntas = useCallback(async () => {
+    const todas = await listarCorridas();
+    return todas.filter((c) => c.status === "pronto").length;
+  }, []);
+
   return (
     <div className="flex w-full flex-col gap-4">
       <SeloAoVivo />
+      <AvisoFila
+        chave="aviso-fila-entregador"
+        contar={contarProntas}
+        mensagem={(qtd) =>
+          qtd === 1
+            ? "Nova corrida disponível!"
+            : `${qtd} novas corridas disponíveis!`
+        }
+      />
 
       {erro ? (
         <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">

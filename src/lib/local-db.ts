@@ -346,6 +346,27 @@ export async function buscarPedidoLocal(pedidoId: string) {
   };
 }
 
+export async function cancelarPedidoLocal(
+  pedidoId: string,
+  clienteId: string,
+) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.cliente_id !== clienteId) {
+    throw new Error("Este pedido não é seu.");
+  }
+  if (pedido.status !== "novo") {
+    throw new Error(
+      "Só é possível cancelar enquanto o restaurante ainda não aceitou.",
+    );
+  }
+  pedido.status = "cancelado";
+  pedido.atualizado_em = agora();
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
 export async function atualizarStatusPedidoLocal(
   pedidoId: string,
   status: StatusPedido,
@@ -356,6 +377,14 @@ export async function atualizarStatusPedidoLocal(
 
   if (!pedido) {
     throw new Error("Pedido não encontrado no banco local.");
+  }
+
+  if (pedido.status === "cancelado") {
+    throw new Error("Este pedido foi cancelado.");
+  }
+
+  if (status === "cancelado") {
+    throw new Error("Use o cancelamento pelo cliente.");
   }
 
   if (status === "a_caminho") {

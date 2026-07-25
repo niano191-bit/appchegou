@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { buscarRestauranteComCardapio } from "@/lib/catalogo";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import { buscarTaxaEntrega } from "@/lib/dono";
+import {
+  lerEnderecoSalvo,
+  salvarEndereco,
+} from "@/lib/endereco-cliente";
 import { criarPedido } from "@/lib/pedidos";
 import type { ItemCardapio, Restaurante } from "@/types/database";
 import { formatarReais } from "@/types/database";
@@ -23,13 +27,18 @@ export function CardapioComCarrinho({
   const [restaurante, setRestaurante] = useState<Restaurante | null>(null);
   const [cardapio, setCardapio] = useState<ItemCardapio[]>([]);
   const [carrinho, setCarrinho] = useState<Record<string, ItemCarrinho>>({});
-  const [endereco, setEndereco] = useState("Rua Teste, 100 — Barra, Salvador");
+  const [endereco, setEndereco] = useState("");
   const [observacao, setObservacao] = useState("");
   const [taxaEntrega, setTaxaEntrega] = useState(TAXA_ENTREGA_PADRAO);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
+
+  useEffect(() => {
+    const salvo = lerEnderecoSalvo();
+    setEndereco(salvo || "Rua Teste, 100 — Barra, Salvador");
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -108,6 +117,7 @@ export function CardapioComCarrinho({
         })),
       });
 
+      salvarEndereco(endereco);
       setCarrinho({});
       setSucesso("Pedido criado! Abrindo pagamento…");
       router.push(`/cliente/pedido/${pedido.id}/pagar`);

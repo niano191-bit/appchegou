@@ -30,6 +30,7 @@ Se o cadastro ou o financeiro com LucPaguei falhar no Supabase, rode no SQL Edit
 
 - `supabase/migrations/004_fase12_senha.sql`
 - `supabase/migrations/005_fase13_gateways.sql`
+- `supabase/migrations/006_fase14_cancelado.sql`
 
 Guia curto: `docs/sql-pendente.md`
 

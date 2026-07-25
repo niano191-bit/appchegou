@@ -7,7 +7,8 @@ export type StatusPedido =
   | "aceito"
   | "pronto"
   | "a_caminho"
-  | "entregue";
+  | "entregue"
+  | "cancelado";
 
 export type Usuario = {
   id: string;
@@ -102,6 +103,7 @@ export const STATUS_PEDIDO_LABEL: Record<StatusPedido, string> = {
   pronto: "Pronto",
   a_caminho: "A caminho",
   entregue: "Entregue",
+  cancelado: "Cancelado",
 };
 
 export const STATUS_PAGAMENTO_LABEL: Record<StatusPagamento, string> = {

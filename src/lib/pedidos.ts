@@ -112,6 +112,17 @@ export async function listarCorridas() {
   return json.corridas ?? [];
 }
 
+/** Cliente cancela pedido ainda não aceito */
+export async function cancelarPedido(pedidoId: string) {
+  const resposta = await fetch(`/api/pedidos/${pedidoId}/cancelar`, {
+    method: "POST",
+  });
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível cancelar o pedido.");
+  }
+}
+
 /** Cria um pedido novo a partir do carrinho */
 export async function criarPedido(entrada: {
   restauranteId: string;

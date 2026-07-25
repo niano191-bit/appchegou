@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AvisoFila } from "@/components/aviso-fila";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
@@ -90,9 +91,28 @@ export function PainelRestaurante() {
     }
   }
 
+  const contarNovos = useCallback(async () => {
+    if (!restauranteIdRef.current) return 0;
+    const novos = await listarPedidosDoRestaurante(
+      restauranteIdRef.current,
+      ["novo"],
+      "asc",
+    );
+    return novos.length;
+  }, []);
+
   return (
     <div className="flex w-full flex-col gap-4">
       <SeloAoVivo />
+      <AvisoFila
+        chave="aviso-fila-restaurante"
+        contar={contarNovos}
+        mensagem={(qtd) =>
+          qtd === 1
+            ? "Chegou 1 pedido novo!"
+            : `Chegaram ${qtd} pedidos novos!`
+        }
+      />
 
       <div className="flex gap-2">
         <button

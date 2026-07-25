@@ -79,6 +79,13 @@ export async function PATCH(
     );
   }
 
+  if (corpo.status === "cancelado") {
+    return NextResponse.json(
+      { erro: "Para cancelar, use a ação de cancelar do cliente." },
+      { status: 400 },
+    );
+  }
+
   const status = corpo.status as StatusPedido;
   const extras = { entregadorId: corpo.entregadorId };
 
