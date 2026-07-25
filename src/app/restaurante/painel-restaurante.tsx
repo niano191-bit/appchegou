@@ -6,6 +6,7 @@ import { ContatoPedido } from "@/components/contato-pedido";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import { baixarComandaPdf } from "@/lib/comanda-impressao";
+import { OPCOES_ETA_MINUTOS, type MinutosEta } from "@/lib/eta";
 import {
   atualizarStatusPedido,
   listarPedidosDoRestaurante,
@@ -26,6 +27,8 @@ export function PainelRestaurante() {
   const [acaoId, setAcaoId] = useState<string | null>(null);
   const [pausado, setPausado] = useState(false);
   const [pausando, setPausando] = useState(false);
+  /** Pedido aguardando escolha do tempo estimado */
+  const [escolhendoEtaId, setEscolhendoEtaId] = useState<string | null>(null);
 
   const carregar = useCallback(
     async (silencioso = false) => {
@@ -113,16 +116,20 @@ export function PainelRestaurante() {
   async function mudarStatus(
     pedidoId: string,
     status: "aceito" | "pronto",
+    tempoEstimadoMinutos?: MinutosEta,
   ) {
     setAcaoId(pedidoId);
     setErro(null);
 
     try {
       const pedidoAntes = pedidos.find((p) => p.id === pedidoId);
-      await atualizarStatusPedido(pedidoId, status);
+      await atualizarStatusPedido(pedidoId, status, {
+        tempoEstimadoMinutos,
+      });
       if (status === "aceito" && pedidoAntes) {
         baixarComandaPdf(pedidoAntes);
       }
+      setEscolhendoEtaId(null);
       await carregar(true);
     } catch (e) {
       const mensagem =
@@ -336,15 +343,48 @@ export function PainelRestaurante() {
 
                 {aba === "agora" ? (
                   <>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      {pedido.status === "novo" ? (
+                    {pedido.status === "novo" &&
+                    escolhendoEtaId === pedido.id ? (
+                      <div className="rounded-xl border border-dende/30 bg-dende-suave/60 px-3 py-3">
+                        <p className="text-sm font-medium text-foreground">
+                          Em quanto tempo entrega?
+                        </p>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {OPCOES_ETA_MINUTOS.map((min) => (
+                            <button
+                              key={min}
+                              type="button"
+                              disabled={ocupado}
+                              onClick={() =>
+                                void mudarStatus(pedido.id, "aceito", min)
+                              }
+                              className="rounded-xl bg-dende px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                            >
+                              {ocupado ? "…" : `${min} min`}
+                            </button>
+                          ))}
+                        </div>
                         <button
                           type="button"
                           disabled={ocupado}
-                          onClick={() => void mudarStatus(pedido.id, "aceito")}
+                          onClick={() => setEscolhendoEtaId(null)}
+                          className="mt-2 w-full text-xs font-semibold text-muted underline-offset-2 hover:underline"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : null}
+
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      {pedido.status === "novo" &&
+                      escolhendoEtaId !== pedido.id ? (
+                        <button
+                          type="button"
+                          disabled={ocupado}
+                          onClick={() => setEscolhendoEtaId(pedido.id)}
                           className="flex-1 rounded-xl bg-dende px-4 py-3 text-sm font-semibold text-white transition hover:bg-dende-escuro disabled:opacity-60"
                         >
-                          {ocupado ? "Salvando…" : "Aceitar e salvar PDF"}
+                          Aceitar e salvar PDF
                         </button>
                       ) : null}
 
@@ -359,6 +399,14 @@ export function PainelRestaurante() {
                         </button>
                       ) : null}
                     </div>
+
+                    {pedido.status === "aceito" &&
+                    pedido.tempo_estimado_minutos ? (
+                      <p className="text-xs text-muted">
+                        Previsão enviada ao cliente:{" "}
+                        {pedido.tempo_estimado_minutos} min
+                      </p>
+                    ) : null}
 
                     {pedido.status === "novo" || pedido.status === "aceito" ? (
                       <button

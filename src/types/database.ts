@@ -75,6 +75,10 @@ export type Pedido = {
   observacao: string | null;
   cancelado_por?: CanceladoPor;
   motivo_cancelamento?: string | null;
+  /** Minutos estimados pela loja ao aceitar */
+  tempo_estimado_minutos?: number | null;
+  /** Horario previsto de entrega (aceitacao + minutos) */
+  previsao_entrega_em?: string | null;
   criado_em: string;
   atualizado_em: string;
 };

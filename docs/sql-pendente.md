@@ -9,5 +9,6 @@ Rode no **SQL Editor**, nesta ordem, se ainda não rodou:
 5. `supabase/migrations/008_fase16_horario.sql` — loja pode pausar pedidos
 6. `supabase/migrations/009_fase17_bairros.sql` — bairros com taxa por zona
 7. `supabase/migrations/010_fase18_estorno.sql` — status Pix estornado / reembolso pendente
+8. `supabase/migrations/011_fase19_eta.sql` — tempo estimado ao aceitar o pedido
 
 As migrations 001, 002 e 003 já devem estar aplicadas.

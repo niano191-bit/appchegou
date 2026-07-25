@@ -59,11 +59,16 @@ export async function PATCH(
 ) {
   const { id } = await context.params;
 
-  let corpo: { status?: string; entregadorId?: string };
+  let corpo: {
+    status?: string;
+    entregadorId?: string;
+    tempoEstimadoMinutos?: number;
+  };
   try {
     corpo = (await request.json()) as {
       status?: string;
       entregadorId?: string;
+      tempoEstimadoMinutos?: number;
     };
   } catch {
     return NextResponse.json(
@@ -87,7 +92,10 @@ export async function PATCH(
   }
 
   const status = corpo.status as StatusPedido;
-  const extras = { entregadorId: corpo.entregadorId };
+  const extras = {
+    entregadorId: corpo.entregadorId,
+    tempoEstimadoMinutos: corpo.tempoEstimadoMinutos,
+  };
 
   try {
     if (usandoModoDemo()) {

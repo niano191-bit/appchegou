@@ -227,6 +227,8 @@ function dadosIniciais(): BancoLocal {
         observacao: "Pedido de teste — sem cebola",
         cancelado_por: null,
         motivo_cancelamento: null,
+        tempo_estimado_minutos: null,
+        previsao_entrega_em: null,
         criado_em: criado,
         atualizado_em: criado,
         itens_pedido: [
@@ -449,7 +451,10 @@ export async function recusarPedidoLocal(
 export async function atualizarStatusPedidoLocal(
   pedidoId: string,
   status: StatusPedido,
-  extras?: { entregadorId?: string | null },
+  extras?: {
+    entregadorId?: string | null;
+    tempoEstimadoMinutos?: number | null;
+  },
 ) {
   const banco = await lerBancoLocal();
   const pedido = banco.pedidos.find((p) => p.id === pedidoId);
@@ -490,6 +495,17 @@ export async function atualizarStatusPedidoLocal(
     ) {
       throw new Error("Esta corrida pertence a outro entregador.");
     }
+  }
+
+  if (status === "aceito") {
+    const minutos = Number(extras?.tempoEstimadoMinutos);
+    if (!Number.isFinite(minutos) || minutos < 10 || minutos > 120) {
+      throw new Error("Informe o tempo estimado (entre 10 e 120 minutos).");
+    }
+    pedido.tempo_estimado_minutos = Math.round(minutos);
+    pedido.previsao_entrega_em = new Date(
+      Date.now() + minutos * 60_000,
+    ).toISOString();
   }
 
   pedido.status = status;
@@ -868,6 +884,8 @@ export async function criarPedidoLocal(entrada: {
     observacao: entrada.observacao?.trim() || null,
     cancelado_por: null,
     motivo_cancelamento: null,
+    tempo_estimado_minutos: null,
+    previsao_entrega_em: null,
     criado_em: criado,
     atualizado_em: criado,
     itens_pedido: itensPedido,

@@ -58,12 +58,16 @@ export async function listarMeusPedidos() {
 export async function atualizarStatusPedido(
   pedidoId: string,
   status: StatusPedido,
-  extras?: { entregadorId?: string },
+  extras?: { entregadorId?: string; tempoEstimadoMinutos?: number },
 ) {
   const resposta = await fetch(`/api/pedidos/${pedidoId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status, entregadorId: extras?.entregadorId }),
+    body: JSON.stringify({
+      status,
+      entregadorId: extras?.entregadorId,
+      tempoEstimadoMinutos: extras?.tempoEstimadoMinutos,
+    }),
   });
   const json = (await resposta.json()) as { erro?: string };
 

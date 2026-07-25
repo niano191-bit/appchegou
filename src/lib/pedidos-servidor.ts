@@ -489,24 +489,40 @@ export async function recusarPedido(
   if (error) throw new Error(error.message);
 }
 
-/** Atualiza status no Supabase (e entregador, se informado) */
+/** Atualiza status no Supabase (e entregador / ETA, se informado) */
 export async function atualizarStatusPedido(
   pedidoId: string,
   status: StatusPedido,
-  extras?: { entregadorId?: string | null },
+  extras?: {
+    entregadorId?: string | null;
+    tempoEstimadoMinutos?: number | null;
+  },
 ) {
   if (status === "cancelado") {
     throw new Error("Use o cancelamento pelo cliente.");
   }
 
   const supabase = createSupabaseClient();
-  const patch: { status: StatusPedido; entregador_id?: string } = { status };
+  const patch: Record<string, unknown> = {
+    status,
+    atualizado_em: new Date().toISOString(),
+  };
 
   if (status === "a_caminho") {
     if (!extras?.entregadorId) {
       throw new Error("Informe o entregador.");
     }
     patch.entregador_id = extras.entregadorId;
+  }
+
+  if (status === "aceito") {
+    const minutos = Number(extras?.tempoEstimadoMinutos);
+    if (!Number.isFinite(minutos) || minutos < 10 || minutos > 120) {
+      throw new Error("Informe o tempo estimado (entre 10 e 120 minutos).");
+    }
+    const previsao = new Date(Date.now() + minutos * 60_000).toISOString();
+    patch.tempo_estimado_minutos = Math.round(minutos);
+    patch.previsao_entrega_em = previsao;
   }
 
   const { error } = await supabase

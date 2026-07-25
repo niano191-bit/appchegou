@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AvisoPedido } from "@/components/aviso-pedido";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
+import { textoPrevisaoEntrega } from "@/lib/eta";
 import {
   buscarPedido,
   cancelarPedido,
@@ -68,6 +69,8 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
   const [cancelando, setCancelando] = useState(false);
   const [chavePix, setChavePix] = useState("");
   const [estornando, setEstornando] = useState(false);
+  /** Atualiza o texto “chega em X min” a cada minuto */
+  const [, setTick] = useState(0);
 
   const carregar = useCallback(async () => {
     try {
@@ -90,6 +93,11 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
   useTempoRealPedidos(() => {
     void carregar();
   });
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   async function cancelar() {
     if (!confirm("Cancelar este pedido?")) return;
@@ -195,6 +203,14 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
               ? mensagemCancelado(pedido)
               : DICA[pedido.status]}
         </p>
+        {!aguardandoPagamento && !cancelado
+          ? (() => {
+              const previsao = textoPrevisaoEntrega(pedido);
+              return previsao ? (
+                <p className="mt-2 text-sm font-semibold text-mar">{previsao}</p>
+              ) : null;
+            })()
+          : null}
         <p className="mt-3 text-base font-semibold text-dende">
           {aguardandoPagamento
             ? STATUS_PAGAMENTO_LABEL[pedido.status_pagamento]
