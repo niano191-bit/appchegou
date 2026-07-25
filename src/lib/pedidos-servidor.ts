@@ -15,11 +15,52 @@ import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 
 export type PedidoComItens = Pedido & {
   itens_pedido: ItemPedido[];
+  cliente_nome?: string | null;
+  cliente_telefone?: string | null;
+  restaurante_endereco?: string | null;
 };
 
 export type Corrida = PedidoComItens & {
   restaurante_nome: string;
 };
+
+async function anexarContatosPedidos(
+  pedidos: PedidoComItens[],
+): Promise<PedidoComItens[]> {
+  if (pedidos.length === 0) return pedidos;
+
+  const supabase = createSupabaseClient();
+  const clienteIds = [...new Set(pedidos.map((p) => p.cliente_id))];
+  const lojaIds = [...new Set(pedidos.map((p) => p.restaurante_id))];
+
+  const [{ data: clientes }, { data: lojas }] = await Promise.all([
+    supabase.from("usuarios").select("id, nome, telefone").in("id", clienteIds),
+    supabase.from("restaurantes").select("id, endereco").in("id", lojaIds),
+  ]);
+
+  const porCliente = new Map(
+    (clientes ?? []).map((c) => [
+      c.id as string,
+      { nome: c.nome as string, telefone: (c.telefone as string | null) ?? null },
+    ]),
+  );
+  const porLoja = new Map(
+    (lojas ?? []).map((l) => [
+      l.id as string,
+      (l.endereco as string | null) ?? null,
+    ]),
+  );
+
+  return pedidos.map((p) => {
+    const cliente = porCliente.get(p.cliente_id);
+    return {
+      ...p,
+      cliente_nome: cliente?.nome ?? null,
+      cliente_telefone: cliente?.telefone ?? null,
+      restaurante_endereco: porLoja.get(p.restaurante_id) ?? null,
+    };
+  });
+}
 
 export async function listarRestaurantes() {
   const supabase = createSupabaseClient();
@@ -327,7 +368,7 @@ export async function listarPedidosDoRestaurante(
     throw new Error(error.message);
   }
 
-  return (data ?? []) as PedidoComItens[];
+  return anexarContatosPedidos((data ?? []) as PedidoComItens[]);
 }
 
 /** Pedidos do cliente logado */
@@ -412,7 +453,7 @@ export async function listarCorridas(entregadorId: string) {
 
   const { data: prontos, error: erroProntos } = await supabase
     .from("pedidos")
-    .select("*, itens_pedido(*), restaurantes(nome)")
+    .select("*, itens_pedido(*), restaurantes(nome, endereco)")
     .eq("status", "pronto")
     .eq("status_pagamento", "pago")
     .order("criado_em", { ascending: true });
@@ -421,7 +462,7 @@ export async function listarCorridas(entregadorId: string) {
 
   const { data: meus, error: erroMeus } = await supabase
     .from("pedidos")
-    .select("*, itens_pedido(*), restaurantes(nome)")
+    .select("*, itens_pedido(*), restaurantes(nome, endereco)")
     .eq("status", "a_caminho")
     .eq("status_pagamento", "pago")
     .eq("entregador_id", entregadorId)
@@ -431,15 +472,21 @@ export async function listarCorridas(entregadorId: string) {
 
   const mapa = (lista: typeof prontos): Corrida[] =>
     (lista ?? []).map((p) => {
-      const restaurantes = p.restaurantes as { nome?: string } | null;
+      const restaurantes = p.restaurantes as {
+        nome?: string;
+        endereco?: string | null;
+      } | null;
       const { restaurantes: _, ...pedido } = p;
       return {
         ...(pedido as PedidoComItens),
         restaurante_nome: restaurantes?.nome ?? "Restaurante",
+        restaurante_endereco: restaurantes?.endereco ?? null,
       };
     });
 
-  return [...mapa(prontos), ...mapa(meus)];
+  const unidos = [...mapa(prontos), ...mapa(meus)];
+  const comContato = await anexarContatosPedidos(unidos);
+  return comContato as Corrida[];
 }
 
 /** Marca pedido como pago no Supabase */

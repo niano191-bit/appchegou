@@ -299,6 +299,11 @@ export async function listarPedidosLocal(
   ordem: "asc" | "desc" = "asc",
 ) {
   const banco = await lerBancoLocal();
+  const porCliente = new Map(
+    banco.usuarios.map((u) => [u.id, { nome: u.nome, telefone: u.telefone }]),
+  );
+  const porLoja = new Map(banco.restaurantes.map((r) => [r.id, r.endereco]));
+
   const lista = banco.pedidos.filter(
     (p) =>
       p.restaurante_id === restauranteId &&
@@ -310,7 +315,15 @@ export async function listarPedidosLocal(
       new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime();
     return ordem === "desc" ? -diff : diff;
   });
-  return lista;
+  return lista.map((p) => {
+    const cliente = porCliente.get(p.cliente_id);
+    return {
+      ...p,
+      cliente_nome: cliente?.nome ?? null,
+      cliente_telefone: cliente?.telefone ?? null,
+      restaurante_endereco: porLoja.get(p.restaurante_id) ?? null,
+    };
+  });
 }
 
 /** Pedidos do cliente (todos os status), mais recentes primeiro */
@@ -421,13 +434,22 @@ export async function atualizarStatusPedidoLocal(
 
 export type CorridaLocal = PedidoLocal & {
   restaurante_nome: string;
+  cliente_nome?: string | null;
+  cliente_telefone?: string | null;
+  restaurante_endereco?: string | null;
 };
 
 /** Corridas disponíveis (pronto) + as do entregador (a caminho) */
 export async function listarCorridasLocal(entregadorId: string) {
   const banco = await lerBancoLocal();
   const porRestaurante = new Map(
-    banco.restaurantes.map((r) => [r.id, r.nome]),
+    banco.restaurantes.map((r) => [
+      r.id,
+      { nome: r.nome, endereco: r.endereco },
+    ]),
+  );
+  const porCliente = new Map(
+    banco.usuarios.map((u) => [u.id, { nome: u.nome, telefone: u.telefone }]),
   );
 
   return banco.pedidos
@@ -441,13 +463,17 @@ export async function listarCorridasLocal(entregadorId: string) {
       (a, b) =>
         new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime(),
     )
-    .map(
-      (p): CorridaLocal => ({
+    .map((p): CorridaLocal => {
+      const loja = porRestaurante.get(p.restaurante_id);
+      const cliente = porCliente.get(p.cliente_id);
+      return {
         ...p,
-        restaurante_nome:
-          porRestaurante.get(p.restaurante_id) ?? "Restaurante",
-      }),
-    );
+        restaurante_nome: loja?.nome ?? "Restaurante",
+        restaurante_endereco: loja?.endereco ?? null,
+        cliente_nome: cliente?.nome ?? null,
+        cliente_telefone: cliente?.telefone ?? null,
+      };
+    });
 }
 
 export async function listarRestaurantesLocal() {

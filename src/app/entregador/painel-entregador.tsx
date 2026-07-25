@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AvisoFila } from "@/components/aviso-fila";
+import { ContatoPedido } from "@/components/contato-pedido";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
@@ -143,6 +144,13 @@ export function PainelEntregador() {
                   {STATUS_PEDIDO_LABEL[corrida.status]}
                 </span>
               </div>
+
+              <ContatoPedido
+                nome={corrida.cliente_nome}
+                telefone={corrida.cliente_telefone}
+                enderecoLoja={corrida.restaurante_endereco}
+                mostrarLoja
+              />
 
               <p className="mt-3 text-sm font-medium text-foreground">
                 Entregar em:
