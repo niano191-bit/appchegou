@@ -54,6 +54,12 @@ function mensagemCancelado(pedido: PedidoDetalhe) {
       ? `A loja não pôde atender: ${motivo}.`
       : "A loja não pôde atender este pedido.";
   }
+  if (pedido.cancelado_por === "dono") {
+    const motivo = pedido.motivo_cancelamento?.trim();
+    return motivo
+      ? `Pedido cancelado pela operação: ${motivo}.`
+      : "Pedido cancelado pela operação.";
+  }
   if (pedido.cancelado_por === "cliente") {
     return "Você cancelou este pedido.";
   }

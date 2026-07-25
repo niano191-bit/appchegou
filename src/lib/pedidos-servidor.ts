@@ -35,6 +35,7 @@ export type PedidoComItens = Pedido & {
   cliente_nome?: string | null;
   cliente_telefone?: string | null;
   restaurante_endereco?: string | null;
+  restaurante_telefone?: string | null;
 };
 
 async function proximoNumeroDia(dataPedido: string): Promise<number> {
@@ -64,10 +65,19 @@ async function anexarContatosPedidos(
   const clienteIds = [...new Set(pedidos.map((p) => p.cliente_id))];
   const lojaIds = [...new Set(pedidos.map((p) => p.restaurante_id))];
 
-  const [{ data: clientes }, { data: lojas }] = await Promise.all([
-    supabase.from("usuarios").select("id, nome, telefone").in("id", clienteIds),
-    supabase.from("restaurantes").select("id, endereco").in("id", lojaIds),
-  ]);
+  const [{ data: clientes }, { data: lojas }, { data: contasLoja }] =
+    await Promise.all([
+      supabase
+        .from("usuarios")
+        .select("id, nome, telefone")
+        .in("id", clienteIds),
+      supabase.from("restaurantes").select("id, endereco").in("id", lojaIds),
+      supabase
+        .from("usuarios")
+        .select("restaurante_id, telefone")
+        .eq("papel", "restaurante")
+        .in("restaurante_id", lojaIds),
+    ]);
 
   const porCliente = new Map(
     (clientes ?? []).map((c) => [
@@ -81,6 +91,12 @@ async function anexarContatosPedidos(
       (l.endereco as string | null) ?? null,
     ]),
   );
+  const telefoneLoja = new Map<string, string | null>();
+  for (const u of contasLoja ?? []) {
+    const rid = u.restaurante_id as string | null;
+    if (!rid || telefoneLoja.has(rid)) continue;
+    telefoneLoja.set(rid, (u.telefone as string | null) ?? null);
+  }
 
   return pedidos.map((p) => {
     const cliente = porCliente.get(p.cliente_id);
@@ -89,6 +105,7 @@ async function anexarContatosPedidos(
       cliente_nome: cliente?.nome ?? null,
       cliente_telefone: cliente?.telefone ?? null,
       restaurante_endereco: porLoja.get(p.restaurante_id) ?? null,
+      restaurante_telefone: telefoneLoja.get(p.restaurante_id) ?? null,
     };
   });
 }
@@ -532,6 +549,39 @@ export async function cancelarPedido(pedidoId: string, clienteId: string) {
     .eq("status", "novo");
 
   if (error) throw new Error(error.message);
+}
+
+/** Dono cancela pedido em andamento (crise / atraso) */
+export async function cancelarPedidoDono(
+  pedidoId: string,
+  motivo?: string | null,
+) {
+  const pedido = await buscarPedido(pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.status === "cancelado") {
+    throw new Error("Este pedido já está cancelado.");
+  }
+  if (pedido.status === "entregue") {
+    throw new Error("Não é possível cancelar um pedido já entregue.");
+  }
+
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .update({
+      status: "cancelado",
+      cancelado_por: "dono",
+      motivo_cancelamento: motivo?.trim() || null,
+      atualizado_em: new Date().toISOString(),
+    })
+    .eq("id", pedidoId)
+    .neq("status", "entregue")
+    .neq("status", "cancelado")
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as Pedido;
 }
 
 /** Loja recusa pedido pago (novo ou aceito) */
@@ -1114,7 +1164,7 @@ export async function listarTodosPedidosDono() {
 
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((p) => {
+  const base = (data ?? []).map((p) => {
     const loja = p.restaurantes as {
       nome?: string;
       comissao_percentual?: number;
@@ -1128,6 +1178,8 @@ export async function listarTodosPedidosDono() {
       comissao_valor: (Number(pedido.total) * comissaoPct) / 100,
     };
   });
+
+  return anexarContatosPedidos(base);
 }
 
 export async function resumoDoDia() {

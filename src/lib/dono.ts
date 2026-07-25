@@ -39,7 +39,24 @@ export type PedidoDono = PedidoComItens & {
   restaurante_nome: string;
   comissao_percentual: number;
   comissao_valor: number;
+  restaurante_telefone?: string | null;
 };
+
+/** Dono cancela pedido (com estorno Pix se estava pago) */
+export async function cancelarPedidoDono(
+  pedidoId: string,
+  motivo?: string,
+) {
+  const resposta = await fetch(`/api/dono/pedidos/${pedidoId}/cancelar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ motivo }),
+  });
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível cancelar o pedido.");
+  }
+}
 
 export async function buscarResumoDia() {
   const resposta = await fetch("/api/dono/resumo", { cache: "no-store" });

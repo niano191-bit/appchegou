@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AvisoFila } from "@/components/aviso-fila";
+import { ContatoPedido } from "@/components/contato-pedido";
+import { LinksWhatsAppPedido } from "@/components/links-whatsapp-pedido";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
+import { linkWhatsApp } from "@/lib/contato";
 import {
   atribuirEntregadorDono,
   buscarConfiguracaoDono,
@@ -11,6 +14,7 @@ import {
   buscarPedidosDono,
   buscarResumoDia,
   buscarRestaurantesDono,
+  cancelarPedidoDono,
   criarEntregadorDono,
   salvarConfiguracaoDono,
   type GanhosEntregadorDono,
@@ -58,6 +62,7 @@ export function PainelDono() {
   const [msg, setMsg] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [atribuindoId, setAtribuindoId] = useState<string | null>(null);
+  const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [escolhaEntregador, setEscolhaEntregador] = useState<
     Record<string, string>
   >({});
@@ -165,6 +170,40 @@ export function PainelDono() {
       );
     } finally {
       setAtribuindoId(null);
+    }
+  }
+
+  async function cancelarComoDono(p: PedidoDono) {
+    const motivo = window.prompt(
+      "Motivo do cancelamento (opcional). O cliente verá este aviso.",
+      "",
+    );
+    if (motivo === null) return;
+    if (
+      !confirm(
+        pedidoEhDinheiroPendente(p)
+          ? "Cancelar este pedido? O cliente será avisado (pagamento era em dinheiro — sem estorno)."
+          : p.status_pagamento === "pago"
+            ? "Cancelar este pedido? O cliente será avisado e o app tenta estornar o Pix."
+            : "Cancelar este pedido? O cliente será avisado.",
+      )
+    ) {
+      return;
+    }
+
+    setCancelandoId(p.id);
+    setErro(null);
+    setMsg(null);
+    try {
+      await cancelarPedidoDono(p.id, motivo.trim() || undefined);
+      setMsg("Pedido cancelado.");
+      await carregar(true);
+    } catch (e) {
+      setErro(
+        e instanceof Error ? e.message : "Não foi possível cancelar.",
+      );
+    } finally {
+      setCancelandoId(null);
     }
   }
 
@@ -348,7 +387,14 @@ export function PainelDono() {
                   ? linkWhatsAppEntregadorComanda(entregadorSel.telefone, p)
                   : null;
               const ocupado = atribuindoId === p.id;
+              const cancelando = cancelandoId === p.id;
               const critico = classificarPedidoCritico(p, agora);
+              const emAndamento =
+                p.status !== "entregue" && p.status !== "cancelado";
+              const whatsLoja = linkWhatsApp(
+                p.restaurante_telefone,
+                `Olá! Sobre o pedido ${rotuloPedido(p)} no app.`,
+              );
 
               return (
                 <li
@@ -412,6 +458,36 @@ export function PainelDono() {
                         : STATUS_PAGAMENTO_LABEL[p.status_pagamento]}
                     </span>
                   </div>
+
+                  {emAndamento ? (
+                    <div className="mt-3 space-y-2 border-t border-linha pt-3">
+                      <ContatoPedido
+                        nome={p.cliente_nome}
+                        telefone={p.cliente_telefone}
+                        enderecoLoja={p.restaurante_endereco}
+                        mostrarLoja
+                      />
+                      <LinksWhatsAppPedido pedido={p} />
+                      {whatsLoja ? (
+                        <a
+                          href={whatsLoja}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-xl border border-linha bg-white px-3 py-2.5 text-center text-sm font-semibold text-foreground"
+                        >
+                          WhatsApp da loja
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={cancelando}
+                        onClick={() => void cancelarComoDono(p)}
+                        className="w-full rounded-xl border border-dende px-3 py-2.5 text-sm font-semibold text-dende disabled:opacity-60"
+                      >
+                        {cancelando ? "Cancelando…" : "Cancelar pedido"}
+                      </button>
+                    </div>
+                  ) : null}
 
                   {podeDespachar && entregadores.length > 0 ? (
                     <div className="mt-3 space-y-2 border-t border-linha pt-3">

@@ -487,6 +487,28 @@ export async function cancelarPedidoLocal(
   return pedido;
 }
 
+/** Dono cancela pedido em andamento */
+export async function cancelarPedidoDonoLocal(
+  pedidoId: string,
+  motivo?: string | null,
+) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.status === "cancelado") {
+    throw new Error("Este pedido já está cancelado.");
+  }
+  if (pedido.status === "entregue") {
+    throw new Error("Não é possível cancelar um pedido já entregue.");
+  }
+  pedido.status = "cancelado";
+  pedido.cancelado_por = "dono";
+  pedido.motivo_cancelamento = motivo?.trim() || null;
+  pedido.atualizado_em = agora();
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
 /** Loja recusa pedido (novo ou aceito) — cliente é avisado no acompanhamento */
 export async function recusarPedidoLocal(
   pedidoId: string,
@@ -1350,6 +1372,14 @@ export async function listarTodosPedidosLocal() {
   const porRestaurante = new Map(
     banco.restaurantes.map((r) => [r.id, r]),
   );
+  const telefoneLoja = new Map<string, string | null>();
+  for (const u of banco.usuarios) {
+    if (u.papel !== "restaurante" || !u.restaurante_id) continue;
+    if (!telefoneLoja.has(u.restaurante_id)) {
+      telefoneLoja.set(u.restaurante_id, u.telefone);
+    }
+  }
+  const porCliente = new Map(banco.usuarios.map((u) => [u.id, u]));
 
   return banco.pedidos
     .slice()
@@ -1359,11 +1389,16 @@ export async function listarTodosPedidosLocal() {
     )
     .map((p) => {
       const loja = porRestaurante.get(p.restaurante_id);
+      const cliente = porCliente.get(p.cliente_id);
       const comissaoPct = Number(loja?.comissao_percentual ?? 0);
       const comissaoValor = (Number(p.total) * comissaoPct) / 100;
       return {
         ...p,
         restaurante_nome: loja?.nome ?? "Restaurante",
+        restaurante_endereco: loja?.endereco ?? null,
+        restaurante_telefone: telefoneLoja.get(p.restaurante_id) ?? null,
+        cliente_nome: cliente?.nome ?? null,
+        cliente_telefone: cliente?.telefone ?? null,
         comissao_percentual: comissaoPct,
         comissao_valor: comissaoValor,
       };

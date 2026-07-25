@@ -61,7 +61,7 @@ export type StatusPagamento =
 
 export type FormaPagamento = "pix" | "cartao" | "dinheiro" | null;
 
-export type CanceladoPor = "cliente" | "restaurante" | null;
+export type CanceladoPor = "cliente" | "restaurante" | "dono" | null;
 
 export type Pedido = {
   id: string;

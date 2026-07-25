@@ -1,6 +1,6 @@
 # SQL no Supabase (produção)
 
-**Atualizado:** migrations `004` → `017` (horario por loja + gorjeta).
+**Atualizado:** migrations `004` → `018` (cancelamento pelo dono).
 
 Se criar um projeto novo do zero, rode nesta ordem:
 
@@ -21,6 +21,7 @@ Se criar um projeto novo do zero, rode nesta ordem:
 15. `015_fase23_cupons.sql`
 16. `016_fase24_avaliacao_obs.sql`
 17. `017_fase25_horario_gorjeta.sql`
+18. `018_fase26_cancel_dono.sql`
 
 Script local (com `SUPABASE_ACCESS_TOKEN`):
 
