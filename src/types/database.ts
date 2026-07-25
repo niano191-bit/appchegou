@@ -41,12 +41,20 @@ export type ItemCardapio = {
   criado_em: string;
 };
 
+/** Pagamento do pedido (Mercado Pago em teste ou simulação) */
+export type StatusPagamento = "pendente" | "pago" | "falhou";
+
+export type FormaPagamento = "pix" | "cartao" | null;
+
 export type Pedido = {
   id: string;
   cliente_id: string;
   restaurante_id: string;
   entregador_id: string | null;
   status: StatusPedido;
+  status_pagamento: StatusPagamento;
+  forma_pagamento: FormaPagamento;
+  mp_payment_id: string | null;
   total: number;
   taxa_entrega: number;
   endereco_entrega: string;
@@ -86,4 +94,10 @@ export const STATUS_PEDIDO_LABEL: Record<StatusPedido, string> = {
   pronto: "Pronto",
   a_caminho: "A caminho",
   entregue: "Entregue",
+};
+
+export const STATUS_PAGAMENTO_LABEL: Record<StatusPagamento, string> = {
+  pendente: "Aguardando pagamento",
+  pago: "Pago",
+  falhou: "Pagamento falhou",
 };

@@ -69,7 +69,7 @@ export default async function Home() {
         </div>
 
         <p className="text-sm text-[#8A7460]">
-          Fase 7 — Login: cada conta vê só a sua área.
+          Fase 8 — Pagamentos em teste (Pix e cartão).
         </p>
       </main>
     </div>

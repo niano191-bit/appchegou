@@ -15,7 +15,11 @@ import {
   type ResumoDia,
 } from "@/lib/dono";
 import type { Configuracao, Restaurante, Usuario } from "@/types/database";
-import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
+import {
+  formatarReais,
+  STATUS_PAGAMENTO_LABEL,
+  STATUS_PEDIDO_LABEL,
+} from "@/types/database";
 
 export function PainelDono() {
   const [resumo, setResumo] = useState<ResumoDia | null>(null);
@@ -183,7 +187,9 @@ export function PainelDono() {
                     </p>
                   </div>
                   <span className="rounded-full bg-[#FFF4EB] px-2.5 py-1 text-xs font-medium text-[#C45C26]">
-                    {STATUS_PEDIDO_LABEL[p.status]}
+                    {p.status_pagamento === "pago"
+                      ? STATUS_PEDIDO_LABEL[p.status]
+                      : STATUS_PAGAMENTO_LABEL[p.status_pagamento]}
                   </span>
                 </div>
               </li>

@@ -171,6 +171,9 @@ function dadosIniciais(): BancoLocal {
         restaurante_id: DEMO.restauranteAcarajeId,
         entregador_id: null,
         status: "novo",
+        status_pagamento: "pago",
+        forma_pagamento: "pix",
+        mp_payment_id: null,
         total: 43.8,
         taxa_entrega: 8,
         endereco_entrega: "Rua Teste, 100 — Barra, Salvador",
@@ -226,9 +229,25 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
   const bruto = await fs.readFile(arquivoDb, "utf8");
   const banco = JSON.parse(bruto) as BancoLocal;
 
+  let mudou = false;
+
   // Bancos antigos sem configuração ganham o padrão automaticamente
   if (!banco.configuracao) {
     banco.configuracao = configuracaoPadrao();
+    mudou = true;
+  }
+
+  // Pedidos antigos sem campo de pagamento: considera pagos
+  for (const pedido of banco.pedidos) {
+    if (!pedido.status_pagamento) {
+      pedido.status_pagamento = "pago";
+      pedido.forma_pagamento = pedido.forma_pagamento ?? null;
+      pedido.mp_payment_id = pedido.mp_payment_id ?? null;
+      mudou = true;
+    }
+  }
+
+  if (mudou) {
     await fs.writeFile(arquivoDb, JSON.stringify(banco, null, 2), "utf8");
   }
 
@@ -248,7 +267,9 @@ export async function listarPedidosLocal(
   return banco.pedidos
     .filter(
       (p) =>
-        p.restaurante_id === restauranteId && status.includes(p.status),
+        p.restaurante_id === restauranteId &&
+        p.status_pagamento === "pago" &&
+        status.includes(p.status),
     )
     .sort(
       (a, b) =>
@@ -329,8 +350,9 @@ export async function listarCorridasLocal(entregadorId: string) {
   return banco.pedidos
     .filter(
       (p) =>
-        p.status === "pronto" ||
-        (p.status === "a_caminho" && p.entregador_id === entregadorId),
+        p.status_pagamento === "pago" &&
+        (p.status === "pronto" ||
+          (p.status === "a_caminho" && p.entregador_id === entregadorId)),
     )
     .sort(
       (a, b) =>
@@ -427,6 +449,9 @@ export async function criarPedidoLocal(entrada: {
     restaurante_id: entrada.restauranteId,
     entregador_id: null,
     status: "novo",
+    status_pagamento: "pendente",
+    forma_pagamento: null,
+    mp_payment_id: null,
     total,
     taxa_entrega: entrada.taxa_entrega,
     endereco_entrega: entrada.endereco_entrega,
@@ -437,6 +462,41 @@ export async function criarPedidoLocal(entrada: {
   };
 
   banco.pedidos.push(pedido);
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
+/** Marca pedido como pago (simulação ou retorno do Mercado Pago) */
+export async function marcarPedidoPagoLocal(
+  pedidoId: string,
+  forma: "pix" | "cartao",
+  mpPaymentId?: string | null,
+) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+
+  if (!pedido) {
+    throw new Error("Pedido não encontrado.");
+  }
+
+  pedido.status_pagamento = "pago";
+  pedido.forma_pagamento = forma;
+  pedido.mp_payment_id = mpPaymentId ?? null;
+  pedido.atualizado_em = agora();
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
+export async function marcarPedidoPagamentoFalhouLocal(pedidoId: string) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+
+  if (!pedido) {
+    throw new Error("Pedido não encontrado.");
+  }
+
+  pedido.status_pagamento = "falhou";
+  pedido.atualizado_em = agora();
   await salvarBancoLocal(banco);
   return pedido;
 }
@@ -530,7 +590,11 @@ export async function resumoDoDiaLocal() {
 
   const doDia = pedidos.filter((p) => {
     const t = new Date(p.criado_em).getTime();
-    return t >= inicio.getTime() && t <= fim.getTime();
+    return (
+      p.status_pagamento === "pago" &&
+      t >= inicio.getTime() &&
+      t <= fim.getTime()
+    );
   });
 
   const qtdPedidos = doDia.length;

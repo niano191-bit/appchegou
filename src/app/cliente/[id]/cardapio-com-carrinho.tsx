@@ -109,8 +109,8 @@ export function CardapioComCarrinho({
       });
 
       setCarrinho({});
-      setSucesso("Pedido enviado! Abrindo acompanhamento ao vivo…");
-      router.push(`/cliente/pedido/${pedido.id}`);
+      setSucesso("Pedido criado! Abrindo pagamento…");
+      router.push(`/cliente/pedido/${pedido.id}/pagar`);
     } catch (e) {
       setErro(
         e instanceof Error ? e.message : "Não foi possível fazer o pedido.",
@@ -280,7 +280,7 @@ export function CardapioComCarrinho({
           onClick={() => void enviarPedido()}
           className="mt-4 w-full rounded-xl bg-[#C45C26] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#A84C1E] disabled:opacity-60"
         >
-          {enviando ? "Enviando…" : "Fazer pedido"}
+          {enviando ? "Enviando…" : "Ir para o pagamento"}
         </button>
       </section>
     </div>

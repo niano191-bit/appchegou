@@ -97,6 +97,9 @@ export async function criarPedido(entrada: {
       cliente_id: entrada.clienteId,
       restaurante_id: entrada.restauranteId,
       status: "novo",
+      status_pagamento: "pendente",
+      forma_pagamento: null,
+      mp_payment_id: null,
       total,
       taxa_entrega: entrada.taxa_entrega,
       endereco_entrega: entrada.endereco_entrega,
@@ -151,6 +154,7 @@ export async function listarPedidosDoRestaurante(
     .from("pedidos")
     .select("*, itens_pedido(*)")
     .eq("restaurante_id", restauranteId)
+    .eq("status_pagamento", "pago")
     .in("status", status)
     .order("criado_em", { ascending: true });
 
@@ -195,6 +199,7 @@ export async function listarCorridas(entregadorId: string) {
     .from("pedidos")
     .select("*, itens_pedido(*), restaurantes(nome)")
     .eq("status", "pronto")
+    .eq("status_pagamento", "pago")
     .order("criado_em", { ascending: true });
 
   if (erroProntos) throw new Error(erroProntos.message);
@@ -203,6 +208,7 @@ export async function listarCorridas(entregadorId: string) {
     .from("pedidos")
     .select("*, itens_pedido(*), restaurantes(nome)")
     .eq("status", "a_caminho")
+    .eq("status_pagamento", "pago")
     .eq("entregador_id", entregadorId)
     .order("criado_em", { ascending: true });
 

@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import { buscarPedido, type PedidoDetalhe } from "@/lib/pedidos";
 import {
   formatarReais,
+  STATUS_PAGAMENTO_LABEL,
   STATUS_PEDIDO_LABEL,
   type StatusPedido,
 } from "@/types/database";
@@ -73,9 +75,28 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
   const total =
     Number(pedido.total) + Number(pedido.taxa_entrega);
 
+  const aguardandoPagamento = pedido.status_pagamento !== "pago";
+
   return (
     <div className="flex flex-col gap-4">
       <SeloAoVivo />
+
+      {aguardandoPagamento ? (
+        <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
+          <p className="font-medium">
+            {STATUS_PAGAMENTO_LABEL[pedido.status_pagamento]}
+          </p>
+          <p className="mt-1">
+            O restaurante só vê o pedido depois do pagamento.
+          </p>
+          <Link
+            href={`/cliente/pedido/${pedidoId}/pagar`}
+            className="mt-3 inline-flex rounded-xl bg-[#C45C26] px-4 py-2.5 text-sm font-semibold text-white"
+          >
+            Ir para o pagamento
+          </Link>
+        </div>
+      ) : null}
 
       <div className="rounded-2xl border border-[#E8D9C8] bg-white px-5 py-4">
         <p className="text-xs font-medium tracking-wide text-[#8A7460] uppercase">
@@ -84,9 +105,15 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
         <p className="mt-1 text-lg font-semibold text-[#1A120C]">
           Pedido #{pedido.id.slice(0, 8)}
         </p>
-        <p className="mt-2 text-sm text-[#5C4A3A]">{DICA[pedido.status]}</p>
+        <p className="mt-2 text-sm text-[#5C4A3A]">
+          {aguardandoPagamento
+            ? "Assim que pagar, o restaurante poderá aceitar."
+            : DICA[pedido.status]}
+        </p>
         <p className="mt-3 text-base font-semibold text-[#C45C26]">
-          {STATUS_PEDIDO_LABEL[pedido.status]}
+          {aguardandoPagamento
+            ? STATUS_PAGAMENTO_LABEL[pedido.status_pagamento]
+            : STATUS_PEDIDO_LABEL[pedido.status]}
         </p>
       </div>
 
