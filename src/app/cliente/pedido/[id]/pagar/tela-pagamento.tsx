@@ -296,40 +296,49 @@ export function TelaPagamento({
                 : "Pagar no LucPaguei (teste)"}
           </button>
 
-          {pixLuc?.qrCodeBase64 ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={
-                pixLuc.qrCodeBase64.startsWith("data:")
-                  ? pixLuc.qrCodeBase64
-                  : `data:image/png;base64,${pixLuc.qrCodeBase64}`
-              }
-              alt="QR Code Pix"
-              className="mx-auto h-48 w-48 rounded-xl bg-white p-2"
-            />
-          ) : null}
+          {pixLuc?.copiaECola || pixLuc?.qrCodeBase64 ? (
+            <div className="space-y-3 rounded-xl border border-mar/20 bg-white px-4 py-4">
+              {pixLuc.qrCodeBase64 ? (
+                <>
+                  <p className="text-center text-xs font-medium text-muted uppercase">
+                    Escaneie o QR Code no app do banco
+                  </p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={
+                      pixLuc.qrCodeBase64.startsWith("data:")
+                        ? pixLuc.qrCodeBase64
+                        : `data:image/png;base64,${pixLuc.qrCodeBase64}`
+                    }
+                    alt="QR Code Pix"
+                    className="mx-auto h-56 w-56 rounded-lg bg-white"
+                  />
+                </>
+              ) : null}
 
-          {pixLuc?.copiaECola ? (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted uppercase">
-                Pix copia e cola
-              </p>
-              <textarea
-                readOnly
-                value={pixLuc.copiaECola}
-                rows={3}
-                className="w-full rounded-xl border border-linha bg-white px-3 py-2 text-xs text-foreground"
-              />
-              <button
-                type="button"
-                className="w-full rounded-xl border border-mar px-3 py-2 text-sm font-semibold text-mar"
-                onClick={() => {
-                  void navigator.clipboard.writeText(pixLuc.copiaECola!);
-                  setInfo("Código Pix copiado.");
-                }}
-              >
-                Copiar código Pix
-              </button>
+              {pixLuc.copiaECola ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted uppercase">
+                    Ou Pix copia e cola
+                  </p>
+                  <textarea
+                    readOnly
+                    value={pixLuc.copiaECola}
+                    rows={3}
+                    className="w-full rounded-xl border border-linha bg-mar-suave/30 px-3 py-2 text-xs text-foreground"
+                  />
+                  <button
+                    type="button"
+                    className="w-full rounded-xl border border-mar px-3 py-2 text-sm font-semibold text-mar"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(pixLuc.copiaECola!);
+                      setInfo("Código Pix copiado.");
+                    }}
+                  >
+                    Copiar código Pix
+                  </button>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </section>

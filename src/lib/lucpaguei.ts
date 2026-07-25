@@ -1,3 +1,4 @@
+import QRCode from "qrcode";
 import { getAppUrl } from "@/lib/mercadopago";
 
 /** LucPaguei (SuitMoney white-label) — client id + secret + URL da API */
@@ -125,9 +126,17 @@ export async function criarCheckoutLucPaguei(entrada: {
     );
   }
 
+  // A API só manda o EMV (texto); geramos a imagem do QR aqui.
+  const qrCodeBase64 = await QRCode.toDataURL(copiaECola, {
+    margin: 1,
+    width: 280,
+    errorCorrectionLevel: "M",
+  });
+
   return {
     copiaECola,
     qrCode: copiaECola,
+    qrCodeBase64,
     transactionId,
   };
 }
