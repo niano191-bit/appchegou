@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
+import { liberarAudioAlerta, tocarAlertaPedido } from "@/lib/alerta-som";
 
 type Props = {
   /** Chave única para lembrar o último total visto */
@@ -11,6 +12,8 @@ type Props = {
   /** Mensagem quando a fila cresce */
   mensagem: (quantidade: number) => string;
   ativo?: boolean;
+  /** Toca bipe quando a fila cresce (loja / entregador) */
+  som?: boolean;
 };
 
 /** Avisa loja/entregador quando entram itens novos na fila */
@@ -19,13 +22,19 @@ export function AvisoFila({
   contar,
   mensagem,
   ativo = true,
+  som = true,
 }: Props) {
   const [aviso, setAviso] = useState<string | null>(null);
+  const [somPronto, setSomPronto] = useState(false);
   const ultimoRef = useRef<number | null>(null);
   const pediuPermissao = useRef(false);
+  const chaveSom = `${chave}-som-ok`;
 
   useEffect(() => {
     if (!ativo || typeof window === "undefined") return;
+    if (sessionStorage.getItem(chaveSom) === "1") {
+      void liberarAudioAlerta().then((ok) => setSomPronto(ok));
+    }
     if (
       !pediuPermissao.current &&
       "Notification" in window &&
@@ -34,7 +43,7 @@ export function AvisoFila({
       pediuPermissao.current = true;
       void Notification.requestPermission();
     }
-  }, [ativo]);
+  }, [ativo, chaveSom]);
 
   useEffect(() => {
     if (!ativo) return;
@@ -54,6 +63,7 @@ export function AvisoFila({
       if (n > anterior) {
         const texto = mensagem(n - anterior);
         setAviso(texto);
+        if (som) tocarAlertaPedido(3);
         if (
           typeof window !== "undefined" &&
           "Notification" in window &&
@@ -67,20 +77,41 @@ export function AvisoFila({
     })();
   });
 
-  if (!aviso) return null;
+  async function ativarSom() {
+    const ok = await liberarAudioAlerta();
+    setSomPronto(ok);
+    if (ok) {
+      sessionStorage.setItem(chaveSom, "1");
+      tocarAlertaPedido(1);
+    }
+  }
 
   return (
-    <div className="marca-entrada rounded-2xl border border-dende/40 bg-dende-suave px-5 py-4 text-sm text-dende-escuro">
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-medium">{aviso}</p>
+    <div className="flex flex-col gap-2">
+      {som && !somPronto ? (
         <button
           type="button"
-          onClick={() => setAviso(null)}
-          className="shrink-0 text-xs font-semibold underline-offset-2 hover:underline"
+          onClick={() => void ativarSom()}
+          className="rounded-2xl border border-mar/40 bg-mar-suave/50 px-4 py-3 text-left text-sm font-medium text-mar"
         >
-          Fechar
+          Ativar som de novos pedidos (toque uma vez)
         </button>
-      </div>
+      ) : null}
+
+      {aviso ? (
+        <div className="marca-entrada rounded-2xl border border-dende/40 bg-dende-suave px-5 py-4 text-sm text-dende-escuro">
+          <div className="flex items-start justify-between gap-3">
+            <p className="font-medium">{aviso}</p>
+            <button
+              type="button"
+              onClick={() => setAviso(null)}
+              className="shrink-0 text-xs font-semibold underline-offset-2 hover:underline"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

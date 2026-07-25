@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AvisoFila } from "@/components/aviso-fila";
 import { ContatoPedido } from "@/components/contato-pedido";
+import { LinksNavegacao } from "@/components/links-navegacao";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
@@ -152,6 +153,13 @@ export function PainelEntregador() {
                 mostrarLoja
               />
 
+              {corrida.restaurante_endereco ? (
+                <LinksNavegacao
+                  endereco={corrida.restaurante_endereco}
+                  rotulo="Ir até a loja"
+                />
+              ) : null}
+
               <p className="mt-3 text-sm font-medium text-foreground">
                 Entregar em:
               </p>
@@ -159,6 +167,15 @@ export function PainelEntregador() {
                 {corrida.endereco_entrega}
                 {corrida.bairro_entrega ? ` (${corrida.bairro_entrega})` : ""}
               </p>
+              <LinksNavegacao
+                endereco={[
+                  corrida.endereco_entrega,
+                  corrida.bairro_entrega,
+                ]
+                  .filter(Boolean)
+                  .join(" — ")}
+                rotulo="Levar ao cliente"
+              />
 
               <ul className="mt-3 border-t border-[#F0E6D8] pt-3 text-sm text-foreground">
                 {corrida.itens_pedido.map((item) => (
