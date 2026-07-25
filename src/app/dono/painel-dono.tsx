@@ -145,6 +145,14 @@ export function PainelDono() {
     }
   }
 
+  function proximoEntregadorLivre() {
+    return (
+      entregadores.find(
+        (e) => (e.disponibilidade ?? "offline") === "livre",
+      ) ?? null
+    );
+  }
+
   async function atribuir(pedidoId: string, liberar = false) {
     const entregadorId = escolhaEntregador[pedidoId];
     if (!liberar && !entregadorId) {
@@ -168,6 +176,37 @@ export function PainelDono() {
     } catch (e) {
       setErro(
         e instanceof Error ? e.message : "Não foi possível atribuir.",
+      );
+    } finally {
+      setAtribuindoId(null);
+    }
+  }
+
+  /** Atribui ao primeiro livre e abre WhatsApp com a comanda */
+  async function despacharProximoLivre(p: PedidoDono) {
+    const livre = proximoEntregadorLivre();
+    if (!livre) {
+      setErro(
+        "Nenhum entregador livre agora. Peça para tocarem em “Ficar livre” ou escolha na lista.",
+      );
+      return;
+    }
+
+    setAtribuindoId(p.id);
+    setErro(null);
+    setMsg(null);
+    try {
+      await atribuirEntregadorDono(p.id, { entregadorId: livre.id });
+      setEscolhaEntregador((prev) => ({ ...prev, [p.id]: livre.id }));
+      setMsg(`Despachado para ${livre.nome}.`);
+      await carregar(true);
+      const whats = linkWhatsAppEntregadorComanda(livre.telefone, p);
+      if (whats) {
+        window.open(whats, "_blank", "noopener,noreferrer");
+      }
+    } catch (e) {
+      setErro(
+        e instanceof Error ? e.message : "Não foi possível despachar.",
       );
     } finally {
       setAtribuindoId(null);
@@ -498,6 +537,7 @@ export function PainelDono() {
               const ocupado = atribuindoId === p.id;
               const cancelando = cancelandoId === p.id;
               const critico = classificarPedidoCritico(p, agora);
+              const livreAgora = proximoEntregadorLivre();
               const emAndamento =
                 p.status !== "entregue" && p.status !== "cancelado";
               const whatsLoja = linkWhatsApp(
@@ -600,6 +640,20 @@ export function PainelDono() {
 
                   {podeDespachar && entregadores.length > 0 ? (
                     <div className="mt-3 space-y-2 border-t border-linha pt-3">
+                      {p.status === "pronto" && !p.entregador_id ? (
+                        <button
+                          type="button"
+                          disabled={ocupado || !livreAgora}
+                          onClick={() => void despacharProximoLivre(p)}
+                          className="w-full rounded-xl bg-dende px-3 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                        >
+                          {ocupado
+                            ? "Despachando…"
+                            : livreAgora
+                              ? `Despachar → ${livreAgora.nome}`
+                              : "Nenhum entregador livre"}
+                        </button>
+                      ) : null}
                       <label className="block text-xs font-medium text-muted">
                         Atribuir entregador
                         <select
