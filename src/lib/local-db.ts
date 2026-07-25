@@ -477,7 +477,7 @@ export async function atualizarStatusPedidoLocal(
       throw new Error("Só é possível aceitar corrida de pedidos prontos.");
     }
     if (pedido.entregador_id && pedido.entregador_id !== extras?.entregadorId) {
-      throw new Error("Esta corrida já foi aceita por outro entregador.");
+      throw new Error("Esta corrida foi atribuída a outro entregador.");
     }
     if (!extras?.entregadorId) {
       throw new Error("Informe o entregador.");
@@ -564,6 +564,45 @@ export async function ganhosTodosEntregadoresHojeLocal() {
     .sort((a, b) => b.valor - a.valor || a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
+/** Dono atribui / troca / libera entregador no pedido */
+export async function atribuirEntregadorPedidoLocal(
+  pedidoId: string,
+  entrada: { entregadorId?: string | null; liberar?: boolean },
+) {
+  const banco = await lerBancoLocal();
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.status_pagamento !== "pago") {
+    throw new Error("Só é possível atribuir pedidos pagos.");
+  }
+  if (pedido.status !== "pronto" && pedido.status !== "a_caminho") {
+    throw new Error(
+      "Só é possível atribuir pedidos prontos ou a caminho.",
+    );
+  }
+
+  if (entrada.liberar) {
+    if (pedido.status !== "pronto") {
+      throw new Error(
+        "Para liberar, o pedido precisa estar pronto (não a caminho).",
+      );
+    }
+    pedido.entregador_id = null;
+  } else {
+    const id = entrada.entregadorId?.trim();
+    if (!id) throw new Error("Informe o entregador.");
+    const entregador = banco.usuarios.find(
+      (u) => u.id === id && u.papel === "entregador",
+    );
+    if (!entregador) throw new Error("Entregador não encontrado.");
+    pedido.entregador_id = id;
+  }
+
+  pedido.atualizado_em = agora();
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
 /** Corridas disponíveis (pronto) + as do entregador (a caminho) */
 export async function listarCorridasLocal(entregadorId: string) {
   const banco = await lerBancoLocal();
@@ -581,7 +620,8 @@ export async function listarCorridasLocal(entregadorId: string) {
     .filter(
       (p) =>
         p.status_pagamento === "pago" &&
-        (p.status === "pronto" ||
+        ((p.status === "pronto" &&
+          (!p.entregador_id || p.entregador_id === entregadorId)) ||
           (p.status === "a_caminho" && p.entregador_id === entregadorId)),
     )
     .sort(

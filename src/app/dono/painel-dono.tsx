@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
+  atribuirEntregadorDono,
   buscarConfiguracaoDono,
   buscarEntregadoresDono,
   buscarPedidosDono,
@@ -15,6 +16,7 @@ import {
   type PedidoDono,
   type ResumoDia,
 } from "@/lib/dono";
+import { linkWhatsAppEntregadorComanda } from "@/lib/resumo-whatsapp";
 import type { Configuracao, Restaurante, Usuario } from "@/types/database";
 import {
   formatarReais,
@@ -37,6 +39,10 @@ export function PainelDono() {
   const [erro, setErro] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [atribuindoId, setAtribuindoId] = useState<string | null>(null);
+  const [escolhaEntregador, setEscolhaEntregador] = useState<
+    Record<string, string>
+  >({});
   const [novoEntregador, setNovoEntregador] = useState({
     nome: "",
     email: "",
@@ -92,6 +98,40 @@ export function PainelDono() {
     } finally {
       setSalvando(false);
     }
+  }
+
+  async function atribuir(pedidoId: string, liberar = false) {
+    const entregadorId = escolhaEntregador[pedidoId];
+    if (!liberar && !entregadorId) {
+      setErro("Escolha um entregador.");
+      return;
+    }
+    setAtribuindoId(pedidoId);
+    setErro(null);
+    setMsg(null);
+    try {
+      await atribuirEntregadorDono(
+        pedidoId,
+        liberar ? { liberar: true } : { entregadorId },
+      );
+      setMsg(
+        liberar
+          ? "Pedido liberado para qualquer entregador."
+          : "Entregador atribuído.",
+      );
+      await carregar(true);
+    } catch (e) {
+      setErro(
+        e instanceof Error ? e.message : "Não foi possível atribuir.",
+      );
+    } finally {
+      setAtribuindoId(null);
+    }
+  }
+
+  function nomeEntregador(id: string | null | undefined) {
+    if (!id) return null;
+    return entregadores.find((e) => e.id === id)?.nome ?? "Entregador";
   }
 
   if (carregando) {
@@ -153,32 +193,117 @@ export function PainelDono() {
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {pedidos.slice(0, 20).map((p) => (
-              <li
-                key={p.id}
-                className="rounded-2xl border border-linha bg-white px-4 py-3 text-sm"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-foreground">
-                      {p.restaurante_nome}
-                    </p>
-                    <p className="text-muted">
-                      #{p.id.slice(0, 8)} · {formatarReais(Number(p.total))}
-                    </p>
-                    <p className="text-xs text-muted">
-                      Comissão {p.comissao_percentual}% ={" "}
-                      {formatarReais(p.comissao_valor)}
-                    </p>
+            {pedidos.slice(0, 20).map((p) => {
+              const podeDespachar =
+                p.status_pagamento === "pago" &&
+                (p.status === "pronto" || p.status === "a_caminho");
+              const atual = nomeEntregador(p.entregador_id);
+              const selecionado =
+                escolhaEntregador[p.id] || p.entregador_id || "";
+              const entregadorSel = entregadores.find(
+                (e) => e.id === selecionado,
+              );
+              const whatsEntregador =
+                entregadorSel && podeDespachar
+                  ? linkWhatsAppEntregadorComanda(entregadorSel.telefone, p)
+                  : null;
+              const ocupado = atribuindoId === p.id;
+
+              return (
+                <li
+                  key={p.id}
+                  className="rounded-2xl border border-linha bg-white px-4 py-3 text-sm"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {p.restaurante_nome}
+                      </p>
+                      <p className="text-muted">
+                        #{p.id.slice(0, 8)} · {formatarReais(Number(p.total))}
+                      </p>
+                      <p className="text-xs text-muted">
+                        Comissão {p.comissao_percentual}% ={" "}
+                        {formatarReais(p.comissao_valor)}
+                      </p>
+                      {atual ? (
+                        <p className="mt-1 text-xs font-medium text-mar">
+                          Entregador: {atual}
+                        </p>
+                      ) : podeDespachar ? (
+                        <p className="mt-1 text-xs text-muted">
+                          Sem entregador atribuído
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="rounded-full bg-dende-suave px-2.5 py-1 text-xs font-medium text-dende">
+                      {p.status_pagamento === "pago"
+                        ? STATUS_PEDIDO_LABEL[p.status]
+                        : STATUS_PAGAMENTO_LABEL[p.status_pagamento]}
+                    </span>
                   </div>
-                  <span className="rounded-full bg-dende-suave px-2.5 py-1 text-xs font-medium text-dende">
-                    {p.status_pagamento === "pago"
-                      ? STATUS_PEDIDO_LABEL[p.status]
-                      : STATUS_PAGAMENTO_LABEL[p.status_pagamento]}
-                  </span>
-                </div>
-              </li>
-            ))}
+
+                  {podeDespachar && entregadores.length > 0 ? (
+                    <div className="mt-3 space-y-2 border-t border-linha pt-3">
+                      <label className="block text-xs font-medium text-muted">
+                        Atribuir entregador
+                        <select
+                          value={selecionado}
+                          onChange={(e) =>
+                            setEscolhaEntregador((prev) => ({
+                              ...prev,
+                              [p.id]: e.target.value,
+                            }))
+                          }
+                          className="mt-1 w-full rounded-xl border border-linha bg-white px-3 py-2 text-sm text-foreground"
+                        >
+                          <option value="">Escolha…</option>
+                          {entregadores.map((e) => (
+                            <option key={e.id} value={e.id}>
+                              {e.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          disabled={ocupado || !selecionado}
+                          onClick={() => void atribuir(p.id, false)}
+                          className="flex-1 rounded-xl bg-mar px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        >
+                          {ocupado
+                            ? "Salvando…"
+                            : p.entregador_id
+                              ? "Trocar entregador"
+                              : "Atribuir"}
+                        </button>
+                        {p.status === "pronto" && p.entregador_id ? (
+                          <button
+                            type="button"
+                            disabled={ocupado}
+                            onClick={() => void atribuir(p.id, true)}
+                            className="rounded-xl border border-linha px-3 py-2 text-sm font-semibold text-muted disabled:opacity-60"
+                          >
+                            Liberar
+                          </button>
+                        ) : null}
+                        {whatsEntregador ? (
+                          <a
+                            href={whatsEntregador}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-xl border border-mar/40 bg-mar-suave/50 px-3 py-2 text-center text-sm font-semibold text-mar"
+                          >
+                            WhatsApp
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

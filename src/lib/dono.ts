@@ -162,6 +162,22 @@ export async function buscarEntregadoresDono() {
   };
 }
 
+/** Dono atribui / troca / libera entregador no pedido */
+export async function atribuirEntregadorDono(
+  pedidoId: string,
+  entrada: { entregadorId?: string; liberar?: boolean },
+) {
+  const resposta = await fetch(`/api/dono/pedidos/${pedidoId}/atribuir`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entrada),
+  });
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível atribuir o entregador.");
+  }
+}
+
 export async function criarEntregadorDono(entrada: {
   nome: string;
   email: string;

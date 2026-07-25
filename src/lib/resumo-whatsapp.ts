@@ -68,3 +68,12 @@ export function linkWhatsAppCompartilharComanda(pedido: PedidoResumo) {
   const texto = textoResumoPedidoWhatsApp(pedido);
   return `https://wa.me/?text=${encodeURIComponent(texto)}`;
 }
+
+/** Avisa o entregador no WhatsApp com a comanda */
+export function linkWhatsAppEntregadorComanda(
+  telefone: string | null | undefined,
+  pedido: PedidoResumo,
+) {
+  const intro = `Olá! Nova corrida da *${MARCA.nome}*.\n\n`;
+  return linkWhatsApp(telefone, intro + textoResumoPedidoWhatsApp(pedido));
+}

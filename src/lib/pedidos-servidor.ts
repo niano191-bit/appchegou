@@ -513,6 +513,17 @@ export async function atualizarStatusPedido(
     if (!extras?.entregadorId) {
       throw new Error("Informe o entregador.");
     }
+    const atual = await buscarPedido(pedidoId);
+    if (!atual) throw new Error("Pedido não encontrado.");
+    if (atual.status !== "pronto") {
+      throw new Error("Só é possível aceitar corrida de pedidos prontos.");
+    }
+    if (
+      atual.entregador_id &&
+      atual.entregador_id !== extras.entregadorId
+    ) {
+      throw new Error("Esta corrida foi atribuída a outro entregador.");
+    }
     patch.entregador_id = extras.entregadorId;
   }
 
@@ -535,6 +546,56 @@ export async function atualizarStatusPedido(
   if (error) {
     throw new Error(error.message);
   }
+}
+
+/**
+ * Dono atribui / troca / libera entregador.
+ * - pronto: define entregador_id (ou null se liberar)
+ * - a_caminho: só troca entregador (não libera)
+ */
+export async function atribuirEntregadorPedido(
+  pedidoId: string,
+  entrada: { entregadorId?: string | null; liberar?: boolean },
+) {
+  const pedido = await buscarPedido(pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.status_pagamento !== "pago") {
+    throw new Error("Só é possível atribuir pedidos pagos.");
+  }
+  if (pedido.status !== "pronto" && pedido.status !== "a_caminho") {
+    throw new Error(
+      "Só é possível atribuir pedidos prontos ou a caminho.",
+    );
+  }
+
+  let novoEntregadorId: string | null;
+  if (entrada.liberar) {
+    if (pedido.status !== "pronto") {
+      throw new Error(
+        "Para liberar, o pedido precisa estar pronto (não a caminho).",
+      );
+    }
+    novoEntregadorId = null;
+  } else {
+    const id = entrada.entregadorId?.trim();
+    if (!id) throw new Error("Informe o entregador.");
+    const entregadores = await listarEntregadores();
+    if (!entregadores.some((e) => e.id === id)) {
+      throw new Error("Entregador não encontrado.");
+    }
+    novoEntregadorId = id;
+  }
+
+  const supabase = createSupabaseClient();
+  const { error } = await supabase
+    .from("pedidos")
+    .update({
+      entregador_id: novoEntregadorId,
+      atualizado_em: new Date().toISOString(),
+    })
+    .eq("id", pedidoId);
+
+  if (error) throw new Error(error.message);
 }
 
 export type GanhosEntregadorDia = {
@@ -650,7 +711,10 @@ export async function listarCorridas(entregadorId: string) {
       };
     });
 
-  const unidos = [...mapa(prontos), ...mapa(meus)];
+  const prontosVisiveis = mapa(prontos).filter(
+    (p) => !p.entregador_id || p.entregador_id === entregadorId,
+  );
+  const unidos = [...prontosVisiveis, ...mapa(meus)];
   const comContato = await anexarContatosPedidos(unidos);
   return comContato as Corrida[];
 }

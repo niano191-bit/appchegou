@@ -157,15 +157,24 @@ export function PainelEntregador() {
                     Seu ganho: {formatarReais(taxa)}
                   </p>
                 </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    corrida.status === "pronto"
-                      ? "bg-dende-suave text-dende"
-                      : "bg-[#E3F2FD] text-[#1565C0]"
-                  }`}
-                >
-                  {STATUS_PEDIDO_LABEL[corrida.status]}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      corrida.status === "pronto"
+                        ? "bg-dende-suave text-dende"
+                        : "bg-[#E3F2FD] text-[#1565C0]"
+                    }`}
+                  >
+                    {STATUS_PEDIDO_LABEL[corrida.status]}
+                  </span>
+                  {corrida.status === "pronto" ? (
+                    <span className="text-xs font-medium text-mar">
+                      {corrida.entregador_id
+                        ? "Atribuída a você"
+                        : "Disponível"}
+                    </span>
+                  ) : null}
+                </div>
               </div>
 
               <ContatoPedido
