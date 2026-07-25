@@ -91,6 +91,7 @@ export async function POST(request: Request) {
     restauranteId?: string;
     endereco_entrega?: string;
     observacao?: string;
+    bairroId?: string;
     itens?: ItemNovoPedido[];
   };
 
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
 
   try {
     const sessao = await exigirSessao("cliente");
-    const taxa = usandoModoDemo()
+    const taxaPadrao = usandoModoDemo()
       ? (await lerConfiguracaoLocal()).taxa_entrega
       : (await lerConfiguracao()).taxa_entrega || TAXA_ENTREGA_PADRAO;
 
@@ -128,7 +129,8 @@ export async function POST(request: Request) {
       restauranteId: corpo.restauranteId,
       endereco_entrega: corpo.endereco_entrega.trim(),
       observacao: corpo.observacao,
-      taxa_entrega: Number(taxa),
+      bairroId: corpo.bairroId,
+      taxa_entrega: Number(taxaPadrao),
       itens: corpo.itens,
     };
 
@@ -145,7 +147,9 @@ export async function POST(request: Request) {
     const status =
       mensagem.includes("fechados") ||
       mensagem.includes("pausou") ||
-      mensagem.includes("disponível")
+      mensagem.includes("disponível") ||
+      mensagem.includes("bairro") ||
+      mensagem.includes("Bairro")
         ? 400
         : 500;
     return NextResponse.json({ erro: mensagem }, { status });

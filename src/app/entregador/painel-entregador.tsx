@@ -157,6 +157,7 @@ export function PainelEntregador() {
               </p>
               <p className="text-sm text-muted">
                 {corrida.endereco_entrega}
+                {corrida.bairro_entrega ? ` (${corrida.bairro_entrega})` : ""}
               </p>
 
               <ul className="mt-3 border-t border-[#F0E6D8] pt-3 text-sm text-foreground">

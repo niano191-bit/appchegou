@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buscarRestauranteComCardapio } from "@/lib/catalogo";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
-import { buscarConfiguracaoPublica, buscarTaxaEntrega } from "@/lib/dono";
+import {
+  buscarBairrosAtivos,
+  buscarConfiguracaoPublica,
+  buscarTaxaEntrega,
+} from "@/lib/dono";
 import {
   lerEnderecoSalvo,
   salvarEndereco,
@@ -17,6 +21,7 @@ import {
 } from "@/lib/horario";
 import { criarPedido } from "@/lib/pedidos";
 import type {
+  BairroEntrega,
   Configuracao,
   ItemCardapio,
   Restaurante,
@@ -39,7 +44,9 @@ export function CardapioComCarrinho({
   const [carrinho, setCarrinho] = useState<Record<string, ItemCarrinho>>({});
   const [endereco, setEndereco] = useState("");
   const [observacao, setObservacao] = useState("");
-  const [taxaEntrega, setTaxaEntrega] = useState(TAXA_ENTREGA_PADRAO);
+  const [bairroId, setBairroId] = useState("");
+  const [bairros, setBairros] = useState<BairroEntrega[]>([]);
+  const [taxaPadrao, setTaxaPadrao] = useState(TAXA_ENTREGA_PADRAO);
   const [config, setConfig] = useState<Configuracao | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
@@ -55,18 +62,21 @@ export function CardapioComCarrinho({
     void (async () => {
       try {
         setErro(null);
-        const [dados, taxa, cfg] = await Promise.all([
+        const [dados, taxa, cfg, zonas] = await Promise.all([
           buscarRestauranteComCardapio(restauranteId),
           buscarTaxaEntrega().catch(() => TAXA_ENTREGA_PADRAO),
           buscarConfiguracaoPublica().catch(() => null),
+          buscarBairrosAtivos().catch(() => [] as BairroEntrega[]),
         ]);
         setRestaurante({
           ...dados.restaurante,
           pausado: dados.restaurante.pausado ?? false,
         });
         setCardapio(dados.cardapio);
-        setTaxaEntrega(taxa);
+        setTaxaPadrao(taxa);
         setConfig(cfg);
+        setBairros(zonas);
+        if (zonas.length === 1) setBairroId(zonas[0]!.id);
       } catch (e) {
         setErro(
           e instanceof Error ? e.message : "Não foi possível carregar o cardápio.",
@@ -88,6 +98,12 @@ export function CardapioComCarrinho({
     [itensCarrinho],
   );
 
+  const bairroSelecionado = bairros.find((b) => b.id === bairroId) ?? null;
+  const taxaEntrega = bairroSelecionado
+    ? Number(bairroSelecionado.taxa)
+    : bairros.length > 0
+      ? 0
+      : taxaPadrao;
   const total = subtotal + taxaEntrega;
 
   function alterarQuantidade(item: ItemCardapio, delta: number) {
@@ -118,6 +134,11 @@ export function CardapioComCarrinho({
       return;
     }
 
+    if (bairros.length > 0 && !bairroId) {
+      setErro("Escolha o bairro de entrega.");
+      return;
+    }
+
     setEnviando(true);
     setErro(null);
     setSucesso(null);
@@ -127,6 +148,7 @@ export function CardapioComCarrinho({
         restauranteId,
         endereco_entrega: endereco.trim(),
         observacao: observacao.trim() || undefined,
+        bairroId: bairroId || undefined,
         itens: itensCarrinho.map((linha) => ({
           item_cardapio_id: linha.item.id,
           quantidade: linha.quantidade,
@@ -301,6 +323,23 @@ export function CardapioComCarrinho({
         )}
 
         <div className="mt-4 space-y-3 border-t border-[#F0E6D8] pt-4">
+          {bairros.length > 0 ? (
+            <label className="block text-sm text-muted">
+              Bairro de entrega
+              <select
+                value={bairroId}
+                onChange={(e) => setBairroId(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-linha bg-white px-3 py-2.5 text-foreground outline-none focus:border-dende"
+              >
+                <option value="">Selecione o bairro…</option>
+                {bairros.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.nome} — {formatarReais(Number(b.taxa))}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label className="block text-sm text-muted">
             Endereço de entrega
             <input
@@ -326,8 +365,15 @@ export function CardapioComCarrinho({
             <span>{formatarReais(subtotal)}</span>
           </div>
           <div className="flex justify-between">
-            <span>Taxa de entrega</span>
-            <span>{formatarReais(taxaEntrega)}</span>
+            <span>
+              Taxa de entrega
+              {bairroSelecionado ? ` (${bairroSelecionado.nome})` : ""}
+            </span>
+            <span>
+              {bairros.length > 0 && !bairroSelecionado
+                ? "—"
+                : formatarReais(taxaEntrega)}
+            </span>
           </div>
           <div className="flex justify-between text-base font-semibold text-foreground">
             <span>Total</span>
@@ -338,7 +384,10 @@ export function CardapioComCarrinho({
         <button
           type="button"
           disabled={
-            enviando || itensCarrinho.length === 0 || !aceitaPedidos
+            enviando ||
+            itensCarrinho.length === 0 ||
+            !aceitaPedidos ||
+            (bairros.length > 0 && !bairroId)
           }
           onClick={() => void enviarPedido()}
           className="mt-4 w-full rounded-xl bg-dende px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-dende-escuro disabled:opacity-60"

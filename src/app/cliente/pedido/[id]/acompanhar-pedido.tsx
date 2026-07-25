@@ -202,7 +202,10 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
       ) : null}
 
       <div className="rounded-2xl border border-linha bg-white px-5 py-4 text-sm">
-        <p className="text-muted">Entrega em {pedido.endereco_entrega}</p>
+        <p className="text-muted">
+          Entrega em {pedido.endereco_entrega}
+          {pedido.bairro_entrega ? ` — ${pedido.bairro_entrega}` : ""}
+        </p>
         <ul className="mt-3 space-y-1 border-t border-linha pt-3 text-foreground">
           {pedido.itens_pedido.map((item) => (
             <li key={item.id}>

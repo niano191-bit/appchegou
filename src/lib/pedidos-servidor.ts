@@ -12,6 +12,7 @@ import { gerarHashSenha } from "@/lib/senha";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import { normalizarConfiguracao, type ItemNovoPedido } from "@/lib/local-db";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
+import { buscarBairro, listarBairros } from "@/lib/bairros-servidor";
 import {
   mensagemBloqueioPedido,
   statusOperacaoLoja,
@@ -268,7 +269,8 @@ export async function criarPedido(entrada: {
   restauranteId: string;
   endereco_entrega: string;
   observacao?: string;
-  taxa_entrega: number;
+  bairroId?: string;
+  taxa_entrega?: number;
   itens: ItemNovoPedido[];
 }) {
   if (!entrada.itens.length) {
@@ -281,6 +283,22 @@ export async function criarPedido(entrada: {
   const status = statusOperacaoLoja(loja, config);
   if (status !== "aberta") {
     throw new Error(mensagemBloqueioPedido(status, config));
+  }
+
+  const ativos = await listarBairros(true);
+  let taxa = Number(entrada.taxa_entrega ?? config.taxa_entrega);
+  let bairroNome: string | null = null;
+
+  if (ativos.length > 0) {
+    if (!entrada.bairroId) {
+      throw new Error("Escolha o bairro de entrega.");
+    }
+    const bairro = await buscarBairro(entrada.bairroId);
+    if (!bairro || !bairro.ativo) {
+      throw new Error("Bairro de entrega inválido ou inativo.");
+    }
+    taxa = Number(bairro.taxa);
+    bairroNome = bairro.nome;
   }
 
   const supabase = createSupabaseClient();
@@ -319,8 +337,9 @@ export async function criarPedido(entrada: {
       forma_pagamento: null,
       mp_payment_id: null,
       total,
-      taxa_entrega: entrada.taxa_entrega,
+      taxa_entrega: taxa,
       endereco_entrega: entrada.endereco_entrega,
+      bairro_entrega: bairroNome,
       observacao: entrada.observacao?.trim() || null,
     })
     .select("*")

@@ -7,5 +7,6 @@ Rode no **SQL Editor**, nesta ordem, se ainda não rodou:
 3. `supabase/migrations/006_fase14_cancelado.sql` — status cancelado
 4. `supabase/migrations/007_fase15_recusa.sql` — loja pode recusar pedido (quem cancelou + motivo)
 5. `supabase/migrations/008_fase16_horario.sql` — loja pode pausar pedidos
+6. `supabase/migrations/009_fase17_bairros.sql` — bairros com taxa por zona
 
 As migrations 001, 002 e 003 já devem estar aplicadas.

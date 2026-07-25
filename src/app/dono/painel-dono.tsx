@@ -20,6 +20,7 @@ import {
   STATUS_PAGAMENTO_LABEL,
   STATUS_PEDIDO_LABEL,
 } from "@/types/database";
+import { GestaoBairros } from "./gestao-bairros";
 import { GestaoLojas } from "./gestao-lojas";
 
 export function PainelDono() {
@@ -182,6 +183,8 @@ export function PainelDono() {
         onAtualizou={() => carregar(true)}
       />
 
+      <GestaoBairros />
+
       {/* Entregadores */}
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
@@ -303,7 +306,7 @@ export function PainelDono() {
         {config ? (
           <div className="rounded-2xl border border-linha bg-white px-4 py-4 space-y-3">
             <label className="block text-sm text-muted">
-              Taxa de entrega (R$)
+              Taxa padrão (R$) — só se não houver bairros ativos
               <input
                 type="number"
                 min={0}

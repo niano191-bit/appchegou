@@ -294,6 +294,7 @@ export function PainelRestaurante() {
 
               <p className="mt-3 text-sm text-muted">
                 Entrega: {pedido.endereco_entrega}
+                {pedido.bairro_entrega ? ` (${pedido.bairro_entrega})` : ""}
               </p>
               {pedido.observacao ? (
                 <p className="mt-1 text-sm text-muted">

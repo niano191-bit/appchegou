@@ -1,4 +1,5 @@
 import type {
+  BairroEntrega,
   Configuracao,
   ItemCardapio,
   Restaurante,
@@ -204,4 +205,75 @@ export async function buscarConfiguracaoPublica() {
 export async function buscarTaxaEntrega() {
   const config = await buscarConfiguracaoPublica();
   return Number(config.taxa_entrega);
+}
+
+export async function buscarBairrosAtivos() {
+  const resposta = await fetch("/api/bairros", { cache: "no-store" });
+  const json = (await resposta.json()) as {
+    bairros?: BairroEntrega[];
+    erro?: string;
+  };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao carregar bairros.");
+  return json.bairros ?? [];
+}
+
+export async function buscarBairrosDono() {
+  const resposta = await fetch("/api/dono/bairros", { cache: "no-store" });
+  const json = (await resposta.json()) as {
+    bairros?: BairroEntrega[];
+    erro?: string;
+  };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao carregar bairros.");
+  return json.bairros ?? [];
+}
+
+export async function salvarBairroDono(entrada: {
+  id?: string;
+  nome: string;
+  taxa: number;
+  ativo: boolean;
+  ordem?: number;
+}) {
+  if (entrada.id) {
+    const resposta = await fetch(
+      `/api/dono/bairros?id=${encodeURIComponent(entrada.id)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: entrada.nome,
+          taxa: entrada.taxa,
+          ativo: entrada.ativo,
+          ordem: entrada.ordem,
+        }),
+      },
+    );
+    const json = (await resposta.json()) as {
+      bairro?: BairroEntrega;
+      erro?: string;
+    };
+    if (!resposta.ok) throw new Error(json.erro ?? "Erro ao salvar bairro.");
+    return json.bairro!;
+  }
+
+  const resposta = await fetch("/api/dono/bairros", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entrada),
+  });
+  const json = (await resposta.json()) as {
+    bairro?: BairroEntrega;
+    erro?: string;
+  };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao criar bairro.");
+  return json.bairro!;
+}
+
+export async function excluirBairroDono(id: string) {
+  const resposta = await fetch(
+    `/api/dono/bairros?id=${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao excluir bairro.");
 }

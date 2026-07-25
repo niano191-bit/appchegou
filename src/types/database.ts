@@ -1,7 +1,7 @@
-/** PapÃ©is possÃ­veis de um usuÃ¡rio na plataforma */
+/** Papéis possíveis de um usuário na plataforma */
 export type PapelUsuario = "cliente" | "restaurante" | "entregador" | "dono";
 
-/** Fluxo do pedido: novo â†’ aceito â†’ pronto â†’ a_caminho â†’ entregue */
+/** Fluxo do pedido: novo ? aceito ? pronto ? a_caminho ? entregue */
 export type StatusPedido =
   | "novo"
   | "aceito"
@@ -17,7 +17,7 @@ export type Usuario = {
   telefone: string | null;
   papel: PapelUsuario;
   restaurante_id: string | null;
-  /** SÃ³ no servidor â€” nunca enviar ao navegador */
+  /** Só no servidor ? nunca enviar ao navegador */
   senha_hash?: string | null;
   criado_em: string;
 };
@@ -46,7 +46,7 @@ export type ItemCardapio = {
   criado_em: string;
 };
 
-/** Pagamento do pedido (Mercado Pago em teste ou simulaÃ§Ã£o) */
+/** Pagamento do pedido (Mercado Pago em teste ou simulação) */
 export type StatusPagamento = "pendente" | "pago" | "falhou";
 
 export type FormaPagamento = "pix" | "cartao" | null;
@@ -65,6 +65,8 @@ export type Pedido = {
   total: number;
   taxa_entrega: number;
   endereco_entrega: string;
+  /** Nome do bairro/zona escolhido no checkout */
+  bairro_entrega?: string | null;
   observacao: string | null;
   cancelado_por?: CanceladoPor;
   motivo_cancelamento?: string | null;
@@ -83,8 +85,19 @@ export type ItemPedido = {
 
 export type GatewayPagamento = "mercadopago" | "lucpaguei";
 
-/** ConfiguraÃ§Ãµes gerais do app (taxa, horÃ¡rio e gateways) */
+/** Bairro com taxa de entrega pr?pria (zona) */
+export type BairroEntrega = {
+  id: string;
+  nome: string;
+  taxa: number;
+  ativo: boolean;
+  ordem: number;
+  criado_em: string;
+};
+
+/** Configurações gerais do app (taxa, horário e gateways) */
 export type Configuracao = {
+  /** Taxa padr?o quando n?o h? bairros ativos */
   taxa_entrega: number;
   horario_abertura: string;
   horario_fechamento: string;
@@ -102,7 +115,7 @@ export function formatarReais(valor: number) {
   });
 }
 
-/** Textos amigÃ¡veis dos status do pedido */
+/** Textos amigáveis dos status do pedido */
 export const STATUS_PEDIDO_LABEL: Record<StatusPedido, string> = {
   novo: "Novo",
   aceito: "Aceito",

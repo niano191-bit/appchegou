@@ -4,6 +4,7 @@ import { DEMO } from "@/lib/demo-ids";
 import { SENHA_DEMO } from "@/lib/auth";
 import { gerarHashSenha } from "@/lib/senha";
 import type {
+  BairroEntrega,
   Configuracao,
   ItemCardapio,
   ItemPedido,
@@ -12,6 +13,7 @@ import type {
   StatusPedido,
   Usuario,
 } from "@/types/database";
+import { BAIRROS_SALVADOR_SEED } from "@/lib/bairros-seed";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import {
   mensagemBloqueioPedido,
@@ -26,7 +28,19 @@ type BancoLocal = {
   itens_cardapio: ItemCardapio[];
   pedidos: PedidoLocal[];
   configuracao: Configuracao;
+  bairros: BairroEntrega[];
 };
+
+function bairrosIniciais(criado: string): BairroEntrega[] {
+  return BAIRROS_SALVADOR_SEED.map((b, i) => ({
+    id: `b${String(i + 1).padStart(7, "0")}-0000-0000-0000-000000000001`,
+    nome: b.nome,
+    taxa: b.taxa,
+    ativo: true,
+    ordem: b.ordem,
+    criado_em: criado,
+  }));
+}
 
 export function configuracaoPadrao(): Configuracao {
   return {
@@ -67,6 +81,7 @@ function dadosIniciais(): BancoLocal {
 
   return {
     configuracao: configuracaoPadrao(),
+    bairros: bairrosIniciais(criado),
     restaurantes: [
       {
         id: DEMO.restauranteAcarajeId,
@@ -208,6 +223,7 @@ function dadosIniciais(): BancoLocal {
         total: 43.8,
         taxa_entrega: 8,
         endereco_entrega: "Rua Teste, 100 — Barra, Salvador",
+        bairro_entrega: "Barra",
         observacao: "Pedido de teste — sem cebola",
         cancelado_por: null,
         motivo_cancelamento: null,
@@ -284,6 +300,11 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
       loja.pausado = false;
       mudou = true;
     }
+  }
+
+  if (!banco.bairros?.length) {
+    banco.bairros = bairrosIniciais(agora());
+    mudou = true;
   }
 
   // Pedidos antigos sem campo de pagamento: considera pagos
@@ -759,7 +780,9 @@ export async function criarPedidoLocal(entrada: {
   restauranteId: string;
   endereco_entrega: string;
   observacao?: string;
-  taxa_entrega: number;
+  bairroId?: string;
+  /** Ignorado se houver bairros ativos — taxa vem do bairro */
+  taxa_entrega?: number;
   itens: ItemNovoPedido[];
 }) {
   if (!entrada.itens.length) {
@@ -779,6 +802,22 @@ export async function criarPedidoLocal(entrada: {
   const status = statusOperacaoLoja(restaurante, config);
   if (status !== "aberta") {
     throw new Error(mensagemBloqueioPedido(status, config));
+  }
+
+  const ativos = banco.bairros.filter((b) => b.ativo);
+  let taxa = Number(entrada.taxa_entrega ?? config.taxa_entrega);
+  let bairroNome: string | null = null;
+
+  if (ativos.length > 0) {
+    if (!entrada.bairroId) {
+      throw new Error("Escolha o bairro de entrega.");
+    }
+    const bairro = ativos.find((b) => b.id === entrada.bairroId);
+    if (!bairro) {
+      throw new Error("Bairro de entrega inválido ou inativo.");
+    }
+    taxa = Number(bairro.taxa);
+    bairroNome = bairro.nome;
   }
 
   const criado = agora();
@@ -823,8 +862,9 @@ export async function criarPedidoLocal(entrada: {
     forma_pagamento: null,
     mp_payment_id: null,
     total,
-    taxa_entrega: entrada.taxa_entrega,
+    taxa_entrega: taxa,
     endereco_entrega: entrada.endereco_entrega,
+    bairro_entrega: bairroNome,
     observacao: entrada.observacao?.trim() || null,
     cancelado_por: null,
     motivo_cancelamento: null,
@@ -1005,6 +1045,98 @@ export async function resumoDoDiaLocal() {
     comissao,
     ticket_medio: ticketMedio,
   };
+}
+
+export async function listarBairrosLocal(apenasAtivos = false) {
+  const banco = await lerBancoLocal();
+  const lista = banco.bairros
+    .filter((b) => (apenasAtivos ? b.ativo : true))
+    .slice()
+    .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, "pt-BR"));
+  return lista;
+}
+
+export async function buscarBairroLocal(id: string) {
+  const banco = await lerBancoLocal();
+  return banco.bairros.find((b) => b.id === id) ?? null;
+}
+
+export async function criarBairroLocal(entrada: {
+  nome: string;
+  taxa: number;
+  ativo?: boolean;
+  ordem?: number;
+}) {
+  const nome = entrada.nome.trim();
+  if (!nome) throw new Error("Informe o nome do bairro.");
+  const taxa = Number(entrada.taxa);
+  if (Number.isNaN(taxa) || taxa < 0) throw new Error("Taxa inválida.");
+
+  const banco = await lerBancoLocal();
+  if (
+    banco.bairros.some((b) => b.nome.toLowerCase() === nome.toLowerCase())
+  ) {
+    throw new Error("Já existe um bairro com este nome.");
+  }
+
+  const bairro: BairroEntrega = {
+    id: crypto.randomUUID(),
+    nome,
+    taxa,
+    ativo: entrada.ativo ?? true,
+    ordem: Number(entrada.ordem ?? 0),
+    criado_em: agora(),
+  };
+  banco.bairros.push(bairro);
+  await salvarBancoLocal(banco);
+  return bairro;
+}
+
+export async function atualizarBairroLocal(
+  id: string,
+  patch: {
+    nome?: string;
+    taxa?: number;
+    ativo?: boolean;
+    ordem?: number;
+  },
+) {
+  const banco = await lerBancoLocal();
+  const bairro = banco.bairros.find((b) => b.id === id);
+  if (!bairro) throw new Error("Bairro não encontrado.");
+
+  if (patch.nome !== undefined) {
+    const nome = patch.nome.trim();
+    if (!nome) throw new Error("Informe o nome do bairro.");
+    if (
+      banco.bairros.some(
+        (b) => b.id !== id && b.nome.toLowerCase() === nome.toLowerCase(),
+      )
+    ) {
+      throw new Error("Já existe um bairro com este nome.");
+    }
+    bairro.nome = nome;
+  }
+  if (patch.taxa !== undefined) {
+    const taxa = Number(patch.taxa);
+    if (Number.isNaN(taxa) || taxa < 0) throw new Error("Taxa inválida.");
+    bairro.taxa = taxa;
+  }
+  if (patch.ativo !== undefined) bairro.ativo = patch.ativo;
+  if (patch.ordem !== undefined) bairro.ordem = Number(patch.ordem) || 0;
+
+  await salvarBancoLocal(banco);
+  return bairro;
+}
+
+export async function excluirBairroLocal(id: string) {
+  const banco = await lerBancoLocal();
+  const antes = banco.bairros.length;
+  banco.bairros = banco.bairros.filter((b) => b.id !== id);
+  if (banco.bairros.length === antes) {
+    throw new Error("Bairro não encontrado.");
+  }
+  await salvarBancoLocal(banco);
 }
 
 /** Indica se estamos no modo demonstração (sem Supabase) */
