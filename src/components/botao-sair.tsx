@@ -16,7 +16,7 @@ export function BotaoSair() {
           router.refresh();
         })();
       }}
-      className="text-sm font-medium text-[#8A7460] underline-offset-2 hover:underline"
+      className="text-sm font-medium text-muted underline-offset-2 hover:underline"
     >
       Sair
     </button>

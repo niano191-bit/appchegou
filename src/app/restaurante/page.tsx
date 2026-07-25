@@ -1,10 +1,9 @@
-import Link from "next/link";
-import { BotaoSair } from "@/components/botao-sair";
+import { CabecalhoArea } from "@/components/cabecalho-area";
 import { lerSessao } from "@/lib/auth-servidor";
 import { PainelRestaurante } from "./painel-restaurante";
 
 export const metadata = {
-  title: "Painel do Restaurante — Chegou",
+  title: "Painel do Restaurante — Tentações da Neuza",
   description: "Aceite pedidos e marque quando estiverem prontos.",
 };
 
@@ -13,28 +12,11 @@ export default async function PaginaRestaurante() {
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-8">
-      <header className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            href="/"
-            className="text-sm font-medium text-[#C45C26] underline-offset-2 hover:underline"
-          >
-            ← Início
-          </Link>
-          <BotaoSair />
-        </div>
-        <p className="text-sm font-medium tracking-wide text-[#8A7460] uppercase">
-          {sessao?.nome ?? "Restaurante"}
-        </p>
-        <h1 className="font-display text-3xl text-[#1A120C]">
-          Painel do Restaurante
-        </h1>
-        <p className="text-sm leading-relaxed text-[#5C4A3A]">
-          Pedidos novos aparecem aqui. Aceite e marque como pronto quando a
-          comida estiver pronta para o entregador.
-        </p>
-      </header>
-
+      <CabecalhoArea
+        rotulo={sessao?.nome ?? "Restaurante"}
+        titulo="Painel do Restaurante"
+        descricao="Pedidos novos aparecem aqui. Aceite e marque como pronto quando a comida estiver pronta para o entregador."
+      />
       <PainelRestaurante />
     </div>
   );

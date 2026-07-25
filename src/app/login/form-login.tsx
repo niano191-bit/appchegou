@@ -29,7 +29,7 @@ export function FormLogin({ nextUrl }: { nextUrl?: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+        <p className="text-sm font-semibold tracking-wide text-muted uppercase">
           Entrar rápido
         </p>
         {CONTAS_DEMO.map((conta) => (
@@ -38,40 +38,40 @@ export function FormLogin({ nextUrl }: { nextUrl?: string }) {
             type="button"
             disabled={carregando}
             onClick={() => void fazerLogin(conta.email, SENHA_DEMO)}
-            className="rounded-2xl border border-[#E8D9C8] bg-white px-4 py-3 text-left transition hover:border-[#C45C26]/50 hover:bg-[#FFF9F4] disabled:opacity-60"
+            className="rounded-2xl border border-linha bg-white px-4 py-3 text-left transition hover:border-dende/50 hover:bg-background disabled:opacity-60"
           >
-            <p className="font-semibold text-[#1A120C]">{conta.rotulo}</p>
-            <p className="text-xs text-[#8A7460]">{conta.email}</p>
+            <p className="font-semibold text-foreground">{conta.rotulo}</p>
+            <p className="text-xs text-muted">{conta.email}</p>
           </button>
         ))}
       </div>
 
       <form
-        className="rounded-2xl border border-[#E8D9C8] bg-white px-4 py-4 space-y-3"
+        className="rounded-2xl border border-linha bg-white px-4 py-4 space-y-3"
         onSubmit={(e) => {
           e.preventDefault();
           void fazerLogin(email, senha);
         }}
       >
-        <p className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+        <p className="text-sm font-semibold tracking-wide text-muted uppercase">
           Ou digite
         </p>
-        <label className="block text-sm text-[#5C4A3A]">
+        <label className="block text-sm text-muted">
           E-mail
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-[#E8D9C8] px-3 py-2.5 text-[#1A120C] outline-none focus:border-[#C45C26]"
+            className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
           />
         </label>
-        <label className="block text-sm text-[#5C4A3A]">
+        <label className="block text-sm text-muted">
           Senha
           <input
             type="password"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-[#E8D9C8] px-3 py-2.5 text-[#1A120C] outline-none focus:border-[#C45C26]"
+            className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
           />
         </label>
 
@@ -82,7 +82,7 @@ export function FormLogin({ nextUrl }: { nextUrl?: string }) {
         <button
           type="submit"
           disabled={carregando}
-          className="w-full rounded-xl bg-[#C45C26] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          className="w-full rounded-xl bg-dende px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
         >
           {carregando ? "Entrando…" : "Entrar"}
         </button>

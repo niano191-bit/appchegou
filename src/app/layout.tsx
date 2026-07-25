@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
+import { MARCA } from "@/lib/marca";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -13,9 +14,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Chegou — Delivery em Salvador",
-  description:
-    "Plataforma de delivery de comida em Salvador: peça, acompanhe e receba.",
+  title: `${MARCA.nome} — Delivery em ${MARCA.cidade}`,
+  description: MARCA.descricao,
+  applicationName: MARCA.nome,
 };
 
 export default function RootLayout({

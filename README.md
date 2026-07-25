@@ -1,6 +1,6 @@
-# Chegou — Delivery em Salvador
+# Tentações da Neuza — Delivery em Salvador
 
-App de delivery com áreas de **cliente**, **restaurante**, **entregador** e **dono**.
+App de delivery (**Tentações da Neuza**) com áreas de **cliente**, **restaurante**, **entregador** e **dono**.
 
 ## Rodar no computador
 

@@ -100,7 +100,7 @@ export function TelaPagamento({
 
   if (carregando) {
     return (
-      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-[#5C4A3A]">
+      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
         Carregando pagamento…
       </p>
     );
@@ -108,7 +108,7 @@ export function TelaPagamento({
 
   if (!pedido) {
     return (
-      <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
+      <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
         {erro ?? "Pedido não encontrado."}
       </div>
     );
@@ -133,17 +133,17 @@ export function TelaPagamento({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-2xl border border-[#E8D9C8] bg-white px-5 py-4">
-        <p className="text-xs font-medium tracking-wide text-[#8A7460] uppercase">
+      <div className="rounded-2xl border border-linha bg-white px-5 py-4">
+        <p className="text-xs font-medium tracking-wide text-muted uppercase">
           {pedido.restaurante_nome}
         </p>
-        <p className="mt-1 text-lg font-semibold text-[#1A120C]">
+        <p className="mt-1 text-lg font-semibold text-foreground">
           Total {formatarReais(total)}
         </p>
-        <p className="mt-1 text-sm text-[#5C4A3A]">
+        <p className="mt-1 text-sm text-muted">
           {STATUS_PAGAMENTO_LABEL[pedido.status_pagamento]}
         </p>
-        <ul className="mt-3 space-y-1 border-t border-[#F0E6D8] pt-3 text-sm text-[#1A120C]">
+        <ul className="mt-3 space-y-1 border-t border-[#F0E6D8] pt-3 text-sm text-foreground">
           {pedido.itens_pedido.map((item) => (
             <li key={item.id}>
               {item.quantidade}× {item.nome}
@@ -153,7 +153,7 @@ export function TelaPagamento({
       </div>
 
       {erro ? (
-        <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
+        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
           {erro}
         </div>
       ) : null}
@@ -163,15 +163,15 @@ export function TelaPagamento({
         </div>
       ) : null}
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-[#E8D9C8] bg-white px-5 py-4">
-        <h2 className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+      <section className="flex flex-col gap-3 rounded-2xl border border-linha bg-white px-5 py-4">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Simular pagamento (recomendado agora)
         </h2>
         <button
           type="button"
           disabled={Boolean(acao)}
           onClick={() => void pagarSimulado("pix")}
-          className="rounded-xl bg-[#C45C26] px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+          className="rounded-xl bg-dende px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
         >
           {acao === "pix" ? "Processando…" : "Simular Pix (teste)"}
         </button>
@@ -179,17 +179,17 @@ export function TelaPagamento({
           type="button"
           disabled={Boolean(acao)}
           onClick={() => void pagarSimulado("cartao")}
-          className="rounded-xl border border-[#C45C26] px-4 py-3.5 text-sm font-semibold text-[#C45C26] disabled:opacity-60"
+          className="rounded-xl border border-dende px-4 py-3.5 text-sm font-semibold text-dende disabled:opacity-60"
         >
           {acao === "cartao" ? "Processando…" : "Simular cartão (teste)"}
         </button>
       </section>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-dashed border-[#C4A882] bg-white/60 px-5 py-4">
-        <h2 className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Mercado Pago (sandbox)
         </h2>
-        <p className="text-sm text-[#5C4A3A]">
+        <p className="text-sm text-muted">
           Quando você colocar a chave de teste no arquivo .env.local, este botão
           abre o checkout oficial.
         </p>
@@ -197,7 +197,7 @@ export function TelaPagamento({
           type="button"
           disabled={Boolean(acao)}
           onClick={() => void pagarMercadoPago()}
-          className="rounded-xl bg-[#1A120C] px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+          className="rounded-xl bg-foreground px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
         >
           {acao === "mp" ? "Abrindo…" : "Pagar no Mercado Pago (teste)"}
         </button>

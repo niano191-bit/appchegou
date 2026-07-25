@@ -74,7 +74,7 @@ export function PainelRestaurante() {
 
   if (carregando) {
     return (
-      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-[#5C4A3A]">
+      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
         Carregando pedidos…
       </p>
     );
@@ -85,13 +85,13 @@ export function PainelRestaurante() {
       <SeloAoVivo />
 
       {erro ? (
-        <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
+        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
           {erro}
         </div>
       ) : null}
 
       {pedidos.length === 0 && !erro ? (
-        <div className="rounded-2xl border border-dashed border-[#C4A882] bg-white/60 px-5 py-10 text-center text-sm text-[#5C4A3A]">
+        <div className="rounded-2xl border border-dashed border-[#C4A882] bg-white/60 px-5 py-10 text-center text-sm text-muted">
           Nenhum pedido novo ou em preparo no momento.
         </div>
       ) : null}
@@ -105,21 +105,21 @@ export function PainelRestaurante() {
           return (
             <li
               key={pedido.id}
-              className="rounded-2xl border border-[#E8D9C8] bg-white px-5 py-4 shadow-sm"
+              className="rounded-2xl border border-linha bg-white px-5 py-4 shadow-sm"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs font-medium tracking-wide text-[#8A7460] uppercase">
+                  <p className="text-xs font-medium tracking-wide text-muted uppercase">
                     Pedido #{pedido.id.slice(0, 8)}
                   </p>
-                  <p className="mt-1 text-lg font-semibold text-[#1A120C]">
+                  <p className="mt-1 text-lg font-semibold text-foreground">
                     {formatarReais(totalComEntrega)}
                   </p>
                 </div>
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-medium ${
                     pedido.status === "novo"
-                      ? "bg-[#FFF4EB] text-[#C45C26]"
+                      ? "bg-dende-suave text-dende"
                       : "bg-[#E8F5E9] text-[#2F6B3A]"
                   }`}
                 >
@@ -127,16 +127,16 @@ export function PainelRestaurante() {
                 </span>
               </div>
 
-              <p className="mt-3 text-sm text-[#5C4A3A]">
+              <p className="mt-3 text-sm text-muted">
                 {pedido.endereco_entrega}
               </p>
               {pedido.observacao ? (
-                <p className="mt-1 text-sm text-[#8A7460]">
+                <p className="mt-1 text-sm text-muted">
                   Obs.: {pedido.observacao}
                 </p>
               ) : null}
 
-              <ul className="mt-3 border-t border-[#F0E6D8] pt-3 text-sm text-[#1A120C]">
+              <ul className="mt-3 border-t border-[#F0E6D8] pt-3 text-sm text-foreground">
                 {pedido.itens_pedido.map((item) => (
                   <li
                     key={item.id}
@@ -145,7 +145,7 @@ export function PainelRestaurante() {
                     <span>
                       {item.quantidade}× {item.nome}
                     </span>
-                    <span className="text-[#5C4A3A]">
+                    <span className="text-muted">
                       {formatarReais(
                         Number(item.preco_unitario) * item.quantidade,
                       )}
@@ -160,7 +160,7 @@ export function PainelRestaurante() {
                     type="button"
                     disabled={ocupado}
                     onClick={() => void mudarStatus(pedido.id, "aceito")}
-                    className="flex-1 rounded-xl bg-[#C45C26] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#A84C1E] disabled:opacity-60"
+                    className="flex-1 rounded-xl bg-dende px-4 py-3 text-sm font-semibold text-white transition hover:bg-dende-escuro disabled:opacity-60"
                   >
                     {ocupado ? "Salvando…" : "Aceitar"}
                   </button>

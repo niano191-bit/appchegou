@@ -111,7 +111,7 @@ export function PainelDono() {
 
   if (carregando) {
     return (
-      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-[#5C4A3A]">
+      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
         Carregando painel…
       </p>
     );
@@ -122,7 +122,7 @@ export function PainelDono() {
       <SeloAoVivo />
 
       {erro ? (
-        <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
+        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
           {erro}
         </div>
       ) : null}
@@ -134,7 +134,7 @@ export function PainelDono() {
 
       {/* Números do dia */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Números do dia
         </h2>
         <div className="grid grid-cols-2 gap-3">
@@ -159,11 +159,11 @@ export function PainelDono() {
 
       {/* Pedidos ao vivo */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Pedidos ao vivo
         </h2>
         {pedidos.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-[#C4A882] bg-white/60 px-5 py-6 text-center text-sm text-[#5C4A3A]">
+          <p className="rounded-2xl border border-dashed border-[#C4A882] bg-white/60 px-5 py-6 text-center text-sm text-muted">
             Nenhum pedido ainda hoje.
           </p>
         ) : (
@@ -171,22 +171,22 @@ export function PainelDono() {
             {pedidos.slice(0, 20).map((p) => (
               <li
                 key={p.id}
-                className="rounded-2xl border border-[#E8D9C8] bg-white px-4 py-3 text-sm"
+                className="rounded-2xl border border-linha bg-white px-4 py-3 text-sm"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-semibold text-[#1A120C]">
+                    <p className="font-semibold text-foreground">
                       {p.restaurante_nome}
                     </p>
-                    <p className="text-[#5C4A3A]">
+                    <p className="text-muted">
                       #{p.id.slice(0, 8)} · {formatarReais(Number(p.total))}
                     </p>
-                    <p className="text-xs text-[#8A7460]">
+                    <p className="text-xs text-muted">
                       Comissão {p.comissao_percentual}% ={" "}
                       {formatarReais(p.comissao_valor)}
                     </p>
                   </div>
-                  <span className="rounded-full bg-[#FFF4EB] px-2.5 py-1 text-xs font-medium text-[#C45C26]">
+                  <span className="rounded-full bg-dende-suave px-2.5 py-1 text-xs font-medium text-dende">
                     {p.status_pagamento === "pago"
                       ? STATUS_PEDIDO_LABEL[p.status]
                       : STATUS_PAGAMENTO_LABEL[p.status_pagamento]}
@@ -200,19 +200,19 @@ export function PainelDono() {
 
       {/* Restaurantes */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Restaurantes
         </h2>
         <ul className="flex flex-col gap-3">
           {restaurantes.map((loja) => (
             <li
               key={loja.id}
-              className="rounded-2xl border border-[#E8D9C8] bg-white px-4 py-3"
+              className="rounded-2xl border border-linha bg-white px-4 py-3"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-semibold text-[#1A120C]">{loja.nome}</p>
-                  <p className="text-xs text-[#8A7460]">
+                  <p className="font-semibold text-foreground">{loja.nome}</p>
+                  <p className="text-xs text-muted">
                     {loja.ativo ? "Ativo" : "Inativo"}
                   </p>
                 </div>
@@ -220,12 +220,12 @@ export function PainelDono() {
                   type="button"
                   disabled={salvando}
                   onClick={() => void alternarAtivo(loja)}
-                  className="text-xs font-medium text-[#C45C26] underline-offset-2 hover:underline"
+                  className="text-xs font-medium text-dende underline-offset-2 hover:underline"
                 >
                   {loja.ativo ? "Desativar" : "Ativar"}
                 </button>
               </div>
-              <label className="mt-3 block text-sm text-[#5C4A3A]">
+              <label className="mt-3 block text-sm text-muted">
                 Comissão (%)
                 <div className="mt-1 flex gap-2">
                   <input
@@ -235,7 +235,7 @@ export function PainelDono() {
                     step={0.5}
                     defaultValue={loja.comissao_percentual}
                     id={`comissao-${loja.id}`}
-                    className="w-28 rounded-xl border border-[#E8D9C8] px-3 py-2 text-[#1A120C] outline-none focus:border-[#C45C26]"
+                    className="w-28 rounded-xl border border-linha px-3 py-2 text-foreground outline-none focus:border-dende"
                   />
                   <button
                     type="button"
@@ -246,7 +246,7 @@ export function PainelDono() {
                       ) as HTMLInputElement | null;
                       void salvarComissao(loja.id, Number(input?.value ?? 0));
                     }}
-                    className="rounded-xl bg-[#C45C26] px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                    className="rounded-xl bg-dende px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
                   >
                     Salvar
                   </button>
@@ -259,18 +259,18 @@ export function PainelDono() {
 
       {/* Entregadores */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Entregadores
         </h2>
         <ul className="flex flex-col gap-2">
           {entregadores.map((e) => (
             <li
               key={e.id}
-              className="rounded-2xl border border-[#E8D9C8] bg-white px-4 py-3 text-sm"
+              className="rounded-2xl border border-linha bg-white px-4 py-3 text-sm"
             >
-              <p className="font-semibold text-[#1A120C]">{e.nome}</p>
-              <p className="text-[#5C4A3A]">{e.telefone ?? "Sem telefone"}</p>
-              <p className="text-xs text-[#8A7460]">{e.email}</p>
+              <p className="font-semibold text-foreground">{e.nome}</p>
+              <p className="text-muted">{e.telefone ?? "Sem telefone"}</p>
+              <p className="text-xs text-muted">{e.email}</p>
             </li>
           ))}
         </ul>
@@ -278,12 +278,12 @@ export function PainelDono() {
 
       {/* Configurações */}
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Configurações
         </h2>
         {config ? (
-          <div className="rounded-2xl border border-[#E8D9C8] bg-white px-4 py-4 space-y-3">
-            <label className="block text-sm text-[#5C4A3A]">
+          <div className="rounded-2xl border border-linha bg-white px-4 py-4 space-y-3">
+            <label className="block text-sm text-muted">
               Taxa de entrega (R$)
               <input
                 type="number"
@@ -296,11 +296,11 @@ export function PainelDono() {
                     taxa_entrega: Number(e.target.value),
                   })
                 }
-                className="mt-1 w-full rounded-xl border border-[#E8D9C8] px-3 py-2.5 text-[#1A120C] outline-none focus:border-[#C45C26]"
+                className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
               />
             </label>
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-sm text-[#5C4A3A]">
+              <label className="block text-sm text-muted">
                 Abre às
                 <input
                   type="time"
@@ -311,10 +311,10 @@ export function PainelDono() {
                       horario_abertura: e.target.value,
                     })
                   }
-                  className="mt-1 w-full rounded-xl border border-[#E8D9C8] px-3 py-2.5 text-[#1A120C] outline-none focus:border-[#C45C26]"
+                  className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
                 />
               </label>
-              <label className="block text-sm text-[#5C4A3A]">
+              <label className="block text-sm text-muted">
                 Fecha às
                 <input
                   type="time"
@@ -325,7 +325,7 @@ export function PainelDono() {
                       horario_fechamento: e.target.value,
                     })
                   }
-                  className="mt-1 w-full rounded-xl border border-[#E8D9C8] px-3 py-2.5 text-[#1A120C] outline-none focus:border-[#C45C26]"
+                  className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
                 />
               </label>
             </div>
@@ -333,7 +333,7 @@ export function PainelDono() {
               type="button"
               disabled={salvando}
               onClick={() => void salvarConfig()}
-              className="w-full rounded-xl bg-[#1A120C] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+              className="w-full rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
             >
               {salvando ? "Salvando…" : "Salvar configurações"}
             </button>
@@ -346,11 +346,11 @@ export function PainelDono() {
 
 function CardNumero({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
-    <div className="rounded-2xl border border-[#E8D9C8] bg-white px-4 py-3">
-      <p className="text-xs font-medium tracking-wide text-[#8A7460] uppercase">
+    <div className="rounded-2xl border border-linha bg-white px-4 py-3">
+      <p className="text-xs font-medium tracking-wide text-muted uppercase">
         {rotulo}
       </p>
-      <p className="mt-1 text-lg font-semibold text-[#1A120C]">{valor}</p>
+      <p className="mt-1 text-lg font-semibold text-foreground">{valor}</p>
     </div>
   );
 }

@@ -57,7 +57,7 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
 
   if (carregando) {
     return (
-      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-[#5C4A3A]">
+      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
         Carregando pedido…
       </p>
     );
@@ -65,7 +65,7 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
 
   if (erro || !pedido) {
     return (
-      <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
+      <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
         {erro ?? "Pedido não encontrado."}
       </div>
     );
@@ -82,7 +82,7 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
       <SeloAoVivo />
 
       {aguardandoPagamento ? (
-        <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
+        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
           <p className="font-medium">
             {STATUS_PAGAMENTO_LABEL[pedido.status_pagamento]}
           </p>
@@ -91,47 +91,47 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
           </p>
           <Link
             href={`/cliente/pedido/${pedidoId}/pagar`}
-            className="mt-3 inline-flex rounded-xl bg-[#C45C26] px-4 py-2.5 text-sm font-semibold text-white"
+            className="mt-3 inline-flex rounded-xl bg-dende px-4 py-2.5 text-sm font-semibold text-white"
           >
             Ir para o pagamento
           </Link>
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-[#E8D9C8] bg-white px-5 py-4">
-        <p className="text-xs font-medium tracking-wide text-[#8A7460] uppercase">
+      <div className="rounded-2xl border border-linha bg-white px-5 py-4">
+        <p className="text-xs font-medium tracking-wide text-muted uppercase">
           {pedido.restaurante_nome}
         </p>
-        <p className="mt-1 text-lg font-semibold text-[#1A120C]">
+        <p className="mt-1 text-lg font-semibold text-foreground">
           Pedido #{pedido.id.slice(0, 8)}
         </p>
-        <p className="mt-2 text-sm text-[#5C4A3A]">
+        <p className="mt-2 text-sm text-muted">
           {aguardandoPagamento
             ? "Assim que pagar, o restaurante poderá aceitar."
             : DICA[pedido.status]}
         </p>
-        <p className="mt-3 text-base font-semibold text-[#C45C26]">
+        <p className="mt-3 text-base font-semibold text-dende">
           {aguardandoPagamento
             ? STATUS_PAGAMENTO_LABEL[pedido.status_pagamento]
             : STATUS_PEDIDO_LABEL[pedido.status]}
         </p>
       </div>
 
-      <ol className="rounded-2xl border border-[#E8D9C8] bg-white px-5 py-4">
+      <ol className="rounded-2xl border border-linha bg-white px-5 py-4">
         {ETAPAS.map((etapa, index) => {
           const feita = index <= indiceAtual;
           return (
             <li
               key={etapa}
               className={`flex items-center gap-3 py-2 text-sm ${
-                feita ? "text-[#1A120C] font-medium" : "text-[#B0A090]"
+                feita ? "text-foreground font-medium" : "text-[#B0A090]"
               }`}
             >
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
                   feita
                     ? "bg-[#2F6B3A] text-white"
-                    : "bg-[#F0E6D8] text-[#8A7460]"
+                    : "bg-linha text-muted"
                 }`}
               >
                 {feita ? "✓" : index + 1}
@@ -142,16 +142,16 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
         })}
       </ol>
 
-      <div className="rounded-2xl border border-[#E8D9C8] bg-white px-5 py-4 text-sm">
-        <p className="text-[#5C4A3A]">Entrega em {pedido.endereco_entrega}</p>
-        <ul className="mt-3 space-y-1 border-t border-[#F0E6D8] pt-3 text-[#1A120C]">
+      <div className="rounded-2xl border border-linha bg-white px-5 py-4 text-sm">
+        <p className="text-muted">Entrega em {pedido.endereco_entrega}</p>
+        <ul className="mt-3 space-y-1 border-t border-[#F0E6D8] pt-3 text-foreground">
           {pedido.itens_pedido.map((item) => (
             <li key={item.id}>
               {item.quantidade}× {item.nome}
             </li>
           ))}
         </ul>
-        <p className="mt-3 font-semibold text-[#1A120C]">
+        <p className="mt-3 font-semibold text-foreground">
           Total {formatarReais(total)}
         </p>
       </div>

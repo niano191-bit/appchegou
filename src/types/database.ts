@@ -1,4 +1,4 @@
-/** Papéis possíveis de um usuário no Chegou */
+/** Papéis possíveis de um usuário na plataforma */
 export type PapelUsuario = "cliente" | "restaurante" | "entregador" | "dono";
 
 /** Fluxo do pedido: novo → aceito → pronto → a_caminho → entregue */

@@ -122,7 +122,7 @@ export function CardapioComCarrinho({
 
   if (carregando) {
     return (
-      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-[#5C4A3A]">
+      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
         Carregando cardápio…
       </p>
     );
@@ -130,7 +130,7 @@ export function CardapioComCarrinho({
 
   if (!restaurante) {
     return (
-      <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
+      <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
         {erro ?? "Restaurante não encontrado."}
       </div>
     );
@@ -139,16 +139,16 @@ export function CardapioComCarrinho({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display text-3xl text-[#1A120C]">
+        <h1 className="font-display text-3xl text-foreground">
           {restaurante.nome}
         </h1>
         {restaurante.descricao ? (
-          <p className="mt-1 text-sm text-[#5C4A3A]">{restaurante.descricao}</p>
+          <p className="mt-1 text-sm text-muted">{restaurante.descricao}</p>
         ) : null}
       </div>
 
       {erro ? (
-        <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
+        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
           {erro}
         </div>
       ) : null}
@@ -160,7 +160,7 @@ export function CardapioComCarrinho({
       ) : null}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Cardápio
         </h2>
         <ul className="flex flex-col gap-3">
@@ -169,17 +169,17 @@ export function CardapioComCarrinho({
             return (
               <li
                 key={item.id}
-                className="rounded-2xl border border-[#E8D9C8] bg-white px-4 py-3"
+                className="rounded-2xl border border-linha bg-white px-4 py-3"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-[#1A120C]">{item.nome}</p>
+                    <p className="font-semibold text-foreground">{item.nome}</p>
                     {item.descricao ? (
-                      <p className="mt-0.5 text-sm text-[#5C4A3A]">
+                      <p className="mt-0.5 text-sm text-muted">
                         {item.descricao}
                       </p>
                     ) : null}
-                    <p className="mt-2 text-sm font-medium text-[#C45C26]">
+                    <p className="mt-2 text-sm font-medium text-dende">
                       {formatarReais(Number(item.preco))}
                     </p>
                   </div>
@@ -189,7 +189,7 @@ export function CardapioComCarrinho({
                         <button
                           type="button"
                           onClick={() => alterarQuantidade(item, -1)}
-                          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E8D9C8] text-lg text-[#1A120C]"
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-linha text-lg text-foreground"
                           aria-label="Remover um"
                         >
                           −
@@ -202,7 +202,7 @@ export function CardapioComCarrinho({
                     <button
                       type="button"
                       onClick={() => alterarQuantidade(item, 1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C45C26] text-lg text-white"
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-dende text-lg text-white"
                       aria-label="Adicionar um"
                     >
                       +
@@ -215,13 +215,13 @@ export function CardapioComCarrinho({
         </ul>
       </section>
 
-      <section className="rounded-2xl border border-[#E8D9C8] bg-white px-5 py-4">
-        <h2 className="text-sm font-semibold tracking-wide text-[#8A7460] uppercase">
+      <section className="rounded-2xl border border-linha bg-white px-5 py-4">
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Carrinho
         </h2>
 
         {itensCarrinho.length === 0 ? (
-          <p className="mt-3 text-sm text-[#5C4A3A]">
+          <p className="mt-3 text-sm text-muted">
             Seu carrinho está vazio. Toque no + para adicionar.
           </p>
         ) : (
@@ -240,26 +240,26 @@ export function CardapioComCarrinho({
         )}
 
         <div className="mt-4 space-y-3 border-t border-[#F0E6D8] pt-4">
-          <label className="block text-sm text-[#5C4A3A]">
+          <label className="block text-sm text-muted">
             Endereço de entrega
             <input
               value={endereco}
               onChange={(e) => setEndereco(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-[#E8D9C8] px-3 py-2.5 text-[#1A120C] outline-none focus:border-[#C45C26]"
+              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
             />
           </label>
-          <label className="block text-sm text-[#5C4A3A]">
+          <label className="block text-sm text-muted">
             Observação (opcional)
             <input
               value={observacao}
               onChange={(e) => setObservacao(e.target.value)}
               placeholder="Ex.: sem pimenta"
-              className="mt-1 w-full rounded-xl border border-[#E8D9C8] px-3 py-2.5 text-[#1A120C] outline-none focus:border-[#C45C26]"
+              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
             />
           </label>
         </div>
 
-        <div className="mt-4 space-y-1 text-sm text-[#5C4A3A]">
+        <div className="mt-4 space-y-1 text-sm text-muted">
           <div className="flex justify-between">
             <span>Subtotal</span>
             <span>{formatarReais(subtotal)}</span>
@@ -268,7 +268,7 @@ export function CardapioComCarrinho({
             <span>Taxa de entrega</span>
             <span>{formatarReais(taxaEntrega)}</span>
           </div>
-          <div className="flex justify-between text-base font-semibold text-[#1A120C]">
+          <div className="flex justify-between text-base font-semibold text-foreground">
             <span>Total</span>
             <span>{formatarReais(total)}</span>
           </div>
@@ -278,7 +278,7 @@ export function CardapioComCarrinho({
           type="button"
           disabled={enviando || itensCarrinho.length === 0}
           onClick={() => void enviarPedido()}
-          className="mt-4 w-full rounded-xl bg-[#C45C26] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#A84C1E] disabled:opacity-60"
+          className="mt-4 w-full rounded-xl bg-dende px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-dende-escuro disabled:opacity-60"
         >
           {enviando ? "Enviando…" : "Ir para o pagamento"}
         </button>

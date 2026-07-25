@@ -29,7 +29,7 @@ export function ListaRestaurantes() {
 
   if (carregando) {
     return (
-      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-[#5C4A3A]">
+      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
         Carregando restaurantes…
       </p>
     );
@@ -37,7 +37,7 @@ export function ListaRestaurantes() {
 
   if (erro) {
     return (
-      <div className="rounded-2xl border border-[#C45C26]/30 bg-[#FFF4EB] px-5 py-4 text-sm text-[#5C3A1E]">
+      <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
         {erro}
       </div>
     );
@@ -49,14 +49,14 @@ export function ListaRestaurantes() {
         <li key={loja.id}>
           <Link
             href={`/cliente/${loja.id}`}
-            className="block rounded-2xl border border-[#E8D9C8] bg-white px-5 py-4 transition hover:border-[#C45C26]/50 hover:bg-[#FFF9F4]"
+            className="block rounded-2xl border border-linha bg-white px-5 py-4 transition hover:border-dende/50 hover:bg-background"
           >
-            <p className="text-lg font-semibold text-[#1A120C]">{loja.nome}</p>
+            <p className="text-lg font-semibold text-foreground">{loja.nome}</p>
             {loja.descricao ? (
-              <p className="mt-1 text-sm text-[#5C4A3A]">{loja.descricao}</p>
+              <p className="mt-1 text-sm text-muted">{loja.descricao}</p>
             ) : null}
             {loja.endereco ? (
-              <p className="mt-2 text-xs text-[#8A7460]">{loja.endereco}</p>
+              <p className="mt-2 text-xs text-muted">{loja.endereco}</p>
             ) : null}
           </Link>
         </li>
