@@ -16,6 +16,7 @@ import type {
 import { BAIRROS_SALVADOR_SEED } from "@/lib/bairros-seed";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import {
+  inicioFimDoDiaSalvador,
   mensagemBloqueioPedido,
   statusOperacaoLoja,
 } from "@/lib/horario";
@@ -520,6 +521,22 @@ export type CorridaLocal = PedidoLocal & {
   cliente_telefone?: string | null;
   restaurante_endereco?: string | null;
 };
+
+/** Ganhos do entregador hoje (soma das taxas de entrega) */
+export async function ganhosEntregadorHojeLocal(entregadorId: string) {
+  const banco = await lerBancoLocal();
+  const { inicio, fim } = inicioFimDoDiaSalvador();
+  const entregues = banco.pedidos.filter((p) => {
+    if (p.entregador_id !== entregadorId) return false;
+    if (p.status !== "entregue") return false;
+    if (p.status_pagamento !== "pago") return false;
+    const t = new Date(p.atualizado_em).getTime();
+    return t >= inicio.getTime() && t <= fim.getTime();
+  });
+
+  const valor = entregues.reduce((s, p) => s + Number(p.taxa_entrega), 0);
+  return { entregas: entregues.length, valor };
+}
 
 /** Corridas disponíveis (pronto) + as do entregador (a caminho) */
 export async function listarCorridasLocal(entregadorId: string) {
@@ -1063,18 +1080,6 @@ export async function listarTodosPedidosLocal() {
     });
 }
 
-function inicioFimDoDiaSalvador() {
-  const agoraSp = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
-  );
-  const y = agoraSp.getFullYear();
-  const m = String(agoraSp.getMonth() + 1).padStart(2, "0");
-  const d = String(agoraSp.getDate()).padStart(2, "0");
-  // Intervalo do dia em Salvador, convertido para comparação ISO
-  const inicio = new Date(`${y}-${m}-${d}T00:00:00-03:00`);
-  const fim = new Date(`${y}-${m}-${d}T23:59:59.999-03:00`);
-  return { inicio, fim };
-}
 
 /** Números do dia: pedidos, comissão e ticket médio */
 export async function resumoDoDiaLocal() {

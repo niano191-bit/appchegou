@@ -101,11 +101,17 @@ export async function buscarPedido(pedidoId: string) {
   return json.pedido!;
 }
 
-/** Lista corridas do entregador logado */
+export type GanhosEntregadorDia = {
+  entregas: number;
+  valor: number;
+};
+
+/** Lista corridas do entregador logado + ganhos do dia */
 export async function listarCorridas() {
   const resposta = await fetch("/api/corridas", { cache: "no-store" });
   const json = (await resposta.json()) as {
     corridas?: CorridaComItens[];
+    ganhos?: GanhosEntregadorDia;
     erro?: string;
   };
 
@@ -113,7 +119,10 @@ export async function listarCorridas() {
     throw new Error(json.erro ?? "Não foi possível carregar as corridas.");
   }
 
-  return json.corridas ?? [];
+  return {
+    corridas: json.corridas ?? [],
+    ganhos: json.ganhos ?? { entregas: 0, valor: 0 },
+  };
 }
 
 /** Cliente cancela pedido ainda não aceito */

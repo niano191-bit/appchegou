@@ -10,6 +10,7 @@ import {
   atualizarStatusPedido,
   listarCorridas,
   type CorridaComItens,
+  type GanhosEntregadorDia,
 } from "@/lib/pedidos";
 import { obterSessaoCliente } from "@/lib/sessao-cliente";
 import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
@@ -17,6 +18,10 @@ import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
 export function PainelEntregador() {
   const entregadorIdRef = useRef<string | null>(null);
   const [corridas, setCorridas] = useState<CorridaComItens[]>([]);
+  const [ganhos, setGanhos] = useState<GanhosEntregadorDia>({
+    entregas: 0,
+    valor: 0,
+  });
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [acaoId, setAcaoId] = useState<string | null>(null);
@@ -30,7 +35,8 @@ export function PainelEntregador() {
         entregadorIdRef.current = user.id;
       }
       const dados = await listarCorridas();
-      setCorridas(dados);
+      setCorridas(dados.corridas);
+      setGanhos(dados.ganhos);
       setErro(null);
     } catch (e) {
       setErro(
@@ -75,6 +81,11 @@ export function PainelEntregador() {
     }
   }
 
+  const contarProntas = useCallback(async () => {
+    const todas = await listarCorridas();
+    return todas.corridas.filter((c) => c.status === "pronto").length;
+  }, []);
+
   if (carregando) {
     return (
       <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
@@ -82,11 +93,6 @@ export function PainelEntregador() {
       </p>
     );
   }
-
-  const contarProntas = useCallback(async () => {
-    const todas = await listarCorridas();
-    return todas.filter((c) => c.status === "pronto").length;
-  }, []);
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -100,6 +106,22 @@ export function PainelEntregador() {
             : `${qtd} novas corridas disponíveis!`
         }
       />
+
+      <div className="rounded-2xl border border-mar/30 bg-mar-suave/50 px-5 py-4">
+        <p className="text-xs font-medium tracking-wide text-muted uppercase">
+          Ganhos de hoje
+        </p>
+        <p className="mt-1 text-2xl font-semibold text-mar">
+          {formatarReais(ganhos.valor)}
+        </p>
+        <p className="mt-1 text-sm text-muted">
+          {ganhos.entregas === 0
+            ? "Nenhuma entrega concluída ainda hoje."
+            : ganhos.entregas === 1
+              ? "1 entrega concluída"
+              : `${ganhos.entregas} entregas concluídas`}
+        </p>
+      </div>
 
       {erro ? (
         <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
@@ -118,8 +140,7 @@ export function PainelEntregador() {
       <ul className="flex flex-col gap-4">
         {corridas.map((corrida) => {
           const ocupado = acaoId === corrida.id;
-          const totalComEntrega =
-            Number(corrida.total) + Number(corrida.taxa_entrega);
+          const taxa = Number(corrida.taxa_entrega);
 
           return (
             <li
@@ -132,7 +153,7 @@ export function PainelEntregador() {
                     {corrida.restaurante_nome}
                   </p>
                   <p className="mt-1 text-lg font-semibold text-foreground">
-                    {formatarReais(totalComEntrega)}
+                    Seu ganho: {formatarReais(taxa)}
                   </p>
                 </div>
                 <span

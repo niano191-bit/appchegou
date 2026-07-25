@@ -10,6 +10,19 @@ export function horaParaMinutos(hora: string): number | null {
   return h * 60 + min;
 }
 
+/** Início e fim do dia civil em Salvador (UTC-3) */
+export function inicioFimDoDiaSalvador(agora = new Date()) {
+  const agoraSp = new Date(
+    agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
+  );
+  const y = agoraSp.getFullYear();
+  const m = String(agoraSp.getMonth() + 1).padStart(2, "0");
+  const d = String(agoraSp.getDate()).padStart(2, "0");
+  const inicio = new Date(`${y}-${m}-${d}T00:00:00-03:00`);
+  const fim = new Date(`${y}-${m}-${d}T23:59:59.999-03:00`);
+  return { inicio, fim };
+}
+
 /** Horário atual em Salvador (America/Bahia) em minutos */
 export function minutosAgoraSalvador(agora = new Date()): number {
   const parts = new Intl.DateTimeFormat("en-GB", {

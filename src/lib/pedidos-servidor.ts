@@ -14,6 +14,7 @@ import { normalizarConfiguracao, type ItemNovoPedido } from "@/lib/local-db";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import { buscarBairro, listarBairros } from "@/lib/bairros-servidor";
 import {
+  inicioFimDoDiaSalvador,
   mensagemBloqueioPedido,
   statusOperacaoLoja,
 } from "@/lib/horario";
@@ -534,6 +535,34 @@ export async function atualizarStatusPedido(
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export type GanhosEntregadorDia = {
+  entregas: number;
+  valor: number;
+};
+
+/** Soma das taxas de entrega do entregador no dia (Salvador) */
+export async function ganhosEntregadorHoje(
+  entregadorId: string,
+): Promise<GanhosEntregadorDia> {
+  const supabase = createSupabaseClient();
+  const { inicio, fim } = inicioFimDoDiaSalvador();
+
+  const { data, error } = await supabase
+    .from("pedidos")
+    .select("taxa_entrega")
+    .eq("entregador_id", entregadorId)
+    .eq("status", "entregue")
+    .eq("status_pagamento", "pago")
+    .gte("atualizado_em", inicio.toISOString())
+    .lte("atualizado_em", fim.toISOString());
+
+  if (error) throw new Error(error.message);
+
+  const lista = data ?? [];
+  const valor = lista.reduce((s, p) => s + Number(p.taxa_entrega), 0);
+  return { entregas: lista.length, valor };
 }
 
 /** Corridas: prontas para pegar + as do entregador a caminho */
