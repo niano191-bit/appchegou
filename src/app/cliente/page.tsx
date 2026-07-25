@@ -1,5 +1,6 @@
 import { CabecalhoArea } from "@/components/cabecalho-area";
 import { lerSessao } from "@/lib/auth-servidor";
+import { HistoricoPedidos } from "./historico-pedidos";
 import { ListaRestaurantes } from "./lista-restaurantes";
 
 export const metadata = {
@@ -18,6 +19,7 @@ export default async function PaginaCliente() {
         descricao="Escolha um restaurante, monte o carrinho e envie o pedido."
       />
       <ListaRestaurantes />
+      <HistoricoPedidos />
     </div>
   );
 }

@@ -265,19 +265,39 @@ async function salvarBancoLocal(banco: BancoLocal) {
 export async function listarPedidosLocal(
   restauranteId: string,
   status: StatusPedido[],
+  ordem: "asc" | "desc" = "asc",
 ) {
   const banco = await lerBancoLocal();
+  const lista = banco.pedidos.filter(
+    (p) =>
+      p.restaurante_id === restauranteId &&
+      p.status_pagamento === "pago" &&
+      status.includes(p.status),
+  );
+  lista.sort((a, b) => {
+    const diff =
+      new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime();
+    return ordem === "desc" ? -diff : diff;
+  });
+  return lista;
+}
+
+/** Pedidos do cliente (todos os status), mais recentes primeiro */
+export async function listarPedidosDoClienteLocal(clienteId: string) {
+  const banco = await lerBancoLocal();
+  const porLoja = new Map(banco.restaurantes.map((r) => [r.id, r.nome]));
+
   return banco.pedidos
-    .filter(
-      (p) =>
-        p.restaurante_id === restauranteId &&
-        p.status_pagamento === "pago" &&
-        status.includes(p.status),
-    )
+    .filter((p) => p.cliente_id === clienteId)
+    .slice()
     .sort(
       (a, b) =>
-        new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime(),
-    );
+        new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime(),
+    )
+    .map((p) => ({
+      ...p,
+      restaurante_nome: porLoja.get(p.restaurante_id) ?? "Restaurante",
+    }));
 }
 
 export async function buscarPedidoLocal(pedidoId: string) {

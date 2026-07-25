@@ -12,10 +12,12 @@ export type ItemCarrinhoEnvio = {
 export async function listarPedidosDoRestaurante(
   restauranteId: string,
   status: StatusPedido[],
+  ordem: "asc" | "desc" = "asc",
 ) {
   const params = new URLSearchParams({
     restauranteId,
     status: status.join(","),
+    ordem,
   });
 
   const resposta = await fetch(`/api/pedidos?${params.toString()}`, {
@@ -28,6 +30,25 @@ export async function listarPedidosDoRestaurante(
 
   if (!resposta.ok) {
     throw new Error(json.erro ?? "Não foi possível carregar os pedidos.");
+  }
+
+  return json.pedidos ?? [];
+}
+
+export type PedidoCliente = PedidoComItens & {
+  restaurante_nome: string;
+};
+
+/** Histórico de pedidos do cliente logado */
+export async function listarMeusPedidos() {
+  const resposta = await fetch("/api/pedidos?meus=1", { cache: "no-store" });
+  const json = (await resposta.json()) as {
+    pedidos?: PedidoCliente[];
+    erro?: string;
+  };
+
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível carregar seus pedidos.");
   }
 
   return json.pedidos ?? [];

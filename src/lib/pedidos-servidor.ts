@@ -302,6 +302,7 @@ export async function buscarPedido(pedidoId: string) {
 export async function listarPedidosDoRestaurante(
   restauranteId: string,
   status: StatusPedido[],
+  ordem: "asc" | "desc" = "asc",
 ) {
   const supabase = createSupabaseClient();
 
@@ -311,13 +312,34 @@ export async function listarPedidosDoRestaurante(
     .eq("restaurante_id", restauranteId)
     .eq("status_pagamento", "pago")
     .in("status", status)
-    .order("criado_em", { ascending: true });
+    .order("criado_em", { ascending: ordem === "asc" });
 
   if (error) {
     throw new Error(error.message);
   }
 
   return (data ?? []) as PedidoComItens[];
+}
+
+/** Pedidos do cliente logado */
+export async function listarPedidosDoCliente(clienteId: string) {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .select("*, itens_pedido(*), restaurantes(nome)")
+    .eq("cliente_id", clienteId)
+    .order("criado_em", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((p) => {
+    const loja = p.restaurantes as { nome?: string } | null;
+    const { restaurantes: _, ...pedido } = p;
+    return {
+      ...(pedido as PedidoComItens),
+      restaurante_nome: loja?.nome ?? "Restaurante",
+    };
+  });
 }
 
 /** Atualiza status no Supabase (e entregador, se informado) */

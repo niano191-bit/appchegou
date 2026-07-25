@@ -4,6 +4,7 @@ import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import {
   criarPedidoLocal,
   lerConfiguracaoLocal,
+  listarPedidosDoClienteLocal,
   listarPedidosLocal,
   usandoModoDemo,
   type ItemNovoPedido,
@@ -11,19 +12,41 @@ import {
 import {
   criarPedido,
   lerConfiguracao,
+  listarPedidosDoCliente,
   listarPedidosDoRestaurante,
 } from "@/lib/pedidos-servidor";
 import type { StatusPedido } from "@/types/database";
 
-/** Lista pedidos (modo demo local ou Supabase, se configurado) */
+/** Lista pedidos do cliente logado ou do restaurante */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const statusParam = searchParams.get("status") ?? "novo,aceito";
   const sessao = await lerSessao();
+
+  // Cliente: só os próprios pedidos
+  if (searchParams.get("meus") === "1" || sessao?.papel === "cliente") {
+    try {
+      const user = await exigirSessao("cliente");
+      if (usandoModoDemo()) {
+        const pedidos = await listarPedidosDoClienteLocal(user.id);
+        return NextResponse.json({ modo: "demo", pedidos });
+      }
+      const pedidos = await listarPedidosDoCliente(user.id);
+      return NextResponse.json({ modo: "supabase", pedidos });
+    } catch (e) {
+      const mensagem =
+        e instanceof Error ? e.message : "Erro ao listar seus pedidos.";
+      const status =
+        mensagem.includes("login") || mensagem.includes("área") ? 401 : 500;
+      return NextResponse.json({ erro: mensagem }, { status });
+    }
+  }
+
+  const statusParam = searchParams.get("status") ?? "novo,aceito";
+  const ordem =
+    searchParams.get("ordem") === "desc" ? ("desc" as const) : ("asc" as const);
 
   let restauranteId = searchParams.get("restauranteId");
 
-  // Restaurante logado só vê a própria loja
   if (sessao?.papel === "restaurante") {
     if (!sessao.restaurante_id) {
       return NextResponse.json(
@@ -45,11 +68,15 @@ export async function GET(request: Request) {
 
   try {
     if (usandoModoDemo()) {
-      const pedidos = await listarPedidosLocal(restauranteId, status);
+      const pedidos = await listarPedidosLocal(restauranteId, status, ordem);
       return NextResponse.json({ modo: "demo", pedidos });
     }
 
-    const pedidos = await listarPedidosDoRestaurante(restauranteId, status);
+    const pedidos = await listarPedidosDoRestaurante(
+      restauranteId,
+      status,
+      ordem,
+    );
     return NextResponse.json({ modo: "supabase", pedidos });
   } catch (e) {
     const mensagem =
@@ -58,7 +85,7 @@ export async function GET(request: Request) {
   }
 }
 
-/** Cria pedido com status novo (Cliente Teste até ter login) */
+/** Cria pedido com status novo */
 export async function POST(request: Request) {
   let corpo: {
     restauranteId?: string;
