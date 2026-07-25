@@ -76,7 +76,7 @@ export function FormLogin({ nextUrl }: { nextUrl?: string }) {
         </label>
 
         {erro ? (
-          <p className="text-sm text-[#A84C1E]">{erro}</p>
+          <p className="text-sm text-dende-escuro">{erro}</p>
         ) : null}
 
         <button

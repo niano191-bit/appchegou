@@ -27,6 +27,31 @@ export async function entrar(email: string, senha: string) {
   return { sessao: json.sessao!, destino: json.destino! };
 }
 
+/** Cria conta de cliente e já entra */
+export async function cadastrar(entrada: {
+  nome: string;
+  email: string;
+  telefone?: string;
+  senha: string;
+}) {
+  const resposta = await fetch("/api/auth/cadastro", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entrada),
+  });
+  const json = (await resposta.json()) as {
+    sessao?: SessaoUsuario;
+    destino?: string;
+    erro?: string;
+  };
+
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível cadastrar.");
+  }
+
+  return { sessao: json.sessao!, destino: json.destino! };
+}
+
 /** Sai da conta */
 export async function sair() {
   await fetch("/api/auth/logout", { method: "POST" });

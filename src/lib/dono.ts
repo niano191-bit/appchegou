@@ -149,6 +149,21 @@ export async function buscarEntregadoresDono() {
   return json.entregadores ?? [];
 }
 
+export async function criarEntregadorDono(entrada: {
+  nome: string;
+  email: string;
+  telefone?: string;
+  senha: string;
+}) {
+  const resposta = await fetch("/api/dono/entregadores", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entrada),
+  });
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao criar entregador.");
+}
+
 export async function buscarConfiguracaoDono() {
   const resposta = await fetch("/api/dono/configuracao", { cache: "no-store" });
   const json = (await resposta.json()) as {

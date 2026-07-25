@@ -1,6 +1,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { DEMO } from "@/lib/demo-ids";
+import { SENHA_DEMO } from "@/lib/auth";
+import { gerarHashSenha } from "@/lib/senha";
 import type {
   Configuracao,
   ItemCardapio,
@@ -75,6 +77,7 @@ function dadosIniciais(): BancoLocal {
         telefone: "71999990001",
         papel: "cliente",
         restaurante_id: null,
+        senha_hash: null,
         criado_em: criado,
       },
       {
@@ -84,6 +87,7 @@ function dadosIniciais(): BancoLocal {
         telefone: "71999990002",
         papel: "restaurante",
         restaurante_id: DEMO.restauranteAcarajeId,
+        senha_hash: null,
         criado_em: criado,
       },
       {
@@ -93,6 +97,7 @@ function dadosIniciais(): BancoLocal {
         telefone: "71999990004",
         papel: "entregador",
         restaurante_id: null,
+        senha_hash: null,
         criado_em: criado,
       },
       {
@@ -102,6 +107,7 @@ function dadosIniciais(): BancoLocal {
         telefone: "71999990005",
         papel: "dono",
         restaurante_id: null,
+        senha_hash: null,
         criado_em: criado,
       },
     ],
@@ -474,13 +480,73 @@ export async function criarRestauranteLocal(entrada: {
     telefone: null,
     papel: "restaurante",
     restaurante_id: id,
+    senha_hash: gerarHashSenha(SENHA_DEMO),
     criado_em: criado,
   };
 
   banco.restaurantes.push(restaurante);
   banco.usuarios.push(usuario);
   await salvarBancoLocal(banco);
-  return { restaurante, usuario };
+  return { restaurante, usuario: semHash(usuario) };
+}
+
+function semHash(usuario: Usuario): Usuario {
+  const { senha_hash: _, ...resto } = usuario;
+  return { ...resto, senha_hash: null };
+}
+
+export async function cadastrarClienteLocal(entrada: {
+  nome: string;
+  email: string;
+  telefone?: string;
+  senha_hash: string;
+}) {
+  const banco = await lerBancoLocal();
+  const email = entrada.email.trim().toLowerCase();
+  if (banco.usuarios.some((u) => u.email?.toLowerCase() === email)) {
+    throw new Error("Já existe uma conta com este e-mail.");
+  }
+
+  const usuario: Usuario = {
+    id: crypto.randomUUID(),
+    nome: entrada.nome.trim(),
+    email,
+    telefone: entrada.telefone?.trim() || null,
+    papel: "cliente",
+    restaurante_id: null,
+    senha_hash: entrada.senha_hash,
+    criado_em: agora(),
+  };
+  banco.usuarios.push(usuario);
+  await salvarBancoLocal(banco);
+  return semHash(usuario);
+}
+
+export async function criarEntregadorLocal(entrada: {
+  nome: string;
+  email: string;
+  telefone?: string;
+  senha_hash: string;
+}) {
+  const banco = await lerBancoLocal();
+  const email = entrada.email.trim().toLowerCase();
+  if (banco.usuarios.some((u) => u.email?.toLowerCase() === email)) {
+    throw new Error("Já existe uma conta com este e-mail.");
+  }
+
+  const usuario: Usuario = {
+    id: crypto.randomUUID(),
+    nome: entrada.nome.trim(),
+    email,
+    telefone: entrada.telefone?.trim() || null,
+    papel: "entregador",
+    restaurante_id: null,
+    senha_hash: entrada.senha_hash,
+    criado_em: agora(),
+  };
+  banco.usuarios.push(usuario);
+  await salvarBancoLocal(banco);
+  return semHash(usuario);
 }
 
 export async function criarItemCardapioLocal(entrada: {
@@ -728,7 +794,9 @@ export async function atualizarRestauranteLocal(
 
 export async function listarEntregadoresLocal() {
   const banco = await lerBancoLocal();
-  return banco.usuarios.filter((u) => u.papel === "entregador");
+  return banco.usuarios
+    .filter((u) => u.papel === "entregador")
+    .map((u) => semHash(u));
 }
 
 export async function listarTodosPedidosLocal() {

@@ -16,6 +16,8 @@ export type Usuario = {
   telefone: string | null;
   papel: PapelUsuario;
   restaurante_id: string | null;
+  /** Só no servidor — nunca enviar ao navegador */
+  senha_hash?: string | null;
   criado_em: string;
 };
 

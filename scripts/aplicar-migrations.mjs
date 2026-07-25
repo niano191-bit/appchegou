@@ -12,6 +12,7 @@ const files = [
   ["001", "supabase/migrations/001_fase1_schema.sql"],
   ["002", "supabase/migrations/002_fase6_configuracao.sql"],
   ["003", "supabase/migrations/003_fase8_pagamentos.sql"],
+  ["004", "supabase/migrations/004_fase12_senha.sql"],
 ];
 
 async function runQuery(query) {

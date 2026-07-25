@@ -9,6 +9,7 @@ import {
   buscarPedidosDono,
   buscarResumoDia,
   buscarRestaurantesDono,
+  criarEntregadorDono,
   salvarConfiguracaoDono,
   type PedidoDono,
   type ResumoDia,
@@ -31,6 +32,12 @@ export function PainelDono() {
   const [erro, setErro] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [novoEntregador, setNovoEntregador] = useState({
+    nome: "",
+    email: "",
+    telefone: "",
+    senha: "",
+  });
 
   const carregar = useCallback(async (silencioso = false) => {
     try {
@@ -180,6 +187,100 @@ export function PainelDono() {
         <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Entregadores
         </h2>
+        <div className="rounded-2xl border border-linha bg-white px-4 py-4 space-y-3">
+          <p className="text-sm font-semibold text-foreground">
+            Novo entregador
+          </p>
+          <label className="block text-sm text-muted">
+            Nome
+            <input
+              value={novoEntregador.nome}
+              onChange={(e) =>
+                setNovoEntregador({ ...novoEntregador, nome: e.target.value })
+              }
+              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+            />
+          </label>
+          <label className="block text-sm text-muted">
+            E-mail
+            <input
+              type="email"
+              value={novoEntregador.email}
+              onChange={(e) =>
+                setNovoEntregador({ ...novoEntregador, email: e.target.value })
+              }
+              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+            />
+          </label>
+          <label className="block text-sm text-muted">
+            Telefone
+            <input
+              value={novoEntregador.telefone}
+              onChange={(e) =>
+                setNovoEntregador({
+                  ...novoEntregador,
+                  telefone: e.target.value,
+                })
+              }
+              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+            />
+          </label>
+          <label className="block text-sm text-muted">
+            Senha (mín. 6)
+            <input
+              type="password"
+              minLength={6}
+              value={novoEntregador.senha}
+              onChange={(e) =>
+                setNovoEntregador({ ...novoEntregador, senha: e.target.value })
+              }
+              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={
+              salvando ||
+              !novoEntregador.nome.trim() ||
+              !novoEntregador.email.trim() ||
+              novoEntregador.senha.length < 6
+            }
+            onClick={() => {
+              void (async () => {
+                setSalvando(true);
+                setErro(null);
+                setMsg(null);
+                try {
+                  await criarEntregadorDono({
+                    nome: novoEntregador.nome,
+                    email: novoEntregador.email,
+                    telefone: novoEntregador.telefone || undefined,
+                    senha: novoEntregador.senha,
+                  });
+                  setNovoEntregador({
+                    nome: "",
+                    email: "",
+                    telefone: "",
+                    senha: "",
+                  });
+                  setMsg("Entregador criado. Ele já pode entrar com esse e-mail.");
+                  await carregar(true);
+                } catch (e) {
+                  setErro(
+                    e instanceof Error
+                      ? e.message
+                      : "Erro ao criar entregador.",
+                  );
+                } finally {
+                  setSalvando(false);
+                }
+              })();
+            }}
+            className="w-full rounded-xl bg-mar px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            Cadastrar entregador
+          </button>
+        </div>
         <ul className="flex flex-col gap-2">
           {entregadores.map((e) => (
             <li

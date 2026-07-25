@@ -7,6 +7,8 @@ import type {
   StatusPedido,
   Usuario,
 } from "@/types/database";
+import { SENHA_DEMO } from "@/lib/auth";
+import { gerarHashSenha } from "@/lib/senha";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import type { ItemNovoPedido } from "@/lib/local-db";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
@@ -130,8 +132,9 @@ export async function criarRestaurante(entrada: {
       telefone: null,
       papel: "restaurante",
       restaurante_id: restaurante.id,
+      senha_hash: gerarHashSenha(SENHA_DEMO),
     })
-    .select("*")
+    .select("id, nome, email, telefone, papel, restaurante_id, criado_em")
     .single();
 
   if (erroUser) throw new Error(erroUser.message);
@@ -529,7 +532,7 @@ export async function listarEntregadores() {
   const supabase = createSupabaseClient();
   const { data, error } = await supabase
     .from("usuarios")
-    .select("*")
+    .select("id, nome, email, telefone, papel, restaurante_id, criado_em")
     .eq("papel", "entregador")
     .order("nome");
   if (error) throw new Error(error.message);

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MarcaLogo } from "@/components/marca-logo";
 import { FormLogin } from "./form-login";
 
@@ -20,8 +21,8 @@ export default async function PaginaLogin({
         <div className="flex flex-col gap-2">
           <h1 className="font-display text-3xl text-foreground">Entrar</h1>
           <p className="text-sm leading-relaxed text-muted">
-            Escolha uma conta de teste. A senha de todas é{" "}
-            <strong className="text-foreground">teste123</strong>.
+            Use sua conta ou as de teste (senha{" "}
+            <strong className="text-foreground">teste123</strong>).
           </p>
         </div>
       </header>
@@ -33,6 +34,16 @@ export default async function PaginaLogin({
       ) : null}
 
       <FormLogin nextUrl={params.next} />
+
+      <p className="text-center text-sm text-muted">
+        Cliente novo?{" "}
+        <Link
+          href="/cadastro"
+          className="font-medium text-dende underline-offset-2 hover:underline"
+        >
+          Criar conta
+        </Link>
+      </p>
     </div>
   );
 }

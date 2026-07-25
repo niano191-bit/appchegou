@@ -22,6 +22,8 @@ Sem Supabase, o app usa **modo demonstração** (dados salvos neste PC).
 | Entregador | `entregador.teste@chegou.local` |
 | Dono | `dono.teste@chegou.local` |
 
+Clientes novos podem se cadastrar em `/cadastro` com e-mail e senha próprios. O dono cadastra entregadores no painel.
+
 ## Painel do dono
 
 No `/dono`, além dos números do dia, o dono pode **criar lojas**, editar dados/comissão e montar o **cardápio** de cada restaurante. Ao criar uma loja, o app gera um login (`loja....@chegou.local`) com senha `teste123`.
@@ -35,6 +37,7 @@ No `/dono`, além dos números do dia, o dono pode **criar lojas**, editar dados
    - `supabase/migrations/001_fase1_schema.sql`
    - `supabase/migrations/002_fase6_configuracao.sql`
    - `supabase/migrations/003_fase8_pagamentos.sql`
+   - `supabase/migrations/004_fase12_senha.sql`
 3. Em **Project Settings → API**, copie a **URL** e a chave **anon**
 
 ### 2. Site na Vercel
