@@ -42,6 +42,8 @@ export type Restaurante = {
   /** Horario da loja (HH:MM). Null/vazio = usa o horario geral do app */
   horario_abertura?: string | null;
   horario_fechamento?: string | null;
+  /** Chave Pix da loja (repasse do dono no fechamento) */
+  chave_pix?: string | null;
   criado_em: string;
 };
 

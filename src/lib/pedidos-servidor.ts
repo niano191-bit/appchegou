@@ -1173,6 +1173,7 @@ export async function atualizarRestaurante(
     pedido_minimo?: number;
     horario_abertura?: string | null;
     horario_fechamento?: string | null;
+    chave_pix?: string | null;
   },
 ) {
   const supabase = createSupabaseClient();
@@ -1222,6 +1223,9 @@ export async function atualizarRestaurante(
     }
     limpo.horario_fechamento = h;
   }
+  if (patch.chave_pix !== undefined) {
+    limpo.chave_pix = patch.chave_pix?.trim() || null;
+  }
 
   const { data, error } = await supabase
     .from("restaurantes")
@@ -1260,7 +1264,9 @@ export async function listarTodosPedidosDono() {
   const supabase = createSupabaseClient();
   const { data, error } = await supabase
     .from("pedidos")
-    .select("*, itens_pedido(*), restaurantes(nome, comissao_percentual)")
+    .select(
+      "*, itens_pedido(*), restaurantes(nome, comissao_percentual, chave_pix)",
+    )
     .order("criado_em", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -1269,12 +1275,14 @@ export async function listarTodosPedidosDono() {
     const loja = p.restaurantes as {
       nome?: string;
       comissao_percentual?: number;
+      chave_pix?: string | null;
     } | null;
     const { restaurantes: _, ...pedido } = p;
     const comissaoPct = Number(loja?.comissao_percentual ?? 0);
     return {
       ...(pedido as PedidoComItens),
       restaurante_nome: loja?.nome ?? "Restaurante",
+      chave_pix: loja?.chave_pix?.trim() || null,
       comissao_percentual: comissaoPct,
       comissao_valor: (Number(pedido.total) * comissaoPct) / 100,
     };

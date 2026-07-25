@@ -107,6 +107,7 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
         horario_abertura: String(dados.get("horario_abertura") ?? "").trim() || null,
         horario_fechamento:
           String(dados.get("horario_fechamento") ?? "").trim() || null,
+        chave_pix: String(dados.get("chave_pix") ?? "").trim() || null,
       });
       setMsg("Loja atualizada.");
       await onAtualizou();
@@ -387,6 +388,15 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
                     <p className="text-xs text-muted">
                       Vazio = usa o horário geral do app.
                     </p>
+                    <label className="block text-sm text-muted">
+                      Chave Pix (repasse do dia)
+                      <input
+                        name="chave_pix"
+                        defaultValue={loja.chave_pix ?? ""}
+                        placeholder="CPF, e-mail, telefone ou chave aleatória"
+                        className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+                      />
+                    </label>
                     <button
                       type="submit"
                       disabled={salvando}

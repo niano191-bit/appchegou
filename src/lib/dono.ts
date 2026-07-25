@@ -26,7 +26,9 @@ export type ResumoDia = {
   cancelados?: number;
   em_andamento?: number;
   por_loja?: {
+    restaurante_id?: string | null;
     nome: string;
+    chave_pix?: string | null;
     pedidos: number;
     faturamento: number;
     faturamento_pix?: number;
@@ -106,6 +108,7 @@ export async function atualizarRestauranteDono(entrada: {
   pedido_minimo?: number;
   horario_abertura?: string | null;
   horario_fechamento?: string | null;
+  chave_pix?: string | null;
 }) {
   const resposta = await fetch("/api/dono/restaurantes", {
     method: "PATCH",

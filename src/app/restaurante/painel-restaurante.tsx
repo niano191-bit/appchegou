@@ -38,6 +38,8 @@ export function PainelRestaurante() {
   const [horarioAbertura, setHorarioAbertura] = useState("");
   const [horarioFechamento, setHorarioFechamento] = useState("");
   const [salvandoHorario, setSalvandoHorario] = useState(false);
+  const [chavePix, setChavePix] = useState("");
+  const [salvandoPix, setSalvandoPix] = useState(false);
   /** Pedido aguardando escolha do tempo estimado */
   const [escolhendoEtaId, setEscolhendoEtaId] = useState<string | null>(null);
 
@@ -77,6 +79,7 @@ export function PainelRestaurante() {
           setPedidoMinimo(String(Number(lojaRes.restaurante.pedido_minimo ?? 0)));
           setHorarioAbertura(lojaRes.restaurante.horario_abertura ?? "");
           setHorarioFechamento(lojaRes.restaurante.horario_fechamento ?? "");
+          setChavePix(lojaRes.restaurante.chave_pix ?? "");
         }
         setErro(null);
       } catch (e) {
@@ -180,6 +183,36 @@ export function PainelRestaurante() {
       );
     } finally {
       setSalvandoHorario(false);
+    }
+  }
+
+  async function salvarChavePix() {
+    setSalvandoPix(true);
+    setErro(null);
+    try {
+      const resposta = await fetch("/api/restaurante/loja", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chave_pix: chavePix.trim() || null,
+        }),
+      });
+      const json = (await resposta.json()) as {
+        restaurante?: { chave_pix?: string | null };
+        erro?: string;
+      };
+      if (!resposta.ok) {
+        throw new Error(json.erro ?? "Não foi possível salvar a chave Pix.");
+      }
+      setChavePix(json.restaurante?.chave_pix ?? "");
+    } catch (e) {
+      setErro(
+        e instanceof Error
+          ? e.message
+          : "Não foi possível salvar a chave Pix.",
+      );
+    } finally {
+      setSalvandoPix(false);
     }
   }
 
@@ -364,6 +397,27 @@ export function PainelRestaurante() {
           className="mt-2 w-full rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
         >
           {salvandoHorario ? "Salvando…" : "Salvar horário"}
+        </button>
+      </div>
+
+      <div className="rounded-2xl border border-linha bg-white px-4 py-3">
+        <p className="text-sm font-medium text-foreground">Chave Pix da loja</p>
+        <p className="mt-1 text-xs text-muted">
+          Usada no fechamento do dia para o dono te transferir o repasse.
+        </p>
+        <input
+          value={chavePix}
+          onChange={(e) => setChavePix(e.target.value)}
+          placeholder="CPF, e-mail, telefone ou chave aleatória"
+          className="mt-2 w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
+        />
+        <button
+          type="button"
+          disabled={salvandoPix}
+          onClick={() => void salvarChavePix()}
+          className="mt-2 w-full rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {salvandoPix ? "Salvando…" : "Salvar chave Pix"}
         </button>
       </div>
 

@@ -122,6 +122,7 @@ function dadosIniciais(): BancoLocal {
         pedido_minimo: 0,
         horario_abertura: null,
         horario_fechamento: null,
+        chave_pix: "71999990002",
         criado_em: criado,
       },
       {
@@ -136,6 +137,7 @@ function dadosIniciais(): BancoLocal {
         pedido_minimo: 0,
         horario_abertura: null,
         horario_fechamento: null,
+        chave_pix: null,
         criado_em: criado,
       },
     ],
@@ -358,6 +360,10 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
     }
     if (loja.horario_fechamento === undefined) {
       loja.horario_fechamento = null;
+      mudou = true;
+    }
+    if (loja.chave_pix === undefined) {
+      loja.chave_pix = null;
       mudou = true;
     }
   }
@@ -872,6 +878,7 @@ export async function criarRestauranteLocal(entrada: {
     pedido_minimo: 0,
     horario_abertura: null,
     horario_fechamento: null,
+    chave_pix: null,
     criado_em: criado,
   };
 
@@ -1361,6 +1368,7 @@ export type PatchRestaurante = {
   pedido_minimo?: number;
   horario_abertura?: string | null;
   horario_fechamento?: string | null;
+  chave_pix?: string | null;
 };
 
 export async function atualizarRestauranteLocal(
@@ -1419,6 +1427,9 @@ export async function atualizarRestauranteLocal(
     }
     loja.horario_fechamento = h;
   }
+  if (patch.chave_pix !== undefined) {
+    loja.chave_pix = patch.chave_pix?.trim() || null;
+  }
 
   await salvarBancoLocal(banco);
   return loja;
@@ -1472,6 +1483,7 @@ export async function listarTodosPedidosLocal() {
         restaurante_nome: loja?.nome ?? "Restaurante",
         restaurante_endereco: loja?.endereco ?? null,
         restaurante_telefone: telefoneLoja.get(p.restaurante_id) ?? null,
+        chave_pix: loja?.chave_pix?.trim() || null,
         cliente_nome: cliente?.nome ?? null,
         cliente_telefone: cliente?.telefone ?? null,
         comissao_percentual: comissaoPct,

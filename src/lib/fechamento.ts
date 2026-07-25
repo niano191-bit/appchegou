@@ -4,7 +4,9 @@ import { formatarReais } from "@/types/database";
 import type { Pedido, StatusPedido } from "@/types/database";
 
 export type LinhaLojaFechamento = {
+  restaurante_id?: string | null;
   nome: string;
+  chave_pix?: string | null;
   pedidos: number;
   faturamento: number;
   faturamento_pix: number;
@@ -57,7 +59,9 @@ type PedidoFechamento = Pick<
   | "gorjeta"
   | "criado_em"
 > & {
+  restaurante_id?: string;
   restaurante_nome?: string;
+  chave_pix?: string | null;
   comissao_valor?: number;
 };
 
@@ -125,8 +129,11 @@ export function montarFechamentoDia(entrada: {
   const porLojaMap = new Map<string, LinhaLojaFechamento>();
   for (const p of doDia) {
     const nome = p.restaurante_nome?.trim() || "Restaurante";
-    const atual = porLojaMap.get(nome) ?? {
+    const chaveMapa = p.restaurante_id?.trim() || nome;
+    const atual = porLojaMap.get(chaveMapa) ?? {
+      restaurante_id: p.restaurante_id ?? null,
       nome,
+      chave_pix: p.chave_pix?.trim() || null,
       pedidos: 0,
       faturamento: 0,
       faturamento_pix: 0,
@@ -135,6 +142,9 @@ export function montarFechamentoDia(entrada: {
       liquido: 0,
       repasse_pix: 0,
     };
+    if (!atual.chave_pix && p.chave_pix?.trim()) {
+      atual.chave_pix = p.chave_pix.trim();
+    }
     const total = Number(p.total);
     const com = Number(p.comissao_valor ?? 0);
     atual.pedidos += 1;
@@ -145,7 +155,7 @@ export function montarFechamentoDia(entrada: {
     } else {
       atual.faturamento_pix += total;
     }
-    porLojaMap.set(nome, atual);
+    porLojaMap.set(chaveMapa, atual);
   }
 
   const por_loja = [...porLojaMap.values()]
@@ -257,6 +267,9 @@ export function textoFechamentoWhatsApp(f: FechamentoDia) {
         `  Fat. ${formatarReais(loja.faturamento)} · Pix ${formatarReais(loja.faturamento_pix)} · Din. ${formatarReais(loja.faturamento_dinheiro)}`,
         `  Comissão ${formatarReais(loja.comissao)} · Líquido ${formatarReais(loja.liquido)}`,
         `  ${textoRepasseLoja(loja)}`,
+        loja.chave_pix?.trim()
+          ? `  Chave Pix: ${loja.chave_pix.trim()}`
+          : `  Chave Pix: (cadastrar na loja)`,
       );
     }
   }

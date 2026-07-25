@@ -64,6 +64,7 @@ export async function PATCH(request: Request) {
     pedido_minimo?: number;
     horario_abertura?: string | null;
     horario_fechamento?: string | null;
+    chave_pix?: string | null;
   };
 
   try {
@@ -90,6 +91,7 @@ export async function PATCH(request: Request) {
       pedido_minimo: corpo.pedido_minimo,
       horario_abertura: corpo.horario_abertura,
       horario_fechamento: corpo.horario_fechamento,
+      chave_pix: corpo.chave_pix,
     };
 
     if (usandoModoDemo()) {

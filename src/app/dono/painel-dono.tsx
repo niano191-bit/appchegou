@@ -362,9 +362,24 @@ export function PainelDono() {
                   loja.liquido ??
                     Number(loja.faturamento) - Number(loja.comissao),
                 );
+                const chave = loja.chave_pix?.trim() || "";
+                const valorCopiar =
+                  repasse > 0
+                    ? repasse.toFixed(2).replace(".", ",")
+                    : Math.abs(repasse).toFixed(2).replace(".", ",");
+
+                async function copiar(texto: string, ok: string) {
+                  try {
+                    await navigator.clipboard.writeText(texto);
+                    setMsg(ok);
+                  } catch {
+                    setErro("Não foi possível copiar. Copie manualmente.");
+                  }
+                }
+
                 return (
                   <li
-                    key={loja.nome}
+                    key={loja.restaurante_id ?? loja.nome}
                     className="border-t border-linha pt-3 first:border-t-0 first:pt-0"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -400,6 +415,42 @@ export function PainelDono() {
                       Comissão {formatarReais(Number(loja.comissao))} ·
                       Líquido {formatarReais(liquido)}
                     </p>
+                    {chave ? (
+                      <p className="mt-1 break-all text-xs text-foreground">
+                        Chave: {chave}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-xs text-dende">
+                        Sem chave Pix cadastrada — edite a loja.
+                      </p>
+                    )}
+                    {repasse !== 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {chave ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void copiar(chave, `Chave de ${loja.nome} copiada.`)
+                            }
+                            className="rounded-xl border border-mar/40 bg-mar-suave/50 px-3 py-1.5 text-xs font-semibold text-mar"
+                          >
+                            Copiar chave
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void copiar(
+                              valorCopiar,
+                              `Valor de ${loja.nome} copiado.`,
+                            )
+                          }
+                          className="rounded-xl border border-linha bg-white px-3 py-1.5 text-xs font-semibold text-foreground"
+                        >
+                          Copiar valor
+                        </button>
+                      </div>
+                    ) : null}
                   </li>
                 );
               })}

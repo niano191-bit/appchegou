@@ -1,6 +1,6 @@
 # SQL no Supabase (produção)
 
-**Atualizado:** migrations `004` → `019` (disponibilidade do entregador).
+**Atualizado:** migrations `004` → `020` (chave Pix da loja).
 
 Se criar um projeto novo do zero, rode nesta ordem:
 
@@ -23,6 +23,7 @@ Se criar um projeto novo do zero, rode nesta ordem:
 17. `017_fase25_horario_gorjeta.sql`
 18. `018_fase26_cancel_dono.sql`
 19. `019_fase27_disponibilidade_entregador.sql`
+20. `020_fase28_chave_pix_loja.sql`
 
 Script local (com `SUPABASE_ACCESS_TOKEN`):
 
