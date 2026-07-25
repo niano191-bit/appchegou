@@ -30,6 +30,7 @@ export function TelaPagamento({
     copiaECola?: string;
     qrCodeBase64?: string;
   } | null>(null);
+  const [verificando, setVerificando] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -40,14 +41,44 @@ export function TelaPagamento({
       setPedido(dados);
       setOpcoes(gates);
       setErro(null);
+      return dados;
     } catch (e) {
       setErro(
         e instanceof Error ? e.message : "Não foi possível carregar o pedido.",
       );
+      return null;
     } finally {
       setCarregando(false);
     }
   }, [pedidoId]);
+
+  const irSePago = useCallback(
+    async (silencioso = false) => {
+      try {
+        const dados = await buscarPedido(pedidoId);
+        setPedido(dados);
+        if (dados.status_pagamento === "pago") {
+          setInfo("Pagamento confirmado! Redirecionando…");
+          router.push(`/cliente/pedido/${pedidoId}`);
+          return true;
+        }
+        if (!silencioso) {
+          setInfo("Ainda não recebemos a confirmação. Se já pagou, aguarde alguns segundos.");
+        }
+        return false;
+      } catch (e) {
+        if (!silencioso) {
+          setErro(
+            e instanceof Error
+              ? e.message
+              : "Não foi possível verificar o pagamento.",
+          );
+        }
+        return false;
+      }
+    },
+    [pedidoId, router],
+  );
 
   useEffect(() => {
     void carregar();
@@ -74,6 +105,18 @@ export function TelaPagamento({
       setInfo("Pagamento pendente. Aguarde a confirmação.");
     }
   }, [resultado, pedidoId, router]);
+
+  // Após gerar Pix LucPaguei: consulta a cada 4s se o webhook marcou como pago
+  useEffect(() => {
+    if (!pixLuc) return;
+
+    void irSePago(true);
+    const id = window.setInterval(() => {
+      void irSePago(true);
+    }, 4000);
+
+    return () => window.clearInterval(id);
+  }, [pixLuc, irSePago]);
 
   async function pagarSimulado(forma: "pix" | "cartao") {
     setAcao(forma);
@@ -143,7 +186,7 @@ export function TelaPagamento({
           qrCodeBase64: res.qrCodeBase64,
         });
         setInfo(
-          "Pix LucPaguei gerado. Pague e aguarde a confirmação automática.",
+          "Pix gerado. Escaneie ou copie o código e aguarde a confirmação automática.",
         );
         return;
       }
@@ -156,6 +199,16 @@ export function TelaPagamento({
       );
     } finally {
       setAcao(null);
+    }
+  }
+
+  async function verificarPagamentoManual() {
+    setVerificando(true);
+    setErro(null);
+    try {
+      await irSePago(false);
+    } finally {
+      setVerificando(false);
     }
   }
 
@@ -178,6 +231,8 @@ export function TelaPagamento({
   const total = Number(pedido.total) + Number(pedido.taxa_entrega);
   const mpAtivo = opcoes?.mercadopago.ativo ?? true;
   const lpAtivo = opcoes?.lucpaguei.ativo ?? true;
+  const lpConfigurado = opcoes?.lucpaguei.configurado ?? false;
+  const mostrarSimulacao = !lpConfigurado;
 
   if (pedido.status_pagamento === "pago") {
     return (
@@ -226,27 +281,32 @@ export function TelaPagamento({
         </div>
       ) : null}
 
-      <section className="flex flex-col gap-3 rounded-2xl border border-linha bg-white px-5 py-4">
-        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
-          Simular pagamento (recomendado agora)
-        </h2>
-        <button
-          type="button"
-          disabled={Boolean(acao)}
-          onClick={() => void pagarSimulado("pix")}
-          className="rounded-xl bg-dende px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {acao === "pix" ? "Processando…" : "Simular Pix (teste)"}
-        </button>
-        <button
-          type="button"
-          disabled={Boolean(acao)}
-          onClick={() => void pagarSimulado("cartao")}
-          className="rounded-xl border border-dende px-4 py-3.5 text-sm font-semibold text-dende disabled:opacity-60"
-        >
-          {acao === "cartao" ? "Processando…" : "Simular cartão (teste)"}
-        </button>
-      </section>
+      {mostrarSimulacao ? (
+        <section className="flex flex-col gap-3 rounded-2xl border border-linha bg-white px-5 py-4">
+          <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
+            Simular pagamento
+          </h2>
+          <p className="text-sm text-muted">
+            Use só enquanto o Pix real (LucPaguei) não estiver configurado.
+          </p>
+          <button
+            type="button"
+            disabled={Boolean(acao)}
+            onClick={() => void pagarSimulado("pix")}
+            className="rounded-xl bg-dende px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {acao === "pix" ? "Processando…" : "Simular Pix (teste)"}
+          </button>
+          <button
+            type="button"
+            disabled={Boolean(acao)}
+            onClick={() => void pagarSimulado("cartao")}
+            className="rounded-xl border border-dende px-4 py-3.5 text-sm font-semibold text-dende disabled:opacity-60"
+          >
+            {acao === "cartao" ? "Processando…" : "Simular cartão (teste)"}
+          </button>
+        </section>
+      ) : null}
 
       {mpAtivo ? (
         <section className="flex flex-col gap-3 rounded-2xl border border-dashed border-linha bg-white/60 px-5 py-4">
@@ -279,8 +339,8 @@ export function TelaPagamento({
             LucPaguei
           </h2>
           <p className="text-sm text-muted">
-            {opcoes?.lucpaguei.configurado
-              ? "Gera Pix pelo LucPaguei (copia e cola)."
+            {lpConfigurado
+              ? "Gera Pix pelo LucPaguei (QR + copia e cola)."
               : "LucPaguei sem chaves no servidor — o botão usa modo teste."}
           </p>
           <button
@@ -291,7 +351,7 @@ export function TelaPagamento({
           >
             {acao === "lp"
               ? "Gerando Pix…"
-              : opcoes?.lucpaguei.configurado
+              : lpConfigurado
                 ? "Pagar no LucPaguei"
                 : "Pagar no LucPaguei (teste)"}
           </button>
@@ -339,6 +399,18 @@ export function TelaPagamento({
                   </button>
                 </div>
               ) : null}
+
+              <p className="text-center text-xs text-muted">
+                Aguardando confirmação automática…
+              </p>
+              <button
+                type="button"
+                disabled={verificando || Boolean(acao)}
+                onClick={() => void verificarPagamentoManual()}
+                className="w-full rounded-xl bg-mar px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {verificando ? "Verificando…" : "Já paguei — verificar"}
+              </button>
             </div>
           ) : null}
         </section>
