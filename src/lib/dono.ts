@@ -19,6 +19,9 @@ export type ResumoDia = {
   comissao: number;
   ticket_medio: number;
   taxa_entrega_total?: number;
+  gorjeta_total?: number;
+  repasse_pix_total?: number;
+  a_receber_lojas?: number;
   entregues?: number;
   cancelados?: number;
   em_andamento?: number;
@@ -26,7 +29,11 @@ export type ResumoDia = {
     nome: string;
     pedidos: number;
     faturamento: number;
+    faturamento_pix?: number;
+    faturamento_dinheiro?: number;
     comissao: number;
+    liquido?: number;
+    repasse_pix?: number;
   }[];
   por_entregador?: {
     nome: string;

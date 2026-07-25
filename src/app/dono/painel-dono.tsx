@@ -326,26 +326,83 @@ export function PainelDono() {
           </div>
         </div>
 
+        {(resumo?.repasse_pix_total != null ||
+          resumo?.a_receber_lojas != null) &&
+        (Number(resumo?.repasse_pix_total) > 0 ||
+          Number(resumo?.a_receber_lojas) > 0) ? (
+          <div className="grid grid-cols-2 gap-2 text-center text-xs">
+            <div className="rounded-xl border border-mar/30 bg-mar-suave/40 px-2 py-2">
+              <p className="font-semibold text-mar">
+                {formatarReais(resumo?.repasse_pix_total ?? 0)}
+              </p>
+              <p className="text-muted">Repasse Pix às lojas</p>
+            </div>
+            <div className="rounded-xl border border-dende/30 bg-dende-suave/50 px-2 py-2">
+              <p className="font-semibold text-dende">
+                {formatarReais(resumo?.a_receber_lojas ?? 0)}
+              </p>
+              <p className="text-muted">A receber das lojas</p>
+            </div>
+          </div>
+        ) : null}
+
         {resumo?.por_loja && resumo.por_loja.length > 0 ? (
           <div className="rounded-2xl border border-linha bg-white px-4 py-3 text-sm">
             <p className="text-xs font-medium tracking-wide text-muted uppercase">
-              Por loja
+              Repasse por loja
             </p>
-            <ul className="mt-2 space-y-1.5">
-              {resumo.por_loja.map((loja) => (
-                <li
-                  key={loja.nome}
-                  className="flex items-center justify-between gap-2"
-                >
-                  <span className="text-foreground">
-                    {loja.nome}{" "}
-                    <span className="text-muted">({loja.pedidos})</span>
-                  </span>
-                  <span className="font-medium text-foreground">
-                    {formatarReais(loja.faturamento)}
-                  </span>
-                </li>
-              ))}
+            <p className="mt-1 text-xs text-muted">
+              Transferir Pix = vendas Pix − comissão. Dinheiro já ficou na
+              loja.
+            </p>
+            <ul className="mt-3 space-y-3">
+              {resumo.por_loja.map((loja) => {
+                const repasse = Number(loja.repasse_pix ?? 0);
+                const liquido = Number(
+                  loja.liquido ??
+                    Number(loja.faturamento) - Number(loja.comissao),
+                );
+                return (
+                  <li
+                    key={loja.nome}
+                    className="border-t border-linha pt-3 first:border-t-0 first:pt-0"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-semibold text-foreground">
+                        {loja.nome}{" "}
+                        <span className="font-normal text-muted">
+                          ({loja.pedidos})
+                        </span>
+                      </p>
+                      <p
+                        className={`shrink-0 text-sm font-semibold ${
+                          repasse > 0
+                            ? "text-mar"
+                            : repasse < 0
+                              ? "text-dende"
+                              : "text-muted"
+                        }`}
+                      >
+                        {repasse > 0
+                          ? `Pix ${formatarReais(repasse)}`
+                          : repasse < 0
+                            ? `Deve ${formatarReais(Math.abs(repasse))}`
+                            : "Zerado"}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">
+                      Fat. {formatarReais(Number(loja.faturamento))} · Pix{" "}
+                      {formatarReais(Number(loja.faturamento_pix ?? 0))} ·
+                      Din.{" "}
+                      {formatarReais(Number(loja.faturamento_dinheiro ?? 0))}
+                    </p>
+                    <p className="text-xs text-muted">
+                      Comissão {formatarReais(Number(loja.comissao))} ·
+                      Líquido {formatarReais(liquido)}
+                    </p>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ) : null}
