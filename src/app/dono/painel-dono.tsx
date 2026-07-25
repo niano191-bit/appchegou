@@ -22,6 +22,11 @@ import {
   type FechamentoDia,
 } from "@/lib/fechamento";
 import {
+  pedidoEhDinheiroPendente,
+  pedidoVisivelNaOperacao,
+  textoCobrancaDinheiro,
+} from "@/lib/pagamento-pedido";
+import {
   classificarPedidoCritico,
   contarPedidosCriticos,
   ordenarCriticosPrimeiro,
@@ -239,6 +244,25 @@ export function PainelDono() {
             valor={formatarReais(resumo?.ticket_medio ?? 0)}
           />
         </div>
+        {(resumo?.faturamento_pix != null ||
+          resumo?.faturamento_dinheiro != null) &&
+        (Number(resumo?.faturamento_dinheiro) > 0 ||
+          Number(resumo?.faturamento_pix) > 0) ? (
+          <div className="grid grid-cols-2 gap-2 text-center text-xs">
+            <div className="rounded-xl border border-linha bg-white px-2 py-2">
+              <p className="font-semibold text-foreground">
+                {formatarReais(resumo?.faturamento_pix ?? 0)}
+              </p>
+              <p className="text-muted">Pix / online</p>
+            </div>
+            <div className="rounded-xl border border-linha bg-white px-2 py-2">
+              <p className="font-semibold text-foreground">
+                {formatarReais(resumo?.faturamento_dinheiro ?? 0)}
+              </p>
+              <p className="text-muted">Dinheiro</p>
+            </div>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
           <div className="rounded-xl border border-linha bg-white px-2 py-2">
@@ -310,7 +334,7 @@ export function PainelDono() {
           <ul className="flex flex-col gap-2">
             {pedidosOrdenados.slice(0, 20).map((p) => {
               const podeDespachar =
-                p.status_pagamento === "pago" &&
+                pedidoVisivelNaOperacao(p) &&
                 (p.status === "pronto" || p.status === "a_caminho");
               const atual = nomeEntregador(p.entregador_id);
               const selecionado =
@@ -342,6 +366,11 @@ export function PainelDono() {
                       <p className="text-muted">
                         {rotuloPedido(p)} · {formatarReais(Number(p.total))}
                       </p>
+                      {pedidoEhDinheiroPendente(p) ? (
+                        <p className="text-xs font-semibold text-dende">
+                          {textoCobrancaDinheiro(p)}
+                        </p>
+                      ) : null}
                       <p className="text-xs text-muted">
                         Comissão {p.comissao_percentual}% ={" "}
                         {formatarReais(p.comissao_valor)}
@@ -369,7 +398,7 @@ export function PainelDono() {
                           : "bg-dende-suave text-dende"
                       }`}
                     >
-                      {p.status_pagamento === "pago"
+                      {pedidoVisivelNaOperacao(p)
                         ? STATUS_PEDIDO_LABEL[p.status]
                         : STATUS_PAGAMENTO_LABEL[p.status_pagamento]}
                     </span>
@@ -691,8 +720,22 @@ export function PainelDono() {
                 />
                 LucPaguei
               </label>
+              <label className="flex items-center gap-3 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={config.pagamento_dinheiro ?? true}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      pagamento_dinheiro: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 accent-dende"
+                />
+                Dinheiro na entrega
+              </label>
               <p className="text-xs text-muted">
-                Os dois podem ficar ligados. O cliente escolhe na hora de pagar.
+                Pode deixar vários ligados. O cliente escolhe na hora de pagar.
               </p>
             </div>
 

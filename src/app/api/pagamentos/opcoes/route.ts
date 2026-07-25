@@ -23,6 +23,9 @@ export async function GET() {
         ativo: config.pagamento_lucpaguei,
         configurado: isLucPagueiConfigured(),
       },
+      dinheiro: {
+        ativo: config.pagamento_dinheiro,
+      },
     });
   } catch (e) {
     const mensagem =

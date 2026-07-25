@@ -1,5 +1,9 @@
 import { linkWhatsApp } from "@/lib/contato";
 import { MARCA } from "@/lib/marca";
+import {
+  pedidoEhDinheiroPendente,
+  textoCobrancaDinheiro,
+} from "@/lib/pagamento-pedido";
 import type { PedidoComItens } from "@/lib/pedidos";
 import { rotuloPedido } from "@/lib/pedido-rotulo";
 import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
@@ -9,6 +13,9 @@ type PedidoResumo = Pick<
   | "id"
   | "numero_dia"
   | "status"
+  | "status_pagamento"
+  | "forma_pagamento"
+  | "troco_para"
   | "total"
   | "taxa_entrega"
   | "endereco_entrega"
@@ -51,6 +58,9 @@ export function textoResumoPedidoWhatsApp(pedido: PedidoResumo) {
     `Itens: ${formatarReais(Number(pedido.total))}`,
     `Entrega: ${formatarReais(Number(pedido.taxa_entrega))}`,
     `*Total: ${formatarReais(total)}*`,
+    pedidoEhDinheiroPendente(pedido)
+      ? `*${textoCobrancaDinheiro(pedido)}*`
+      : null,
   ];
 
   return linhas.filter((l) => l !== null).join("\n");

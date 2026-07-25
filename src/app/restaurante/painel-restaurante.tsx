@@ -9,6 +9,10 @@ import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import { baixarComandaPdf } from "@/lib/comanda-impressao";
 import { OPCOES_ETA_MINUTOS, type MinutosEta } from "@/lib/eta";
 import {
+  pedidoEhDinheiroPendente,
+  textoCobrancaDinheiro,
+} from "@/lib/pagamento-pedido";
+import {
   atualizarStatusPedido,
   listarPedidosDoRestaurante,
   recusarPedido,
@@ -143,6 +147,7 @@ export function PainelRestaurante() {
   }
 
   async function recusar(pedidoId: string) {
+    const pedido = pedidos.find((p) => p.id === pedidoId);
     const motivo = window.prompt(
       "Motivo da recusa (opcional). O cliente verá este aviso.",
       "",
@@ -150,7 +155,9 @@ export function PainelRestaurante() {
     if (motivo === null) return;
     if (
       !confirm(
-        "Recusar este pedido? Ele será cancelado, o cliente será avisado e o app tenta estornar o Pix automaticamente.",
+        pedido && pedidoEhDinheiroPendente(pedido)
+          ? "Recusar este pedido? Ele será cancelado e o cliente será avisado (sem estorno — pagamento era em dinheiro)."
+          : "Recusar este pedido? Ele será cancelado, o cliente será avisado e o app tenta estornar o Pix automaticamente.",
       )
     ) {
       return;
@@ -287,6 +294,11 @@ export function PainelRestaurante() {
                   <p className="mt-1 text-lg font-semibold text-foreground">
                     {formatarReais(totalComEntrega)}
                   </p>
+                  {pedidoEhDinheiroPendente(pedido) ? (
+                    <p className="mt-1 text-xs font-semibold text-dende">
+                      {textoCobrancaDinheiro(pedido)}
+                    </p>
+                  ) : null}
                 </div>
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-medium ${

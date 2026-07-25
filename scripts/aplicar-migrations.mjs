@@ -19,6 +19,7 @@ const files = [
   ["010", "supabase/migrations/010_fase18_estorno.sql"],
   ["011", "supabase/migrations/011_fase19_eta.sql"],
   ["012", "supabase/migrations/012_fase20_numero_pedido.sql"],
+  ["013", "supabase/migrations/013_fase21_dinheiro.sql"],
 ];
 
 async function runQuery(query) {
@@ -54,7 +55,8 @@ const cols = await runQuery(`
     and column_name in (
       'numero_dia', 'data_pedido',
       'tempo_estimado_minutos', 'previsao_entrega_em',
-      'cancelado_por', 'motivo_cancelamento'
+      'cancelado_por', 'motivo_cancelamento',
+      'troco_para'
     )
   order by 1
 `);

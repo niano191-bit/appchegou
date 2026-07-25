@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { pedidoEhDinheiroPendente } from "@/lib/pagamento-pedido";
 import { listarMeusPedidos, type PedidoCliente } from "@/lib/pedidos";
 import { rotuloPedido } from "@/lib/pedido-rotulo";
 import {
@@ -75,7 +76,8 @@ export function HistoricoPedidos() {
       <ul className="flex flex-col gap-3">
         {pedidos.map((p) => {
           const total = Number(p.total) + Number(p.taxa_entrega);
-          const pendente = p.status_pagamento !== "pago";
+          const dinheiro = pedidoEhDinheiroPendente(p);
+          const pendente = p.status_pagamento !== "pago" && !dinheiro;
           const href = pendente
             ? `/cliente/pedido/${p.id}/pagar`
             : `/cliente/pedido/${p.id}`;
@@ -102,7 +104,9 @@ export function HistoricoPedidos() {
                 <p className="mt-2 text-xs text-muted">
                   {pendente
                     ? STATUS_PAGAMENTO_LABEL[p.status_pagamento]
-                    : STATUS_PEDIDO_LABEL[p.status]}
+                    : dinheiro
+                      ? "Dinheiro na entrega"
+                      : STATUS_PEDIDO_LABEL[p.status]}
                   {" · "}
                   Pedido {rotuloPedido(p)}
                 </p>

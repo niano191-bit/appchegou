@@ -8,6 +8,10 @@ import { LinksWhatsAppPedido } from "@/components/links-whatsapp-pedido";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
+  pedidoEhDinheiroPendente,
+  textoCobrancaDinheiro,
+} from "@/lib/pagamento-pedido";
+import {
   atualizarStatusPedido,
   listarCorridas,
   type CorridaComItens,
@@ -157,6 +161,11 @@ export function PainelEntregador() {
                   <p className="mt-1 text-lg font-semibold text-foreground">
                     Seu ganho: {formatarReais(taxa)}
                   </p>
+                  {pedidoEhDinheiroPendente(corrida) ? (
+                    <p className="mt-1 text-xs font-semibold text-dende">
+                      {textoCobrancaDinheiro(corrida)}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span
@@ -237,7 +246,11 @@ export function PainelEntregador() {
                     onClick={() => void acao(corrida.id, "entregue")}
                     className="flex-1 rounded-xl bg-[#2F6B3A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#245530] disabled:opacity-60"
                   >
-                    {ocupado ? "Salvando…" : "Confirmar entrega"}
+                    {ocupado
+                      ? "Salvando…"
+                      : pedidoEhDinheiroPendente(corrida)
+                        ? "Recebi o dinheiro e entreguei"
+                        : "Confirmar entrega"}
                   </button>
                 ) : null}
               </div>

@@ -21,6 +21,8 @@ export type FechamentoDia = {
   data_label: string;
   qtd_pedidos: number;
   faturamento: number;
+  faturamento_pix: number;
+  faturamento_dinheiro: number;
   comissao: number;
   ticket_medio: number;
   taxa_entrega_total: number;
@@ -33,7 +35,12 @@ export type FechamentoDia = {
 
 type PedidoFechamento = Pick<
   Pedido,
-  "status" | "status_pagamento" | "total" | "taxa_entrega" | "criado_em"
+  | "status"
+  | "status_pagamento"
+  | "forma_pagamento"
+  | "total"
+  | "taxa_entrega"
+  | "criado_em"
 > & {
   restaurante_nome?: string;
   comissao_valor?: number;
@@ -78,6 +85,10 @@ export function montarFechamentoDia(entrada: {
 
   const qtd = doDia.length;
   const faturamento = doDia.reduce((s, p) => s + Number(p.total), 0);
+  const faturamento_dinheiro = doDia
+    .filter((p) => p.forma_pagamento === "dinheiro")
+    .reduce((s, p) => s + Number(p.total), 0);
+  const faturamento_pix = faturamento - faturamento_dinheiro;
   const comissao = doDia.reduce((s, p) => s + Number(p.comissao_valor ?? 0), 0);
   const taxa_entrega_total = doDia.reduce(
     (s, p) => s + Number(p.taxa_entrega),
@@ -130,6 +141,8 @@ export function montarFechamentoDia(entrada: {
     data_label,
     qtd_pedidos: qtd,
     faturamento,
+    faturamento_pix,
+    faturamento_dinheiro,
     comissao,
     ticket_medio: qtd > 0 ? faturamento / qtd : 0,
     taxa_entrega_total,
@@ -154,6 +167,8 @@ export function textoFechamentoWhatsApp(f: FechamentoDia) {
     `Cancelados: ${f.cancelados}`,
     "",
     `Faturamento: ${formatarReais(f.faturamento)}`,
+    `  Pix/online: ${formatarReais(f.faturamento_pix)}`,
+    `  Dinheiro: ${formatarReais(f.faturamento_dinheiro)}`,
     `Comissão: ${formatarReais(f.comissao)}`,
     `Taxas de entrega: ${formatarReais(f.taxa_entrega_total)}`,
     `Ticket médio: ${formatarReais(f.ticket_medio)}`,

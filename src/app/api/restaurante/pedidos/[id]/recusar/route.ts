@@ -8,6 +8,7 @@ import {
 } from "@/lib/local-db";
 import {
   buscarClienteDoPedido,
+  buscarPedido,
   recusarPedido,
 } from "@/lib/pedidos-servidor";
 
@@ -42,22 +43,30 @@ export async function POST(request: Request, ctx: Ctx) {
         sessao.restaurante_id,
         motivo,
       );
-      const cliente = await buscarClienteDoPedidoLocal(id);
-      const estorno = await processarEstornoPedido({
+      let estorno = null;
+      if (pedido.status_pagamento === "pago") {
+        const cliente = await buscarClienteDoPedidoLocal(id);
+        estorno = await processarEstornoPedido({
+          pedidoId: id,
+          clienteTelefone: cliente?.telefone,
+          clienteEmail: cliente?.email,
+        });
+      }
+      return NextResponse.json({ modo: "demo", pedido, estorno });
+    }
+
+    const antes = await buscarPedido(id);
+    await recusarPedido(id, sessao.restaurante_id, motivo);
+
+    let estorno = null;
+    if (antes?.status_pagamento === "pago") {
+      const cliente = await buscarClienteDoPedido(id);
+      estorno = await processarEstornoPedido({
         pedidoId: id,
         clienteTelefone: cliente?.telefone,
         clienteEmail: cliente?.email,
       });
-      return NextResponse.json({ modo: "demo", pedido, estorno });
     }
-
-    await recusarPedido(id, sessao.restaurante_id, motivo);
-    const cliente = await buscarClienteDoPedido(id);
-    const estorno = await processarEstornoPedido({
-      pedidoId: id,
-      clienteTelefone: cliente?.telefone,
-      clienteEmail: cliente?.email,
-    });
 
     return NextResponse.json({ modo: "supabase", ok: true, estorno });
   } catch (e) {

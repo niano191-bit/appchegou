@@ -56,6 +56,7 @@ export async function PUT(request: Request) {
     horario_fechamento: corpo.horario_fechamento,
     pagamento_mercadopago: corpo.pagamento_mercadopago,
     pagamento_lucpaguei: corpo.pagamento_lucpaguei,
+    pagamento_dinheiro: corpo.pagamento_dinheiro,
   });
 
   try {

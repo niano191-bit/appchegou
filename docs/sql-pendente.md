@@ -1,6 +1,6 @@
 # SQL no Supabase (produção)
 
-**Atualizado:** migrations `004` → `012` aplicadas no projeto em 25/07/2026.
+**Atualizado:** migrations `004` → `013` (dinheiro na entrega).
 
 Se criar um projeto novo do zero, rode nesta ordem:
 
@@ -16,6 +16,7 @@ Se criar um projeto novo do zero, rode nesta ordem:
 10. `010_fase18_estorno.sql`
 11. `011_fase19_eta.sql`
 12. `012_fase20_numero_pedido.sql`
+13. `013_fase21_dinheiro.sql`
 
 Script local (com `SUPABASE_ACCESS_TOKEN`):
 

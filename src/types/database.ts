@@ -54,7 +54,7 @@ export type StatusPagamento =
   | "estornado"
   | "reembolso_pendente";
 
-export type FormaPagamento = "pix" | "cartao" | null;
+export type FormaPagamento = "pix" | "cartao" | "dinheiro" | null;
 
 export type CanceladoPor = "cliente" | "restaurante" | null;
 
@@ -83,6 +83,8 @@ export type Pedido = {
   numero_dia?: number | null;
   /** Data civil do pedido em Salvador (YYYY-MM-DD) */
   data_pedido?: string | null;
+  /** Cliente pediu troco para este valor (dinheiro na entrega) */
+  troco_para?: number | null;
   criado_em: string;
   atualizado_em: string;
 };
@@ -118,6 +120,8 @@ export type Configuracao = {
   pagamento_mercadopago: boolean;
   /** Aceitar LucPaguei no checkout */
   pagamento_lucpaguei: boolean;
+  /** Aceitar dinheiro na entrega */
+  pagamento_dinheiro: boolean;
 };
 
 /** Formata valor em reais: R$ 0,00 */

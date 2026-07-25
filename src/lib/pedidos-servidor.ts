@@ -20,6 +20,7 @@ import {
   mensagemBloqueioPedido,
   statusOperacaoLoja,
 } from "@/lib/horario";
+import { pedidoVisivelNaOperacao } from "@/lib/pagamento-pedido";
 
 export type PedidoComItens = Pedido & {
   itens_pedido: ItemPedido[];
@@ -433,7 +434,7 @@ export async function listarPedidosDoRestaurante(
     .from("pedidos")
     .select("*, itens_pedido(*)")
     .eq("restaurante_id", restauranteId)
-    .eq("status_pagamento", "pago")
+    .or("status_pagamento.eq.pago,forma_pagamento.eq.dinheiro")
     .in("status", status)
     .order("criado_em", { ascending: ordem === "asc" });
 
@@ -441,7 +442,10 @@ export async function listarPedidosDoRestaurante(
     throw new Error(error.message);
   }
 
-  return anexarContatosPedidos((data ?? []) as PedidoComItens[]);
+  const filtrados = ((data ?? []) as PedidoComItens[]).filter(
+    pedidoVisivelNaOperacao,
+  );
+  return anexarContatosPedidos(filtrados);
 }
 
 /** Pedidos do cliente logado */
@@ -505,8 +509,8 @@ export async function recusarPedido(
   if (pedido.restaurante_id !== restauranteId) {
     throw new Error("Este pedido não é da sua loja.");
   }
-  if (pedido.status_pagamento !== "pago") {
-    throw new Error("Só é possível recusar pedidos já pagos.");
+  if (!pedidoVisivelNaOperacao(pedido)) {
+    throw new Error("Só é possível recusar pedidos pagos ou em dinheiro.");
   }
   if (pedido.status !== "novo" && pedido.status !== "aceito") {
     throw new Error(
@@ -549,12 +553,13 @@ export async function atualizarStatusPedido(
     atualizado_em: new Date().toISOString(),
   };
 
+  const atual = await buscarPedido(pedidoId);
+  if (!atual) throw new Error("Pedido não encontrado.");
+
   if (status === "a_caminho") {
     if (!extras?.entregadorId) {
       throw new Error("Informe o entregador.");
     }
-    const atual = await buscarPedido(pedidoId);
-    if (!atual) throw new Error("Pedido não encontrado.");
     if (atual.status !== "pronto") {
       throw new Error("Só é possível aceitar corrida de pedidos prontos.");
     }
@@ -565,6 +570,19 @@ export async function atualizarStatusPedido(
       throw new Error("Esta corrida foi atribuída a outro entregador.");
     }
     patch.entregador_id = extras.entregadorId;
+  }
+
+  if (status === "entregue") {
+    if (atual.status !== "a_caminho") {
+      throw new Error("Só é possível confirmar entrega de pedidos a caminho.");
+    }
+    if (
+      atual.forma_pagamento === "dinheiro" &&
+      atual.status_pagamento === "pendente"
+    ) {
+      patch.status_pagamento = "pago";
+      patch.forma_pagamento = "dinheiro";
+    }
   }
 
   if (status === "aceito") {
@@ -599,8 +617,8 @@ export async function atribuirEntregadorPedido(
 ) {
   const pedido = await buscarPedido(pedidoId);
   if (!pedido) throw new Error("Pedido não encontrado.");
-  if (pedido.status_pagamento !== "pago") {
-    throw new Error("Só é possível atribuir pedidos pagos.");
+  if (!pedidoVisivelNaOperacao(pedido)) {
+    throw new Error("Só é possível atribuir pedidos pagos ou em dinheiro.");
   }
   if (pedido.status !== "pronto" && pedido.status !== "a_caminho") {
     throw new Error(
@@ -722,7 +740,7 @@ export async function listarCorridas(entregadorId: string) {
     .from("pedidos")
     .select("*, itens_pedido(*), restaurantes(nome, endereco)")
     .eq("status", "pronto")
-    .eq("status_pagamento", "pago")
+    .or("status_pagamento.eq.pago,forma_pagamento.eq.dinheiro")
     .order("criado_em", { ascending: true });
 
   if (erroProntos) throw new Error(erroProntos.message);
@@ -731,25 +749,27 @@ export async function listarCorridas(entregadorId: string) {
     .from("pedidos")
     .select("*, itens_pedido(*), restaurantes(nome, endereco)")
     .eq("status", "a_caminho")
-    .eq("status_pagamento", "pago")
+    .or("status_pagamento.eq.pago,forma_pagamento.eq.dinheiro")
     .eq("entregador_id", entregadorId)
     .order("criado_em", { ascending: true });
 
   if (erroMeus) throw new Error(erroMeus.message);
 
   const mapa = (lista: typeof prontos): Corrida[] =>
-    (lista ?? []).map((p) => {
-      const restaurantes = p.restaurantes as {
-        nome?: string;
-        endereco?: string | null;
-      } | null;
-      const { restaurantes: _, ...pedido } = p;
-      return {
-        ...(pedido as PedidoComItens),
-        restaurante_nome: restaurantes?.nome ?? "Restaurante",
-        restaurante_endereco: restaurantes?.endereco ?? null,
-      };
-    });
+    (lista ?? [])
+      .map((p) => {
+        const restaurantes = p.restaurantes as {
+          nome?: string;
+          endereco?: string | null;
+        } | null;
+        const { restaurantes: _, ...pedido } = p;
+        return {
+          ...(pedido as PedidoComItens),
+          restaurante_nome: restaurantes?.nome ?? "Restaurante",
+          restaurante_endereco: restaurantes?.endereco ?? null,
+        };
+      })
+      .filter(pedidoVisivelNaOperacao);
 
   const prontosVisiveis = mapa(prontos).filter(
     (p) => !p.entregador_id || p.entregador_id === entregadorId,
@@ -757,6 +777,58 @@ export async function listarCorridas(entregadorId: string) {
   const unidos = [...prontosVisiveis, ...mapa(meus)];
   const comContato = await anexarContatosPedidos(unidos);
   return comContato as Corrida[];
+}
+
+/** Cliente escolhe pagar em dinheiro na entrega */
+export async function escolherDinheiro(
+  pedidoId: string,
+  clienteId: string,
+  trocoPara?: number | null,
+) {
+  const config = await lerConfiguracao();
+  if (!config.pagamento_dinheiro) {
+    throw new Error("Pagamento em dinheiro está desligado.");
+  }
+
+  const pedido = await buscarPedido(pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.cliente_id !== clienteId) {
+    throw new Error("Este pedido não é seu.");
+  }
+  if (pedido.status_pagamento === "pago") {
+    throw new Error("Este pedido já está pago.");
+  }
+  if (pedido.status === "cancelado") {
+    throw new Error("Pedido cancelado.");
+  }
+
+  const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  let troco: number | null = null;
+  if (trocoPara != null && Number(trocoPara) > 0) {
+    troco = Number(Number(trocoPara).toFixed(2));
+    if (troco < total) {
+      throw new Error(
+        `Troco para deve ser pelo menos o total (${total.toFixed(2)}).`,
+      );
+    }
+  }
+
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .update({
+      forma_pagamento: "dinheiro",
+      status_pagamento: "pendente",
+      troco_para: troco,
+      atualizado_em: new Date().toISOString(),
+    })
+    .eq("id", pedidoId)
+    .eq("cliente_id", clienteId)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as Pedido;
 }
 
 /** Marca pedido como pago no Supabase */
@@ -864,6 +936,7 @@ export async function lerConfiguracao() {
     horario_fechamento: data.horario_fechamento,
     pagamento_mercadopago: data.pagamento_mercadopago,
     pagamento_lucpaguei: data.pagamento_lucpaguei,
+    pagamento_dinheiro: data.pagamento_dinheiro,
   });
 }
 
@@ -879,6 +952,7 @@ export async function salvarConfiguracao(config: Configuracao) {
       horario_fechamento: limpa.horario_fechamento,
       pagamento_mercadopago: limpa.pagamento_mercadopago,
       pagamento_lucpaguei: limpa.pagamento_lucpaguei,
+      pagamento_dinheiro: limpa.pagamento_dinheiro,
       atualizado_em: new Date().toISOString(),
     })
     .select("*")
@@ -891,6 +965,7 @@ export async function salvarConfiguracao(config: Configuracao) {
     horario_fechamento: data.horario_fechamento,
     pagamento_mercadopago: data.pagamento_mercadopago,
     pagamento_lucpaguei: data.pagamento_lucpaguei,
+    pagamento_dinheiro: data.pagamento_dinheiro,
   });
 }
 

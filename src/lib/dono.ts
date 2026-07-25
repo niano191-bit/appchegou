@@ -12,6 +12,8 @@ export type ResumoDia = {
   data_label?: string;
   qtd_pedidos: number;
   faturamento: number;
+  faturamento_pix?: number;
+  faturamento_dinheiro?: number;
   comissao: number;
   ticket_medio: number;
   taxa_entrega_total?: number;

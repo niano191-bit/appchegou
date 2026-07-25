@@ -12,6 +12,10 @@ import {
   solicitarEstornoPix,
   type PedidoDetalhe,
 } from "@/lib/pedidos";
+import {
+  pedidoEhDinheiroPendente,
+  textoCobrancaDinheiro,
+} from "@/lib/pagamento-pedido";
 import { rotuloPedido } from "@/lib/pedido-rotulo";
 import {
   formatarReais,
@@ -151,8 +155,11 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
   const cancelado = pedido.status === "cancelado";
   const indiceAtual = cancelado ? -1 : ETAPAS.indexOf(pedido.status);
   const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  const dinheiroPendente = pedidoEhDinheiroPendente(pedido);
   const aguardandoPagamento =
-    !cancelado && pedido.status_pagamento !== "pago";
+    !cancelado &&
+    pedido.status_pagamento !== "pago" &&
+    !dinheiroPendente;
   const podeCancelar = pedido.status === "novo";
 
   return (
@@ -187,6 +194,19 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
           >
             Ir para o pagamento
           </Link>
+        </div>
+      ) : null}
+
+      {dinheiroPendente && !cancelado ? (
+        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
+          <p className="font-medium text-foreground">
+            Pagamento em dinheiro na entrega
+          </p>
+          <p className="mt-1">{textoCobrancaDinheiro(pedido)}</p>
+          <p className="mt-1">
+            Tenha o valor pronto. O entregador confirma o recebimento na
+            entrega.
+          </p>
         </div>
       ) : null}
 

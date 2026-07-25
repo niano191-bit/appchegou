@@ -1,5 +1,9 @@
 import { jsPDF } from "jspdf";
 import { MARCA } from "@/lib/marca";
+import {
+  pedidoEhDinheiroPendente,
+  textoCobrancaDinheiro,
+} from "@/lib/pagamento-pedido";
 import type { PedidoComItens } from "@/lib/pedidos";
 import { codigoPedido, rotuloPedido } from "@/lib/pedido-rotulo";
 import { formatarReais } from "@/types/database";
@@ -112,6 +116,10 @@ export function baixarComandaPdf(pedido: PedidoComItens) {
   linha(`Entrega: ${formatarReais(Number(pedido.taxa_entrega))}`, 9);
   const total = Number(pedido.total) + Number(pedido.taxa_entrega);
   linha(`TOTAL ${formatarReais(total)}`, 12, true);
+  if (pedidoEhDinheiroPendente(pedido)) {
+    y += 1;
+    linha(textoCobrancaDinheiro(pedido), 10, true);
+  }
   y += 3;
   centro(MARCA.tagline, 7);
 

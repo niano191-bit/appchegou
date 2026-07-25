@@ -73,7 +73,28 @@ export async function criarCheckoutLucPaguei(pedidoId: string) {
 export type OpcoesPagamento = {
   mercadopago: { ativo: boolean; configurado: boolean };
   lucpaguei: { ativo: boolean; configurado: boolean };
+  dinheiro: { ativo: boolean };
 };
+
+/** Cliente escolhe pagar em dinheiro na entrega */
+export async function escolherPagamentoDinheiro(
+  pedidoId: string,
+  trocoPara?: number | null,
+) {
+  const resposta = await fetch(`/api/pedidos/${pedidoId}/dinheiro`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ troco_para: trocoPara ?? null }),
+  });
+  const json = (await resposta.json()) as {
+    pedido?: Pedido;
+    erro?: string;
+  };
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível escolher dinheiro.");
+  }
+  return json.pedido!;
+}
 
 /** Gateways liberados pelo dono */
 export async function buscarOpcoesPagamento() {

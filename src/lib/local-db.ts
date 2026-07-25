@@ -22,6 +22,7 @@ import {
   mensagemBloqueioPedido,
   statusOperacaoLoja,
 } from "@/lib/horario";
+import { pedidoVisivelNaOperacao } from "@/lib/pagamento-pedido";
 
 export type PedidoLocal = Pedido & { itens_pedido: ItemPedido[] };
 
@@ -52,6 +53,7 @@ export function configuracaoPadrao(): Configuracao {
     horario_fechamento: "22:00",
     pagamento_mercadopago: true,
     pagamento_lucpaguei: true,
+    pagamento_dinheiro: true,
   };
 }
 
@@ -66,6 +68,7 @@ export function normalizarConfiguracao(
     horario_fechamento: cfg?.horario_fechamento ?? base.horario_fechamento,
     pagamento_mercadopago: cfg?.pagamento_mercadopago ?? true,
     pagamento_lucpaguei: cfg?.pagamento_lucpaguei ?? true,
+    pagamento_dinheiro: cfg?.pagamento_dinheiro ?? true,
   };
 }
 
@@ -234,6 +237,7 @@ function dadosIniciais(): BancoLocal {
         previsao_entrega_em: null,
         numero_dia: 1,
         data_pedido: null,
+        troco_para: null,
         criado_em: criado,
         atualizado_em: criado,
         itens_pedido: [
@@ -350,7 +354,7 @@ export async function listarPedidosLocal(
   const lista = banco.pedidos.filter(
     (p) =>
       p.restaurante_id === restauranteId &&
-      p.status_pagamento === "pago" &&
+      pedidoVisivelNaOperacao(p) &&
       status.includes(p.status),
   );
   lista.sort((a, b) => {
@@ -437,8 +441,8 @@ export async function recusarPedidoLocal(
   if (pedido.restaurante_id !== restauranteId) {
     throw new Error("Este pedido não é da sua loja.");
   }
-  if (pedido.status_pagamento !== "pago") {
-    throw new Error("Só é possível recusar pedidos já pagos.");
+  if (!pedidoVisivelNaOperacao(pedido)) {
+    throw new Error("Só é possível recusar pedidos pagos ou em dinheiro.");
   }
   if (pedido.status !== "novo" && pedido.status !== "aceito") {
     throw new Error(
@@ -499,6 +503,12 @@ export async function atualizarStatusPedidoLocal(
       pedido.entregador_id !== extras.entregadorId
     ) {
       throw new Error("Esta corrida pertence a outro entregador.");
+    }
+    if (
+      pedido.forma_pagamento === "dinheiro" &&
+      pedido.status_pagamento === "pendente"
+    ) {
+      pedido.status_pagamento = "pago";
     }
   }
 
@@ -576,8 +586,8 @@ export async function atribuirEntregadorPedidoLocal(
   const banco = await lerBancoLocal();
   const pedido = banco.pedidos.find((p) => p.id === pedidoId);
   if (!pedido) throw new Error("Pedido não encontrado.");
-  if (pedido.status_pagamento !== "pago") {
-    throw new Error("Só é possível atribuir pedidos pagos.");
+  if (!pedidoVisivelNaOperacao(pedido)) {
+    throw new Error("Só é possível atribuir pedidos pagos ou em dinheiro.");
   }
   if (pedido.status !== "pronto" && pedido.status !== "a_caminho") {
     throw new Error(
@@ -623,7 +633,7 @@ export async function listarCorridasLocal(entregadorId: string) {
   return banco.pedidos
     .filter(
       (p) =>
-        p.status_pagamento === "pago" &&
+        pedidoVisivelNaOperacao(p) &&
         ((p.status === "pronto" &&
           (!p.entregador_id || p.entregador_id === entregadorId)) ||
           (p.status === "a_caminho" && p.entregador_id === entregadorId)),
@@ -982,6 +992,7 @@ export async function criarPedidoLocal(entrada: {
     previsao_entrega_em: null,
     numero_dia: numeroDia,
     data_pedido: dataPedido,
+    troco_para: null,
     criado_em: criado,
     atualizado_em: criado,
     itens_pedido: itensPedido,
@@ -1008,6 +1019,48 @@ export async function marcarPedidoPagoLocal(
   pedido.status_pagamento = "pago";
   pedido.forma_pagamento = forma;
   pedido.mp_payment_id = mpPaymentId ?? null;
+  pedido.atualizado_em = agora();
+  await salvarBancoLocal(banco);
+  return pedido;
+}
+
+/** Cliente escolhe pagar em dinheiro na entrega */
+export async function escolherDinheiroLocal(
+  pedidoId: string,
+  clienteId: string,
+  trocoPara?: number | null,
+) {
+  const banco = await lerBancoLocal();
+  const config = normalizarConfiguracao(banco.configuracao);
+  if (!config.pagamento_dinheiro) {
+    throw new Error("Pagamento em dinheiro está desligado.");
+  }
+  const pedido = banco.pedidos.find((p) => p.id === pedidoId);
+  if (!pedido) throw new Error("Pedido não encontrado.");
+  if (pedido.cliente_id !== clienteId) {
+    throw new Error("Este pedido não é seu.");
+  }
+  if (pedido.status_pagamento === "pago") {
+    throw new Error("Este pedido já está pago.");
+  }
+  if (pedido.status === "cancelado") {
+    throw new Error("Pedido cancelado.");
+  }
+
+  const total = Number(pedido.total) + Number(pedido.taxa_entrega);
+  let troco: number | null = null;
+  if (trocoPara != null && Number(trocoPara) > 0) {
+    troco = Number(trocoPara);
+    if (troco < total) {
+      throw new Error(
+        `Troco para deve ser pelo menos o total (${total.toFixed(2)}).`,
+      );
+    }
+  }
+
+  pedido.forma_pagamento = "dinheiro";
+  pedido.status_pagamento = "pendente";
+  pedido.troco_para = troco;
   pedido.atualizado_em = agora();
   await salvarBancoLocal(banco);
   return pedido;

@@ -6,10 +6,12 @@ import {
   buscarOpcoesPagamento,
   criarCheckoutLucPaguei,
   criarCheckoutMercadoPago,
+  escolherPagamentoDinheiro,
   simularPagamento,
   type OpcoesPagamento,
 } from "@/lib/pagamentos";
 import { buscarPedido, type PedidoDetalhe } from "@/lib/pedidos";
+import { pedidoEhDinheiroPendente } from "@/lib/pagamento-pedido";
 import { formatarReais, STATUS_PAGAMENTO_LABEL } from "@/types/database";
 
 export function TelaPagamento({
@@ -31,6 +33,8 @@ export function TelaPagamento({
     qrCodeBase64?: string;
   } | null>(null);
   const [verificando, setVerificando] = useState(false);
+  const [trocoPara, setTrocoPara] = useState("");
+  const [precisaTroco, setPrecisaTroco] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -212,6 +216,30 @@ export function TelaPagamento({
     }
   }
 
+  async function pagarDinheiro() {
+    setAcao("dinheiro");
+    setErro(null);
+    try {
+      let troco: number | null = null;
+      if (precisaTroco) {
+        troco = Number(trocoPara.replace(",", "."));
+        if (!Number.isFinite(troco) || troco <= 0) {
+          throw new Error("Informe o valor do troco (ex.: 50).");
+        }
+      }
+      await escolherPagamentoDinheiro(pedidoId, troco);
+      router.push(`/cliente/pedido/${pedidoId}`);
+    } catch (e) {
+      setErro(
+        e instanceof Error
+          ? e.message
+          : "Não foi possível escolher pagamento em dinheiro.",
+      );
+    } finally {
+      setAcao(null);
+    }
+  }
+
   if (carregando) {
     return (
       <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
@@ -232,12 +260,15 @@ export function TelaPagamento({
   const mpAtivo = opcoes?.mercadopago.ativo ?? true;
   const lpAtivo = opcoes?.lucpaguei.ativo ?? true;
   const lpConfigurado = opcoes?.lucpaguei.configurado ?? false;
+  const dinheiroAtivo = opcoes?.dinheiro.ativo ?? true;
   const mostrarSimulacao = !lpConfigurado;
 
-  if (pedido.status_pagamento === "pago") {
+  if (pedido.status_pagamento === "pago" || pedidoEhDinheiroPendente(pedido)) {
     return (
       <div className="rounded-2xl border border-mar/40 bg-mar-suave px-5 py-4 text-sm text-mar">
-        Este pedido já está pago.{" "}
+        {pedidoEhDinheiroPendente(pedido)
+          ? "Você escolheu pagar em dinheiro na entrega. "
+          : "Este pedido já está pago. "}
         <button
           type="button"
           className="font-semibold underline"
@@ -329,6 +360,52 @@ export function TelaPagamento({
               : opcoes?.mercadopago.configurado
                 ? "Pagar no Mercado Pago"
                 : "Pagar no Mercado Pago (teste)"}
+          </button>
+        </section>
+      ) : null}
+
+      {dinheiroAtivo ? (
+        <section className="flex flex-col gap-3 rounded-2xl border border-dashed border-dende/40 bg-dende-suave/40 px-5 py-4">
+          <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
+            Dinheiro na entrega
+          </h2>
+          <p className="text-sm text-muted">
+            Pague ao entregador quando receber. Total:{" "}
+            <span className="font-semibold text-foreground">
+              {formatarReais(total)}
+            </span>
+          </p>
+          <label className="flex items-center gap-3 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={precisaTroco}
+              onChange={(e) => setPrecisaTroco(e.target.checked)}
+              className="h-4 w-4 accent-dende"
+            />
+            Preciso de troco
+          </label>
+          {precisaTroco ? (
+            <label className="block text-sm text-muted">
+              Vou pagar com (R$)
+              <input
+                type="text"
+                inputMode="decimal"
+                value={trocoPara}
+                onChange={(e) => setTrocoPara(e.target.value)}
+                placeholder={`Ex.: ${Math.ceil(total / 10) * 10 || 50}`}
+                className="mt-1 w-full rounded-xl border border-linha bg-white px-3 py-2.5 text-foreground outline-none focus:border-dende"
+              />
+            </label>
+          ) : null}
+          <button
+            type="button"
+            disabled={Boolean(acao)}
+            onClick={() => void pagarDinheiro()}
+            className="rounded-xl bg-dende px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {acao === "dinheiro"
+              ? "Confirmando…"
+              : "Pagar em dinheiro na entrega"}
           </button>
         </section>
       ) : null}
