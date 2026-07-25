@@ -21,6 +21,7 @@ const files = [
   ["012", "supabase/migrations/012_fase20_numero_pedido.sql"],
   ["013", "supabase/migrations/013_fase21_dinheiro.sql"],
   ["014", "supabase/migrations/014_fase22_pedido_minimo.sql"],
+  ["015", "supabase/migrations/015_fase23_cupons.sql"],
 ];
 
 async function runQuery(query) {

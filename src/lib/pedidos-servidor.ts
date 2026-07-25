@@ -1,10 +1,12 @@
 import type {
   Configuracao,
+  Cupom,
   ItemCardapio,
   ItemPedido,
   Pedido,
   Restaurante,
   StatusPedido,
+  TipoCupom,
   Usuario,
 } from "@/types/database";
 import { SENHA_DEMO } from "@/lib/auth";
@@ -13,6 +15,10 @@ import { createSupabaseClient } from "@/lib/supabase/client";
 import { normalizarConfiguracao, type ItemNovoPedido } from "@/lib/local-db";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import { buscarBairro, listarBairros } from "@/lib/bairros-servidor";
+import {
+  calcularDescontoCupom,
+  normalizarCodigoCupom,
+} from "@/lib/cupom";
 import { montarFechamentoDia } from "@/lib/fechamento";
 import {
   dataPedidoSalvador,
@@ -291,6 +297,7 @@ export async function criarPedido(entrada: {
   observacao?: string;
   bairroId?: string;
   taxa_entrega?: number;
+  cupomCodigo?: string | null;
   itens: ItemNovoPedido[];
 }) {
   if (!entrada.itens.length) {
@@ -349,6 +356,18 @@ export async function criarPedido(entrada: {
 
   exigirPedidoMinimo(loja, total);
 
+  let desconto = 0;
+  let cupomCodigo: string | null = null;
+  const codigoInformado = entrada.cupomCodigo
+    ? normalizarCodigoCupom(entrada.cupomCodigo)
+    : "";
+  if (codigoInformado) {
+    const aplicado = await validarCupom(codigoInformado, total);
+    desconto = aplicado.desconto;
+    cupomCodigo = aplicado.codigo;
+    total = Number((total - desconto).toFixed(2));
+  }
+
   const dataPedido = dataPedidoSalvador();
   let numeroDia = await proximoNumeroDia(dataPedido);
   let pedido: Pedido | null = null;
@@ -371,6 +390,8 @@ export async function criarPedido(entrada: {
         observacao: entrada.observacao?.trim() || null,
         numero_dia: numeroDia,
         data_pedido: dataPedido,
+        desconto,
+        cupom_codigo: cupomCodigo,
       })
       .select("*")
       .single();
@@ -1092,4 +1113,117 @@ export async function resumoDoDia() {
       valor: g.valor,
     })),
   });
+}
+
+export async function listarCupons() {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("cupons")
+    .select("*")
+    .order("codigo");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Cupom[];
+}
+
+export async function buscarCupomPorCodigo(codigo: string) {
+  const supabase = createSupabaseClient();
+  const chave = normalizarCodigoCupom(codigo);
+  const { data, error } = await supabase
+    .from("cupons")
+    .select("*")
+    .ilike("codigo", chave)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as Cupom | null) ?? null;
+}
+
+export async function validarCupom(codigo: string, subtotal: number) {
+  const cupom = await buscarCupomPorCodigo(codigo);
+  if (!cupom) throw new Error("Cupom não encontrado.");
+  const desconto = calcularDescontoCupom(cupom, subtotal);
+  return {
+    cupom,
+    desconto,
+    codigo: normalizarCodigoCupom(cupom.codigo),
+  };
+}
+
+export async function criarCupom(entrada: {
+  codigo: string;
+  tipo: TipoCupom;
+  valor: number;
+}) {
+  const codigo = normalizarCodigoCupom(entrada.codigo);
+  if (!codigo || codigo.length < 3) {
+    throw new Error("Informe um código com pelo menos 3 caracteres.");
+  }
+  if (entrada.tipo !== "percent" && entrada.tipo !== "fix") {
+    throw new Error("Tipo de cupom inválido.");
+  }
+  const valor = Number(entrada.valor);
+  if (!Number.isFinite(valor) || valor <= 0) {
+    throw new Error("Valor do desconto inválido.");
+  }
+  if (entrada.tipo === "percent" && valor > 100) {
+    throw new Error("Percentual deve ser no máximo 100.");
+  }
+
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("cupons")
+    .insert({
+      codigo,
+      tipo: entrada.tipo,
+      valor: Number(valor.toFixed(2)),
+      ativo: true,
+    })
+    .select("*")
+    .single();
+  if (error) {
+    if (error.code === "23505" || /duplicate|unique/i.test(error.message)) {
+      throw new Error("Já existe um cupom com este código.");
+    }
+    throw new Error(error.message);
+  }
+  return data as Cupom;
+}
+
+export async function atualizarCupom(
+  id: string,
+  patch: { ativo?: boolean; valor?: number; tipo?: TipoCupom },
+) {
+  const limpo: Record<string, unknown> = {};
+  if (patch.ativo !== undefined) limpo.ativo = patch.ativo;
+  if (patch.tipo !== undefined) {
+    if (patch.tipo !== "percent" && patch.tipo !== "fix") {
+      throw new Error("Tipo de cupom inválido.");
+    }
+    limpo.tipo = patch.tipo;
+  }
+  if (patch.valor !== undefined) {
+    const valor = Number(patch.valor);
+    if (!Number.isFinite(valor) || valor <= 0) {
+      throw new Error("Valor do desconto inválido.");
+    }
+    limpo.valor = Number(valor.toFixed(2));
+  }
+  if (Object.keys(limpo).length === 0) {
+    throw new Error("Nada para atualizar.");
+  }
+
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("cupons")
+    .update(limpo)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Cupom;
+}
+
+export async function excluirCupom(id: string) {
+  const supabase = createSupabaseClient();
+  const { error } = await supabase.from("cupons").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 }

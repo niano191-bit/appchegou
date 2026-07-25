@@ -289,6 +289,12 @@ export function TelaPagamento({
         <p className="mt-1 text-lg font-semibold text-foreground">
           Total {formatarReais(total)}
         </p>
+        {Number(pedido.desconto) > 0 ? (
+          <p className="mt-1 text-xs text-mar">
+            Cupom {pedido.cupom_codigo} (−
+            {formatarReais(Number(pedido.desconto))})
+          </p>
+        ) : null}
         <p className="mt-1 text-sm text-muted">
           {STATUS_PAGAMENTO_LABEL[pedido.status_pagamento]}
         </p>

@@ -87,8 +87,24 @@ export type Pedido = {
   data_pedido?: string | null;
   /** Cliente pediu troco para este valor (dinheiro na entrega) */
   troco_para?: number | null;
+  /** Valor abatido do subtotal dos itens */
+  desconto?: number;
+  /** Codigo do cupom aplicado */
+  cupom_codigo?: string | null;
   criado_em: string;
   atualizado_em: string;
+};
+
+export type TipoCupom = "percent" | "fix";
+
+/** Cupom de desconto criado pelo dono */
+export type Cupom = {
+  id: string;
+  codigo: string;
+  tipo: TipoCupom;
+  valor: number;
+  ativo: boolean;
+  criado_em: string;
 };
 
 export type ItemPedido = {

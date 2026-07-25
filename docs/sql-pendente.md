@@ -1,6 +1,6 @@
 # SQL no Supabase (produção)
 
-**Atualizado:** migrations `004` → `014` (pedido mínimo por loja).
+**Atualizado:** migrations `004` → `015` (cupons de desconto).
 
 Se criar um projeto novo do zero, rode nesta ordem:
 
@@ -18,6 +18,7 @@ Se criar um projeto novo do zero, rode nesta ordem:
 12. `012_fase20_numero_pedido.sql`
 13. `013_fase21_dinheiro.sql`
 14. `014_fase22_pedido_minimo.sql`
+15. `015_fase23_cupons.sql`
 
 Script local (com `SUPABASE_ACCESS_TOKEN`):
 

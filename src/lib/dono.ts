@@ -1,8 +1,10 @@
 import type {
   BairroEntrega,
   Configuracao,
+  Cupom,
   ItemCardapio,
   Restaurante,
+  TipoCupom,
   Usuario,
 } from "@/types/database";
 import type { PedidoComItens } from "@/lib/pedidos-servidor";
@@ -324,4 +326,55 @@ export async function excluirBairroDono(id: string) {
   );
   const json = (await resposta.json()) as { erro?: string };
   if (!resposta.ok) throw new Error(json.erro ?? "Erro ao excluir bairro.");
+}
+
+export async function buscarCuponsDono() {
+  const resposta = await fetch("/api/cupons", { cache: "no-store" });
+  const json = (await resposta.json()) as {
+    cupons?: Cupom[];
+    erro?: string;
+  };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao carregar cupons.");
+  return json.cupons ?? [];
+}
+
+export async function criarCupomDono(entrada: {
+  codigo: string;
+  tipo: TipoCupom;
+  valor: number;
+}) {
+  const resposta = await fetch("/api/cupons", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entrada),
+  });
+  const json = (await resposta.json()) as { cupom?: Cupom; erro?: string };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao criar cupom.");
+  return json.cupom!;
+}
+
+export async function atualizarCupomDono(entrada: {
+  id: string;
+  ativo?: boolean;
+  valor?: number;
+  tipo?: TipoCupom;
+}) {
+  const resposta = await fetch("/api/cupons", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entrada),
+  });
+  const json = (await resposta.json()) as { cupom?: Cupom; erro?: string };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao atualizar cupom.");
+  return json.cupom!;
+}
+
+export async function excluirCupomDono(id: string) {
+  const resposta = await fetch("/api/cupons", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, excluir: true }),
+  });
+  const json = (await resposta.json()) as { erro?: string };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao excluir cupom.");
 }

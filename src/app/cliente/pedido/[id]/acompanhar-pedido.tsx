@@ -335,6 +335,12 @@ export function AcompanharPedido({ pedidoId }: { pedidoId: string }) {
             </li>
           ))}
         </ul>
+        {Number(pedido.desconto) > 0 ? (
+          <p className="mt-3 text-sm text-mar">
+            Cupom {pedido.cupom_codigo}: −
+            {formatarReais(Number(pedido.desconto))}
+          </p>
+        ) : null}
         <p className="mt-3 font-semibold text-foreground">
           Total {formatarReais(total)}
         </p>

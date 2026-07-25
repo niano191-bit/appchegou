@@ -41,6 +41,7 @@ import {
   STATUS_PEDIDO_LABEL,
 } from "@/types/database";
 import { GestaoBairros } from "./gestao-bairros";
+import { GestaoCupons } from "./gestao-cupons";
 import { GestaoLojas } from "./gestao-lojas";
 
 export function PainelDono() {
@@ -475,6 +476,8 @@ export function PainelDono() {
       />
 
       <GestaoBairros />
+
+      <GestaoCupons />
 
       {/* Entregadores */}
       <section className="flex flex-col gap-3">

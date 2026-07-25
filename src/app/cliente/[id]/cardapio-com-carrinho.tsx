@@ -58,6 +58,13 @@ export function CardapioComCarrinho({
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [avisoRepetir, setAvisoRepetir] = useState<string | null>(null);
+  const [cupomCodigo, setCupomCodigo] = useState("");
+  const [cupomAplicado, setCupomAplicado] = useState<{
+    codigo: string;
+    desconto: number;
+    rotulo: string;
+  } | null>(null);
+  const [validandoCupom, setValidandoCupom] = useState(false);
 
   useEffect(() => {
     const salvo = lerEnderecoSalvo();
@@ -149,10 +156,54 @@ export function CardapioComCarrinho({
     : bairros.length > 0
       ? 0
       : taxaPadrao;
-  const total = subtotal + taxaEntrega;
+  const desconto =
+    cupomAplicado && cupomAplicado.desconto > 0
+      ? Math.min(cupomAplicado.desconto, subtotal)
+      : 0;
+  const total = Math.max(0, subtotal - desconto) + taxaEntrega;
   const pedidoMinimo = valorPedidoMinimo(restaurante);
   const abaixoDoMinimo = pedidoMinimo > 0 && subtotal + 1e-9 < pedidoMinimo;
   const avisoMinimo = textoPedidoMinimo(pedidoMinimo);
+
+  // Se o carrinho mudou, revalida o desconto do cupom
+  useEffect(() => {
+    if (!cupomAplicado) return;
+    if (subtotal <= 0) {
+      setCupomAplicado(null);
+      return;
+    }
+    void (async () => {
+      try {
+        const res = await fetch("/api/cupons/validar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            codigo: cupomAplicado.codigo,
+            subtotal,
+          }),
+        });
+        const json = (await res.json()) as {
+          codigo?: string;
+          desconto?: number;
+          rotulo?: string;
+          erro?: string;
+        };
+        if (!res.ok) {
+          setCupomAplicado(null);
+          setErro(json.erro ?? "Cupom não vale mais para este carrinho.");
+          return;
+        }
+        setCupomAplicado({
+          codigo: json.codigo!,
+          desconto: Number(json.desconto),
+          rotulo: json.rotulo!,
+        });
+      } catch {
+        /* mantém o aplicado */
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só quando subtotal muda
+  }, [subtotal]);
 
   function alterarQuantidade(item: ItemCardapio, delta: number) {
     setCarrinho((atual) => {
@@ -169,6 +220,46 @@ export function CardapioComCarrinho({
         [item.id]: { item, quantidade: nova },
       };
     });
+  }
+
+  async function aplicarCupom() {
+    if (!cupomCodigo.trim()) return;
+    if (subtotal <= 0) {
+      setErro("Adicione itens antes de aplicar o cupom.");
+      return;
+    }
+    setValidandoCupom(true);
+    setErro(null);
+    try {
+      const res = await fetch("/api/cupons/validar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          codigo: cupomCodigo.trim(),
+          subtotal,
+        }),
+      });
+      const json = (await res.json()) as {
+        codigo?: string;
+        desconto?: number;
+        rotulo?: string;
+        erro?: string;
+      };
+      if (!res.ok) {
+        throw new Error(json.erro ?? "Cupom inválido.");
+      }
+      setCupomAplicado({
+        codigo: json.codigo!,
+        desconto: Number(json.desconto),
+        rotulo: json.rotulo!,
+      });
+      setCupomCodigo(json.codigo!);
+    } catch (e) {
+      setCupomAplicado(null);
+      setErro(e instanceof Error ? e.message : "Cupom inválido.");
+    } finally {
+      setValidandoCupom(false);
+    }
   }
 
   async function enviarPedido() {
@@ -204,6 +295,7 @@ export function CardapioComCarrinho({
         endereco_entrega: endereco.trim(),
         observacao: observacao.trim() || undefined,
         bairroId: bairroId || undefined,
+        cupomCodigo: cupomAplicado?.codigo,
         itens: itensCarrinho.map((linha) => ({
           item_cardapio_id: linha.item.id,
           quantidade: linha.quantidade,
@@ -421,6 +513,47 @@ export function CardapioComCarrinho({
               className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
             />
           </label>
+          <div>
+            <label className="block text-sm text-muted">
+              Cupom (opcional)
+              <div className="mt-1 flex gap-2">
+                <input
+                  value={cupomCodigo}
+                  onChange={(e) => setCupomCodigo(e.target.value.toUpperCase())}
+                  placeholder="Ex: DEMO10"
+                  className="w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+                />
+                <button
+                  type="button"
+                  disabled={
+                    validandoCupom ||
+                    !cupomCodigo.trim() ||
+                    itensCarrinho.length === 0
+                  }
+                  onClick={() => void aplicarCupom()}
+                  className="shrink-0 rounded-xl border border-dende px-3 py-2.5 text-sm font-semibold text-dende disabled:opacity-60"
+                >
+                  {validandoCupom ? "…" : "Aplicar"}
+                </button>
+              </div>
+            </label>
+            {cupomAplicado ? (
+              <p className="mt-1 text-xs font-medium text-mar">
+                {cupomAplicado.rotulo} aplicado (−
+                {formatarReais(desconto)})
+                <button
+                  type="button"
+                  className="ml-2 underline"
+                  onClick={() => {
+                    setCupomAplicado(null);
+                    setCupomCodigo("");
+                  }}
+                >
+                  Remover
+                </button>
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-4 space-y-1 text-sm text-muted">
@@ -428,6 +561,12 @@ export function CardapioComCarrinho({
             <span>Subtotal</span>
             <span>{formatarReais(subtotal)}</span>
           </div>
+          {desconto > 0 ? (
+            <div className="flex justify-between text-mar">
+              <span>Desconto</span>
+              <span>−{formatarReais(desconto)}</span>
+            </div>
+          ) : null}
           <div className="flex justify-between">
             <span>
               Taxa de entrega

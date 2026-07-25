@@ -92,6 +92,7 @@ export async function POST(request: Request) {
     endereco_entrega?: string;
     observacao?: string;
     bairroId?: string;
+    cupomCodigo?: string;
     itens?: ItemNovoPedido[];
   };
 
@@ -131,6 +132,7 @@ export async function POST(request: Request) {
       observacao: corpo.observacao,
       bairroId: corpo.bairroId,
       taxa_entrega: Number(taxaPadrao),
+      cupomCodigo: corpo.cupomCodigo,
       itens: corpo.itens,
     };
 
@@ -149,7 +151,11 @@ export async function POST(request: Request) {
       mensagem.includes("pausou") ||
       mensagem.includes("disponível") ||
       mensagem.includes("bairro") ||
-      mensagem.includes("Bairro")
+      mensagem.includes("Bairro") ||
+      mensagem.includes("Cupom") ||
+      mensagem.includes("cupom") ||
+      mensagem.includes("mínimo") ||
+      mensagem.includes("minimo")
         ? 400
         : 500;
     return NextResponse.json({ erro: mensagem }, { status });

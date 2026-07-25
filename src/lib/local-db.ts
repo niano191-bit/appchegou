@@ -6,15 +6,21 @@ import { gerarHashSenha } from "@/lib/senha";
 import type {
   BairroEntrega,
   Configuracao,
+  Cupom,
   ItemCardapio,
   ItemPedido,
   Pedido,
   Restaurante,
   StatusPedido,
+  TipoCupom,
   Usuario,
 } from "@/types/database";
 import { BAIRROS_SALVADOR_SEED } from "@/lib/bairros-seed";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
+import {
+  calcularDescontoCupom,
+  normalizarCodigoCupom,
+} from "@/lib/cupom";
 import { montarFechamentoDia } from "@/lib/fechamento";
 import {
   dataPedidoSalvador,
@@ -34,6 +40,7 @@ type BancoLocal = {
   pedidos: PedidoLocal[];
   configuracao: Configuracao;
   bairros: BairroEntrega[];
+  cupons: Cupom[];
 };
 
 function bairrosIniciais(criado: string): BairroEntrega[] {
@@ -89,6 +96,16 @@ function dadosIniciais(): BancoLocal {
   return {
     configuracao: configuracaoPadrao(),
     bairros: bairrosIniciais(criado),
+    cupons: [
+      {
+        id: "c1000000-0000-0000-0000-000000000001",
+        codigo: "DEMO10",
+        tipo: "percent",
+        valor: 10,
+        ativo: true,
+        criado_em: criado,
+      },
+    ],
     restaurantes: [
       {
         id: DEMO.restauranteAcarajeId,
@@ -241,6 +258,8 @@ function dadosIniciais(): BancoLocal {
         numero_dia: 1,
         data_pedido: null,
         troco_para: null,
+        desconto: 0,
+        cupom_codigo: null,
         criado_em: criado,
         atualizado_em: criado,
         itens_pedido: [
@@ -325,12 +344,31 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
     mudou = true;
   }
 
+  if (!banco.cupons) {
+    banco.cupons = [
+      {
+        id: "c1000000-0000-0000-0000-000000000001",
+        codigo: "DEMO10",
+        tipo: "percent",
+        valor: 10,
+        ativo: true,
+        criado_em: agora(),
+      },
+    ];
+    mudou = true;
+  }
+
   // Pedidos antigos sem campo de pagamento: considera pagos
   for (const pedido of banco.pedidos) {
     if (!pedido.status_pagamento) {
       pedido.status_pagamento = "pago";
       pedido.forma_pagamento = pedido.forma_pagamento ?? null;
       pedido.mp_payment_id = pedido.mp_payment_id ?? null;
+      mudou = true;
+    }
+    if (pedido.desconto === undefined) {
+      pedido.desconto = 0;
+      pedido.cupom_codigo = pedido.cupom_codigo ?? null;
       mudou = true;
     }
   }
@@ -904,6 +942,7 @@ export async function criarPedidoLocal(entrada: {
   bairroId?: string;
   /** Ignorado se houver bairros ativos — taxa vem do bairro */
   taxa_entrega?: number;
+  cupomCodigo?: string | null;
   itens: ItemNovoPedido[];
 }) {
   if (!entrada.itens.length) {
@@ -975,6 +1014,21 @@ export async function criarPedidoLocal(entrada: {
 
   exigirPedidoMinimo(restaurante, total);
 
+  let desconto = 0;
+  let cupomCodigo: string | null = null;
+  const codigoInformado = entrada.cupomCodigo
+    ? normalizarCodigoCupom(entrada.cupomCodigo)
+    : "";
+  if (codigoInformado) {
+    const cupom = banco.cupons.find(
+      (c) => normalizarCodigoCupom(c.codigo) === codigoInformado,
+    );
+    if (!cupom) throw new Error("Cupom não encontrado.");
+    desconto = calcularDescontoCupom(cupom, total);
+    cupomCodigo = normalizarCodigoCupom(cupom.codigo);
+    total = Number((total - desconto).toFixed(2));
+  }
+
   const dataPedido = dataPedidoSalvador();
   const numerosHoje = banco.pedidos
     .filter((p) => p.data_pedido === dataPedido && p.numero_dia != null)
@@ -1003,6 +1057,8 @@ export async function criarPedidoLocal(entrada: {
     numero_dia: numeroDia,
     data_pedido: dataPedido,
     troco_para: null,
+    desconto,
+    cupom_codigo: cupomCodigo,
     criado_em: criado,
     atualizado_em: criado,
     itens_pedido: itensPedido,
@@ -1338,6 +1394,112 @@ export async function excluirBairroLocal(id: string) {
   banco.bairros = banco.bairros.filter((b) => b.id !== id);
   if (banco.bairros.length === antes) {
     throw new Error("Bairro não encontrado.");
+  }
+  await salvarBancoLocal(banco);
+}
+
+export async function listarCuponsLocal() {
+  const banco = await lerBancoLocal();
+  return banco.cupons
+    .slice()
+    .sort((a, b) => a.codigo.localeCompare(b.codigo, "pt-BR"));
+}
+
+export async function buscarCupomPorCodigoLocal(codigo: string) {
+  const banco = await lerBancoLocal();
+  const chave = normalizarCodigoCupom(codigo);
+  return (
+    banco.cupons.find((c) => normalizarCodigoCupom(c.codigo) === chave) ?? null
+  );
+}
+
+export async function validarCupomLocal(codigo: string, subtotal: number) {
+  const cupom = await buscarCupomPorCodigoLocal(codigo);
+  if (!cupom) throw new Error("Cupom não encontrado.");
+  const desconto = calcularDescontoCupom(cupom, subtotal);
+  return {
+    cupom,
+    desconto,
+    codigo: normalizarCodigoCupom(cupom.codigo),
+  };
+}
+
+export async function criarCupomLocal(entrada: {
+  codigo: string;
+  tipo: TipoCupom;
+  valor: number;
+}) {
+  const codigo = normalizarCodigoCupom(entrada.codigo);
+  if (!codigo || codigo.length < 3) {
+    throw new Error("Informe um código com pelo menos 3 caracteres.");
+  }
+  if (entrada.tipo !== "percent" && entrada.tipo !== "fix") {
+    throw new Error("Tipo de cupom inválido.");
+  }
+  const valor = Number(entrada.valor);
+  if (!Number.isFinite(valor) || valor <= 0) {
+    throw new Error("Valor do desconto inválido.");
+  }
+  if (entrada.tipo === "percent" && valor > 100) {
+    throw new Error("Percentual deve ser no máximo 100.");
+  }
+
+  const banco = await lerBancoLocal();
+  if (
+    banco.cupons.some((c) => normalizarCodigoCupom(c.codigo) === codigo)
+  ) {
+    throw new Error("Já existe um cupom com este código.");
+  }
+
+  const cupom: Cupom = {
+    id: crypto.randomUUID(),
+    codigo,
+    tipo: entrada.tipo,
+    valor: Number(valor.toFixed(2)),
+    ativo: true,
+    criado_em: agora(),
+  };
+  banco.cupons.push(cupom);
+  await salvarBancoLocal(banco);
+  return cupom;
+}
+
+export async function atualizarCupomLocal(
+  id: string,
+  patch: { ativo?: boolean; valor?: number; tipo?: TipoCupom },
+) {
+  const banco = await lerBancoLocal();
+  const cupom = banco.cupons.find((c) => c.id === id);
+  if (!cupom) throw new Error("Cupom não encontrado.");
+
+  if (patch.ativo !== undefined) cupom.ativo = patch.ativo;
+  if (patch.tipo !== undefined) {
+    if (patch.tipo !== "percent" && patch.tipo !== "fix") {
+      throw new Error("Tipo de cupom inválido.");
+    }
+    cupom.tipo = patch.tipo;
+  }
+  if (patch.valor !== undefined) {
+    const valor = Number(patch.valor);
+    if (!Number.isFinite(valor) || valor <= 0) {
+      throw new Error("Valor do desconto inválido.");
+    }
+    if (cupom.tipo === "percent" && valor > 100) {
+      throw new Error("Percentual deve ser no máximo 100.");
+    }
+    cupom.valor = Number(valor.toFixed(2));
+  }
+
+  await salvarBancoLocal(banco);
+  return cupom;
+}
+
+export async function excluirCupomLocal(id: string) {
+  const banco = await lerBancoLocal();
+  const antes = banco.cupons.length;
+  banco.cupons = banco.cupons.filter((c) => c.id !== id);
+  if (banco.cupons.length === antes) {
+    throw new Error("Cupom não encontrado.");
   }
   await salvarBancoLocal(banco);
 }
