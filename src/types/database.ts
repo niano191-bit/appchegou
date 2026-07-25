@@ -10,6 +10,9 @@ export type StatusPedido =
   | "entregue"
   | "cancelado";
 
+/** Status do entregador no despacho */
+export type DisponibilidadeEntregador = "livre" | "em_rota" | "offline";
+
 export type Usuario = {
   id: string;
   nome: string;
@@ -17,6 +20,8 @@ export type Usuario = {
   telefone: string | null;
   papel: PapelUsuario;
   restaurante_id: string | null;
+  /** Entregador: livre | em_rota | offline (outros papeis: offline) */
+  disponibilidade?: DisponibilidadeEntregador;
   /** So no servidor ? nunca enviar ao navegador */
   senha_hash?: string | null;
   criado_em: string;
@@ -180,3 +185,23 @@ export const STATUS_PAGAMENTO_LABEL: Record<StatusPagamento, string> = {
   estornado: "Pix estornado",
   reembolso_pendente: "Aguardando chave Pix para estorno",
 };
+
+export const DISPONIBILIDADE_LABEL: Record<DisponibilidadeEntregador, string> = {
+  livre: "Livre",
+  em_rota: "Em rota",
+  offline: "Offline",
+};
+
+/** Ordem no despacho: livres primeiro */
+export function ordemDisponibilidade(
+  d: DisponibilidadeEntregador | null | undefined,
+): number {
+  switch (d) {
+    case "livre":
+      return 0;
+    case "em_rota":
+      return 1;
+    default:
+      return 2;
+  }
+}

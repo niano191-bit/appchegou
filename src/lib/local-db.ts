@@ -7,6 +7,7 @@ import type {
   BairroEntrega,
   Configuracao,
   Cupom,
+  DisponibilidadeEntregador,
   ItemCardapio,
   ItemPedido,
   Pedido,
@@ -15,6 +16,7 @@ import type {
   TipoCupom,
   Usuario,
 } from "@/types/database";
+import { ordemDisponibilidade } from "@/types/database";
 import { BAIRROS_SALVADOR_SEED } from "@/lib/bairros-seed";
 import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 import {
@@ -165,6 +167,7 @@ function dadosIniciais(): BancoLocal {
         telefone: "71999990004",
         papel: "entregador",
         restaurante_id: null,
+        disponibilidade: "livre",
         senha_hash: null,
         criado_em: criado,
       },
@@ -329,6 +332,13 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
       banco.configuracao.pagamento_lucpaguei === undefined
     ) {
       banco.configuracao = normalizada;
+      mudou = true;
+    }
+  }
+
+  for (const u of banco.usuarios) {
+    if (u.disponibilidade === undefined) {
+      u.disponibilidade = "offline";
       mudou = true;
     }
   }
@@ -605,8 +615,55 @@ export async function atualizarStatusPedidoLocal(
 
   pedido.status = status;
   pedido.atualizado_em = agora();
+
+  if (status === "a_caminho" && extras?.entregadorId) {
+    const ent = banco.usuarios.find((u) => u.id === extras.entregadorId);
+    if (ent) ent.disponibilidade = "em_rota";
+  }
+  if (status === "entregue") {
+    const entregadorId = pedido.entregador_id ?? extras?.entregadorId;
+    if (entregadorId) {
+      const aindaEmRota = banco.pedidos.some(
+        (p) =>
+          p.id !== pedidoId &&
+          p.entregador_id === entregadorId &&
+          p.status === "a_caminho",
+      );
+      if (!aindaEmRota) {
+        const ent = banco.usuarios.find((u) => u.id === entregadorId);
+        if (ent) ent.disponibilidade = "livre";
+      }
+    }
+  }
+
   await salvarBancoLocal(banco);
   return pedido;
+}
+
+export async function atualizarDisponibilidadeEntregadorLocal(
+  entregadorId: string,
+  valor: "livre" | "offline",
+) {
+  const banco = await lerBancoLocal();
+  const ent = banco.usuarios.find(
+    (u) => u.id === entregadorId && u.papel === "entregador",
+  );
+  if (!ent) throw new Error("Entregador não encontrado.");
+  const atual = ent.disponibilidade ?? "offline";
+  if (atual === "em_rota" && valor === "offline") {
+    throw new Error(
+      "Você está em rota. Confirme a entrega antes de ficar offline.",
+    );
+  }
+  ent.disponibilidade = valor;
+  await salvarBancoLocal(banco);
+  return valor as DisponibilidadeEntregador;
+}
+
+export async function lerDisponibilidadeEntregadorLocal(entregadorId: string) {
+  const banco = await lerBancoLocal();
+  const ent = banco.usuarios.find((u) => u.id === entregadorId);
+  return (ent?.disponibilidade as DisponibilidadeEntregador | undefined) ?? "offline";
 }
 
 export type CorridaLocal = PedidoLocal & {
@@ -706,6 +763,9 @@ export async function atribuirEntregadorPedidoLocal(
 /** Corridas disponíveis (pronto) + as do entregador (a caminho) */
 export async function listarCorridasLocal(entregadorId: string) {
   const banco = await lerBancoLocal();
+  const disponibilidade =
+    banco.usuarios.find((u) => u.id === entregadorId)?.disponibilidade ??
+    "offline";
   const porRestaurante = new Map(
     banco.restaurantes.map((r) => [
       r.id,
@@ -717,13 +777,16 @@ export async function listarCorridasLocal(entregadorId: string) {
   );
 
   return banco.pedidos
-    .filter(
-      (p) =>
-        pedidoVisivelNaOperacao(p) &&
-        ((p.status === "pronto" &&
-          (!p.entregador_id || p.entregador_id === entregadorId)) ||
-          (p.status === "a_caminho" && p.entregador_id === entregadorId)),
-    )
+    .filter((p) => {
+      if (!pedidoVisivelNaOperacao(p)) return false;
+      if (p.status === "a_caminho" && p.entregador_id === entregadorId) {
+        return true;
+      }
+      if (p.status !== "pronto") return false;
+      if (p.entregador_id === entregadorId) return true;
+      if (disponibilidade === "offline") return false;
+      return !p.entregador_id;
+    })
     .sort(
       (a, b) =>
         new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime(),
@@ -890,6 +953,7 @@ export async function criarEntregadorLocal(entrada: {
     telefone: entrada.telefone?.trim() || null,
     papel: "entregador",
     restaurante_id: null,
+    disponibilidade: "offline",
     senha_hash: entrada.senha_hash,
     criado_em: agora(),
   };
@@ -1364,7 +1428,18 @@ export async function listarEntregadoresLocal() {
   const banco = await lerBancoLocal();
   return banco.usuarios
     .filter((u) => u.papel === "entregador")
-    .map((u) => semHash(u));
+    .map((u) =>
+      semHash({
+        ...u,
+        disponibilidade: u.disponibilidade ?? "offline",
+      }),
+    )
+    .sort(
+      (a, b) =>
+        ordemDisponibilidade(a.disponibilidade) -
+          ordemDisponibilidade(b.disponibilidade) ||
+        a.nome.localeCompare(b.nome, "pt-BR"),
+    );
 }
 
 export async function listarTodosPedidosLocal() {

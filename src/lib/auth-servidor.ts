@@ -205,8 +205,11 @@ export async function criarEntregador(entrada: {
       papel: "entregador",
       restaurante_id: null,
       senha_hash,
+      disponibilidade: "offline",
     })
-    .select("id, nome, email, telefone, papel, restaurante_id, criado_em")
+    .select(
+      "id, nome, email, telefone, papel, restaurante_id, disponibilidade, criado_em",
+    )
     .single();
 
   if (error) throw new Error(error.message);

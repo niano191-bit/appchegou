@@ -40,6 +40,7 @@ import { rotuloPedido } from "@/lib/pedido-rotulo";
 import { linkWhatsAppEntregadorComanda } from "@/lib/resumo-whatsapp";
 import type { Configuracao, Restaurante, Usuario } from "@/types/database";
 import {
+  DISPONIBILIDADE_LABEL,
   formatarReais,
   STATUS_PAGAMENTO_LABEL,
   STATUS_PEDIDO_LABEL,
@@ -506,7 +507,12 @@ export function PainelDono() {
                           <option value="">Escolha…</option>
                           {entregadores.map((e) => (
                             <option key={e.id} value={e.id}>
-                              {e.nome}
+                              {e.nome} ·{" "}
+                              {
+                                DISPONIBILIDADE_LABEL[
+                                  e.disponibilidade ?? "offline"
+                                ]
+                              }
                             </option>
                           ))}
                         </select>
@@ -704,16 +710,32 @@ export function PainelDono() {
           </button>
         </div>
         <ul className="flex flex-col gap-2">
-          {entregadores.map((e) => (
-            <li
-              key={e.id}
-              className="rounded-2xl border border-linha bg-white px-4 py-3 text-sm"
-            >
-              <p className="font-semibold text-foreground">{e.nome}</p>
-              <p className="text-muted">{e.telefone ?? "Sem telefone"}</p>
-              <p className="text-xs text-muted">{e.email}</p>
-            </li>
-          ))}
+          {entregadores.map((e) => {
+            const disp = e.disponibilidade ?? "offline";
+            return (
+              <li
+                key={e.id}
+                className="rounded-2xl border border-linha bg-white px-4 py-3 text-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold text-foreground">{e.nome}</p>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      disp === "livre"
+                        ? "bg-mar-suave text-mar"
+                        : disp === "em_rota"
+                          ? "bg-dende-suave text-dende"
+                          : "bg-linha text-muted"
+                    }`}
+                  >
+                    {DISPONIBILIDADE_LABEL[disp]}
+                  </span>
+                </div>
+                <p className="text-muted">{e.telefone ?? "Sem telefone"}</p>
+                <p className="text-xs text-muted">{e.email}</p>
+              </li>
+            );
+          })}
         </ul>
       </section>
 

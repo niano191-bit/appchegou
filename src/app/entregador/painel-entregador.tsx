@@ -13,13 +13,20 @@ import {
 } from "@/lib/pagamento-pedido";
 import {
   atualizarStatusPedido,
+  definirDisponibilidadeEntregador,
+  lerDisponibilidadeEntregador,
   listarCorridas,
   type CorridaComItens,
   type GanhosEntregadorDia,
 } from "@/lib/pedidos";
 import { rotuloPedido } from "@/lib/pedido-rotulo";
 import { obterSessaoCliente } from "@/lib/sessao-cliente";
-import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
+import {
+  DISPONIBILIDADE_LABEL,
+  formatarReais,
+  STATUS_PEDIDO_LABEL,
+  type DisponibilidadeEntregador,
+} from "@/types/database";
 
 export function PainelEntregador() {
   const entregadorIdRef = useRef<string | null>(null);
@@ -28,9 +35,12 @@ export function PainelEntregador() {
     entregas: 0,
     valor: 0,
   });
+  const [disponibilidade, setDisponibilidade] =
+    useState<DisponibilidadeEntregador>("offline");
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [acaoId, setAcaoId] = useState<string | null>(null);
+  const [salvandoDisp, setSalvandoDisp] = useState(false);
 
   const carregar = useCallback(async (silencioso = false) => {
     try {
@@ -40,9 +50,13 @@ export function PainelEntregador() {
         if (!user) throw new Error("Faça login para continuar.");
         entregadorIdRef.current = user.id;
       }
-      const dados = await listarCorridas();
+      const [dados, disp] = await Promise.all([
+        listarCorridas(),
+        lerDisponibilidadeEntregador(),
+      ]);
       setCorridas(dados.corridas);
       setGanhos(dados.ganhos);
+      setDisponibilidade(disp);
       setErro(null);
     } catch (e) {
       setErro(
@@ -87,6 +101,26 @@ export function PainelEntregador() {
     }
   }
 
+  async function alternarDisponibilidade() {
+    if (disponibilidade === "em_rota") return;
+    setSalvandoDisp(true);
+    setErro(null);
+    try {
+      const proximo = disponibilidade === "livre" ? "offline" : "livre";
+      const nova = await definirDisponibilidadeEntregador(proximo);
+      setDisponibilidade(nova);
+      await carregar(true);
+    } catch (e) {
+      setErro(
+        e instanceof Error
+          ? e.message
+          : "Não foi possível atualizar a disponibilidade.",
+      );
+    } finally {
+      setSalvandoDisp(false);
+    }
+  }
+
   const contarProntas = useCallback(async () => {
     const todas = await listarCorridas();
     return todas.corridas.filter((c) => c.status === "pronto").length;
@@ -113,6 +147,45 @@ export function PainelEntregador() {
         }
       />
 
+      <div
+        className={`rounded-2xl border px-4 py-3 ${
+          disponibilidade === "livre"
+            ? "border-mar/30 bg-mar-suave/50"
+            : disponibilidade === "em_rota"
+              ? "border-dende/40 bg-dende-suave"
+              : "border-linha bg-white"
+        }`}
+      >
+        <p className="text-sm font-medium text-foreground">
+          Status: {DISPONIBILIDADE_LABEL[disponibilidade]}
+        </p>
+        <p className="mt-1 text-xs text-muted">
+          {disponibilidade === "em_rota"
+            ? "Em entrega — confirme a entrega para voltar a ficar livre."
+            : disponibilidade === "livre"
+              ? "Você aparece como livre no despacho e recebe corridas novas."
+              : "Offline — só vê corridas já atribuídas a você."}
+        </p>
+        {disponibilidade !== "em_rota" ? (
+          <button
+            type="button"
+            disabled={salvandoDisp}
+            onClick={() => void alternarDisponibilidade()}
+            className={`mt-2 w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60 ${
+              disponibilidade === "livre"
+                ? "border border-linha text-muted"
+                : "bg-mar text-white"
+            }`}
+          >
+            {salvandoDisp
+              ? "Salvando…"
+              : disponibilidade === "livre"
+                ? "Ficar offline"
+                : "Ficar livre"}
+          </button>
+        ) : null}
+      </div>
+
       <div className="rounded-2xl border border-mar/30 bg-mar-suave/50 px-5 py-4">
         <p className="text-xs font-medium tracking-wide text-muted uppercase">
           Ganhos de hoje
@@ -137,7 +210,9 @@ export function PainelEntregador() {
 
       {corridas.length === 0 && !erro ? (
         <div className="rounded-2xl border border-dashed border-[#C4A882] bg-white/60 px-5 py-10 text-center text-sm text-muted">
-          Nenhuma corrida pronta no momento.
+          {disponibilidade === "offline"
+            ? "Você está offline. Toque em “Ficar livre” para ver corridas novas."
+            : "Nenhuma corrida pronta no momento."}
           <br />
           Peça no app do cliente e marque como pronto no restaurante.
         </div>

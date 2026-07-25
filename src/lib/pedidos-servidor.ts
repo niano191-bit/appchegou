@@ -1,6 +1,7 @@
 import type {
   Configuracao,
   Cupom,
+  DisponibilidadeEntregador,
   ItemCardapio,
   ItemPedido,
   Pedido,
@@ -9,6 +10,7 @@ import type {
   TipoCupom,
   Usuario,
 } from "@/types/database";
+import { ordemDisponibilidade } from "@/types/database";
 import { SENHA_DEMO } from "@/lib/auth";
 import { gerarHashSenha } from "@/lib/senha";
 import { createSupabaseClient } from "@/lib/supabase/client";
@@ -690,6 +692,90 @@ export async function atualizarStatusPedido(
   if (error) {
     throw new Error(error.message);
   }
+
+  if (status === "a_caminho" && extras?.entregadorId) {
+    await definirDisponibilidadeInterna(extras.entregadorId, "em_rota");
+  }
+  if (status === "entregue") {
+    const entregadorId = atual.entregador_id ?? extras?.entregadorId;
+    if (entregadorId) {
+      await liberarEntregadorSeSemCorrida(entregadorId);
+    }
+  }
+}
+
+async function definirDisponibilidadeInterna(
+  entregadorId: string,
+  valor: DisponibilidadeEntregador,
+) {
+  const supabase = createSupabaseClient();
+  await supabase
+    .from("usuarios")
+    .update({ disponibilidade: valor })
+    .eq("id", entregadorId)
+    .eq("papel", "entregador");
+}
+
+async function liberarEntregadorSeSemCorrida(entregadorId: string) {
+  const supabase = createSupabaseClient();
+  const { count } = await supabase
+    .from("pedidos")
+    .select("id", { count: "exact", head: true })
+    .eq("entregador_id", entregadorId)
+    .eq("status", "a_caminho");
+
+  if ((count ?? 0) === 0) {
+    await definirDisponibilidadeInterna(entregadorId, "livre");
+  }
+}
+
+/** Entregador liga/desliga disponibilidade (livre <-> offline) */
+export async function atualizarDisponibilidadeEntregador(
+  entregadorId: string,
+  valor: "livre" | "offline",
+) {
+  const supabase = createSupabaseClient();
+  const { data: atual, error: erroLeitura } = await supabase
+    .from("usuarios")
+    .select("disponibilidade, papel")
+    .eq("id", entregadorId)
+    .maybeSingle();
+
+  if (erroLeitura) throw new Error(erroLeitura.message);
+  if (!atual || atual.papel !== "entregador") {
+    throw new Error("Entregador não encontrado.");
+  }
+
+  const atualDisp = (atual.disponibilidade as DisponibilidadeEntregador) ?? "offline";
+  if (atualDisp === "em_rota" && valor === "offline") {
+    throw new Error(
+      "Você está em rota. Confirme a entrega antes de ficar offline.",
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("usuarios")
+    .update({ disponibilidade: valor })
+    .eq("id", entregadorId)
+    .eq("papel", "entregador")
+    .select("disponibilidade")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return (data.disponibilidade as DisponibilidadeEntregador) ?? valor;
+}
+
+export async function lerDisponibilidadeEntregador(entregadorId: string) {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("usuarios")
+    .select("disponibilidade")
+    .eq("id", entregadorId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (
+    (data?.disponibilidade as DisponibilidadeEntregador | undefined) ?? "offline"
+  );
 }
 
 /**
@@ -824,6 +910,7 @@ export async function ganhosTodosEntregadoresHoje(): Promise<
 /** Corridas: prontas para pegar + as do entregador a caminho */
 export async function listarCorridas(entregadorId: string) {
   const supabase = createSupabaseClient();
+  const disponibilidade = await lerDisponibilidadeEntregador(entregadorId);
 
   const { data: prontos, error: erroProntos } = await supabase
     .from("pedidos")
@@ -860,9 +947,11 @@ export async function listarCorridas(entregadorId: string) {
       })
       .filter(pedidoVisivelNaOperacao);
 
-  const prontosVisiveis = mapa(prontos).filter(
-    (p) => !p.entregador_id || p.entregador_id === entregadorId,
-  );
+  const prontosVisiveis = mapa(prontos).filter((p) => {
+    if (p.entregador_id === entregadorId) return true;
+    if (disponibilidade === "offline") return false;
+    return !p.entregador_id;
+  });
   const unidos = [...prontosVisiveis, ...mapa(meus)];
   const comContato = await anexarContatosPedidos(unidos);
   return comContato as Corrida[];
@@ -1148,11 +1237,23 @@ export async function listarEntregadores() {
   const supabase = createSupabaseClient();
   const { data, error } = await supabase
     .from("usuarios")
-    .select("id, nome, email, telefone, papel, restaurante_id, criado_em")
+    .select(
+      "id, nome, email, telefone, papel, restaurante_id, disponibilidade, criado_em",
+    )
     .eq("papel", "entregador")
     .order("nome");
   if (error) throw new Error(error.message);
-  return (data ?? []) as Usuario[];
+  return ((data ?? []) as Usuario[])
+    .map((e) => ({
+      ...e,
+      disponibilidade: e.disponibilidade ?? "offline",
+    }))
+    .sort(
+      (a, b) =>
+        ordemDisponibilidade(a.disponibilidade) -
+          ordemDisponibilidade(b.disponibilidade) ||
+        a.nome.localeCompare(b.nome, "pt-BR"),
+    );
 }
 
 export async function listarTodosPedidosDono() {

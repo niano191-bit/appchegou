@@ -1,4 +1,8 @@
-import type { Pedido, StatusPedido } from "@/types/database";
+import type {
+  DisponibilidadeEntregador,
+  Pedido,
+  StatusPedido,
+} from "@/types/database";
 import type { PedidoComItens } from "@/lib/pedidos-servidor";
 
 export type { PedidoComItens };
@@ -124,6 +128,38 @@ export async function listarCorridas() {
     corridas: json.corridas ?? [],
     ganhos: json.ganhos ?? { entregas: 0, valor: 0 },
   };
+}
+
+export async function lerDisponibilidadeEntregador() {
+  const resposta = await fetch("/api/entregador/disponibilidade", {
+    cache: "no-store",
+  });
+  const json = (await resposta.json()) as {
+    disponibilidade?: DisponibilidadeEntregador;
+    erro?: string;
+  };
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível ler a disponibilidade.");
+  }
+  return json.disponibilidade ?? "offline";
+}
+
+export async function definirDisponibilidadeEntregador(
+  disponibilidade: "livre" | "offline",
+) {
+  const resposta = await fetch("/api/entregador/disponibilidade", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ disponibilidade }),
+  });
+  const json = (await resposta.json()) as {
+    disponibilidade?: DisponibilidadeEntregador;
+    erro?: string;
+  };
+  if (!resposta.ok) {
+    throw new Error(json.erro ?? "Não foi possível atualizar.");
+  }
+  return json.disponibilidade ?? disponibilidade;
 }
 
 /** Cliente cancela pedido ainda não aceito */
