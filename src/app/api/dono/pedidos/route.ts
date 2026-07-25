@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listarTodosPedidosLocal, usandoModoDemo } from "@/lib/local-db";
+import { listarTodosPedidosDono } from "@/lib/pedidos-servidor";
 
 /** Lista todos os pedidos (ao vivo no painel do dono) */
 export async function GET() {
@@ -9,7 +10,8 @@ export async function GET() {
       return NextResponse.json({ modo: "demo", pedidos });
     }
 
-    return NextResponse.json({ modo: "supabase", pedidos: [] });
+    const pedidos = await listarTodosPedidosDono();
+    return NextResponse.json({ modo: "supabase", pedidos });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao listar pedidos.";

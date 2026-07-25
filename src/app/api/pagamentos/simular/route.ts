@@ -5,8 +5,9 @@ import {
   marcarPedidoPagoLocal,
   usandoModoDemo,
 } from "@/lib/local-db";
+import { buscarPedido, marcarPedidoPago } from "@/lib/pedidos-servidor";
 
-/** Simula pagamento Pix ou cartão (só para desenvolvimento / teste) */
+/** Simula pagamento Pix ou cartão (ambiente de teste) */
 export async function POST(request: Request) {
   let corpo: { pedidoId?: string; forma?: "pix" | "cartao" };
 
@@ -25,42 +26,56 @@ export async function POST(request: Request) {
 
   try {
     const sessao = await exigirSessao("cliente");
+    const idSimulado = `simulado-${corpo.forma}-${Date.now()}`;
 
-    if (!usandoModoDemo()) {
-      return NextResponse.json(
-        {
-          erro: "No Supabase, use o Checkout do Mercado Pago. Simulação só no modo demo.",
-        },
-        { status: 400 },
+    if (usandoModoDemo()) {
+      const pedido = await buscarPedidoLocal(corpo.pedidoId);
+      if (!pedido) {
+        return NextResponse.json(
+          { erro: "Pedido não encontrado." },
+          { status: 404 },
+        );
+      }
+      if (pedido.cliente_id !== sessao.id) {
+        return NextResponse.json(
+          { erro: "Este pedido não é seu." },
+          { status: 403 },
+        );
+      }
+      if (pedido.status_pagamento === "pago") {
+        return NextResponse.json({ modo: "demo", pedido, ja_pago: true });
+      }
+      const atualizado = await marcarPedidoPagoLocal(
+        corpo.pedidoId,
+        corpo.forma,
+        idSimulado,
       );
+      return NextResponse.json({ modo: "demo", pedido: atualizado });
     }
 
-    const pedido = await buscarPedidoLocal(corpo.pedidoId);
+    const pedido = await buscarPedido(corpo.pedidoId);
     if (!pedido) {
       return NextResponse.json(
         { erro: "Pedido não encontrado." },
         { status: 404 },
       );
     }
-
     if (pedido.cliente_id !== sessao.id) {
       return NextResponse.json(
         { erro: "Este pedido não é seu." },
         { status: 403 },
       );
     }
-
     if (pedido.status_pagamento === "pago") {
-      return NextResponse.json({ modo: "demo", pedido, ja_pago: true });
+      return NextResponse.json({ modo: "supabase", pedido, ja_pago: true });
     }
 
-    const atualizado = await marcarPedidoPagoLocal(
+    const atualizado = await marcarPedidoPago(
       corpo.pedidoId,
       corpo.forma,
-      `simulado-${corpo.forma}-${Date.now()}`,
+      idSimulado,
     );
-
-    return NextResponse.json({ modo: "demo", pedido: atualizado });
+    return NextResponse.json({ modo: "supabase", pedido: atualizado });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao simular pagamento.";

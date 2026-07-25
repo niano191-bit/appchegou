@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listarEntregadoresLocal, usandoModoDemo } from "@/lib/local-db";
+import { listarEntregadores } from "@/lib/pedidos-servidor";
 
 /** Lista entregadores cadastrados */
 export async function GET() {
@@ -9,7 +10,8 @@ export async function GET() {
       return NextResponse.json({ modo: "demo", entregadores });
     }
 
-    return NextResponse.json({ modo: "supabase", entregadores: [] });
+    const entregadores = await listarEntregadores();
+    return NextResponse.json({ modo: "supabase", entregadores });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao listar entregadores.";

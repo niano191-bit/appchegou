@@ -4,6 +4,10 @@ import {
   lerBancoLocal,
   usandoModoDemo,
 } from "@/lib/local-db";
+import {
+  atualizarRestaurante,
+  listarTodosRestaurantes,
+} from "@/lib/pedidos-servidor";
 
 /** Lista todos os restaurantes (ativos e inativos) */
 export async function GET() {
@@ -16,7 +20,8 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ modo: "supabase", restaurantes: [] });
+    const restaurantes = await listarTodosRestaurantes();
+    return NextResponse.json({ modo: "supabase", restaurantes });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao listar restaurantes.";
@@ -54,10 +59,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ modo: "demo", restaurante });
     }
 
-    return NextResponse.json(
-      { erro: "Edição no Supabase ainda não ligada nesta fase." },
-      { status: 501 },
-    );
+    const restaurante = await atualizarRestaurante(corpo.id, {
+      comissao_percentual: corpo.comissao_percentual,
+      ativo: corpo.ativo,
+    });
+    return NextResponse.json({ modo: "supabase", restaurante });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao atualizar restaurante.";

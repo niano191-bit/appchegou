@@ -1,12 +1,15 @@
 import type {
+  Configuracao,
   ItemCardapio,
   ItemPedido,
   Pedido,
   Restaurante,
   StatusPedido,
+  Usuario,
 } from "@/types/database";
 import { createSupabaseClient } from "@/lib/supabase/client";
 import type { ItemNovoPedido } from "@/lib/local-db";
+import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
 
 export type PedidoComItens = Pedido & {
   itens_pedido: ItemPedido[];
@@ -225,4 +228,161 @@ export async function listarCorridas(entregadorId: string) {
     });
 
   return [...mapa(prontos), ...mapa(meus)];
+}
+
+/** Marca pedido como pago no Supabase */
+export async function marcarPedidoPago(
+  pedidoId: string,
+  forma: "pix" | "cartao",
+  mpPaymentId?: string | null,
+) {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .update({
+      status_pagamento: "pago",
+      forma_pagamento: forma,
+      mp_payment_id: mpPaymentId ?? null,
+    })
+    .eq("id", pedidoId)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as Pedido;
+}
+
+export async function lerConfiguracao() {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("configuracao")
+    .select("*")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) {
+    return {
+      taxa_entrega: TAXA_ENTREGA_PADRAO,
+      horario_abertura: "10:00",
+      horario_fechamento: "22:00",
+    } satisfies Configuracao;
+  }
+
+  return {
+    taxa_entrega: Number(data.taxa_entrega),
+    horario_abertura: data.horario_abertura,
+    horario_fechamento: data.horario_fechamento,
+  } satisfies Configuracao;
+}
+
+export async function salvarConfiguracao(config: Configuracao) {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("configuracao")
+    .upsert({
+      id: 1,
+      taxa_entrega: config.taxa_entrega,
+      horario_abertura: config.horario_abertura,
+      horario_fechamento: config.horario_fechamento,
+      atualizado_em: new Date().toISOString(),
+    })
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return {
+    taxa_entrega: Number(data.taxa_entrega),
+    horario_abertura: data.horario_abertura,
+    horario_fechamento: data.horario_fechamento,
+  } satisfies Configuracao;
+}
+
+export async function listarTodosRestaurantes() {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("restaurantes")
+    .select("*")
+    .order("nome");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Restaurante[];
+}
+
+export async function atualizarRestaurante(
+  id: string,
+  patch: { comissao_percentual?: number; ativo?: boolean },
+) {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("restaurantes")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Restaurante;
+}
+
+export async function listarEntregadores() {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("usuarios")
+    .select("*")
+    .eq("papel", "entregador")
+    .order("nome");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Usuario[];
+}
+
+export async function listarTodosPedidosDono() {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .select("*, itens_pedido(*), restaurantes(nome, comissao_percentual)")
+    .order("criado_em", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((p) => {
+    const loja = p.restaurantes as {
+      nome?: string;
+      comissao_percentual?: number;
+    } | null;
+    const { restaurantes: _, ...pedido } = p;
+    const comissaoPct = Number(loja?.comissao_percentual ?? 0);
+    return {
+      ...(pedido as PedidoComItens),
+      restaurante_nome: loja?.nome ?? "Restaurante",
+      comissao_percentual: comissaoPct,
+      comissao_valor: (Number(pedido.total) * comissaoPct) / 100,
+    };
+  });
+}
+
+export async function resumoDoDia() {
+  const pedidos = await listarTodosPedidosDono();
+  const agoraSp = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }),
+  );
+  const y = agoraSp.getFullYear();
+  const m = String(agoraSp.getMonth() + 1).padStart(2, "0");
+  const d = String(agoraSp.getDate()).padStart(2, "0");
+  const inicio = new Date(`${y}-${m}-${d}T00:00:00-03:00`).getTime();
+  const fim = new Date(`${y}-${m}-${d}T23:59:59.999-03:00`).getTime();
+
+  const doDia = pedidos.filter((p) => {
+    const t = new Date(p.criado_em).getTime();
+    return p.status_pagamento === "pago" && t >= inicio && t <= fim;
+  });
+
+  const qtd = doDia.length;
+  const faturamento = doDia.reduce((s, p) => s + Number(p.total), 0);
+  const comissao = doDia.reduce((s, p) => s + Number(p.comissao_valor), 0);
+
+  return {
+    qtd_pedidos: qtd,
+    faturamento,
+    comissao,
+    ticket_medio: qtd > 0 ? faturamento / qtd : 0,
+  };
 }

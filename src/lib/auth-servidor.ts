@@ -5,7 +5,8 @@ import {
   type SessaoUsuario,
 } from "@/lib/auth";
 import { lerBancoLocal, usandoModoDemo } from "@/lib/local-db";
-import type { PapelUsuario } from "@/types/database";
+import { createSupabaseClient } from "@/lib/supabase/client";
+import type { PapelUsuario, Usuario } from "@/types/database";
 
 export async function lerSessao(): Promise<SessaoUsuario | null> {
   const jar = await cookies();
@@ -26,6 +27,7 @@ export async function gravarSessao(sessao: SessaoUsuario) {
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
+    secure: process.env.VERCEL === "1",
   });
 }
 
@@ -34,22 +36,31 @@ export async function limparSessao() {
   jar.delete(COOKIE_SESSAO);
 }
 
-/** Login no modo demo: e-mail + senha teste123 */
+/** Login das contas de teste (senha teste123) — local ou Supabase */
 export async function loginDemo(email: string, senha: string) {
-  if (!usandoModoDemo()) {
-    throw new Error(
-      "Login com Supabase Auth ainda será ligado quando o banco na nuvem estiver ativo.",
-    );
-  }
-
   if (senha !== SENHA_DEMO) {
-    throw new Error("Senha incorreta. No modo demo use: teste123");
+    throw new Error("Senha incorreta. Use: teste123");
   }
 
-  const banco = await lerBancoLocal();
-  const usuario = banco.usuarios.find(
-    (u) => u.email?.toLowerCase() === email.trim().toLowerCase(),
-  );
+  const emailLimpo = email.trim().toLowerCase();
+  let usuario: Usuario | null = null;
+
+  if (usandoModoDemo()) {
+    const banco = await lerBancoLocal();
+    usuario =
+      banco.usuarios.find((u) => u.email?.toLowerCase() === emailLimpo) ??
+      null;
+  } else {
+    const supabase = createSupabaseClient();
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("*")
+      .ilike("email", emailLimpo)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    usuario = (data as Usuario | null) ?? null;
+  }
 
   if (!usuario) {
     throw new Error("Conta não encontrada.");

@@ -10,6 +10,7 @@ import {
 } from "@/lib/local-db";
 import {
   criarPedido,
+  lerConfiguracao,
   listarPedidosDoRestaurante,
 } from "@/lib/pedidos-servidor";
 import type { StatusPedido } from "@/types/database";
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
     const sessao = await exigirSessao("cliente");
     const taxa = usandoModoDemo()
       ? (await lerConfiguracaoLocal()).taxa_entrega
-      : TAXA_ENTREGA_PADRAO;
+      : (await lerConfiguracao()).taxa_entrega || TAXA_ENTREGA_PADRAO;
 
     const entrada = {
       clienteId: sessao.id,

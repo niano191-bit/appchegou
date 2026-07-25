@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resumoDoDiaLocal, usandoModoDemo } from "@/lib/local-db";
+import { resumoDoDia } from "@/lib/pedidos-servidor";
 
 /** Números do dia para o painel do dono */
 export async function GET() {
@@ -9,16 +10,8 @@ export async function GET() {
       return NextResponse.json({ modo: "demo", resumo });
     }
 
-    // Placeholder até ligar o Supabase com o SQL da Fase 6
-    return NextResponse.json({
-      modo: "supabase",
-      resumo: {
-        qtd_pedidos: 0,
-        faturamento: 0,
-        comissao: 0,
-        ticket_medio: 0,
-      },
-    });
+    const resumo = await resumoDoDia();
+    return NextResponse.json({ modo: "supabase", resumo });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao calcular resumo.";

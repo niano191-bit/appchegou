@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { lerConfiguracaoLocal, usandoModoDemo } from "@/lib/local-db";
-import { TAXA_ENTREGA_PADRAO } from "@/lib/constantes";
+import { lerConfiguracao } from "@/lib/pedidos-servidor";
 
 /** Configuração pública (taxa e horário) para o app */
 export async function GET() {
@@ -10,15 +10,8 @@ export async function GET() {
       return NextResponse.json({ modo: "demo", configuracao });
     }
 
-    // Até o SQL da Fase 6 rodar no Supabase, usa o padrão
-    return NextResponse.json({
-      modo: "supabase",
-      configuracao: {
-        taxa_entrega: TAXA_ENTREGA_PADRAO,
-        horario_abertura: "10:00",
-        horario_fechamento: "22:00",
-      },
-    });
+    const configuracao = await lerConfiguracao();
+    return NextResponse.json({ modo: "supabase", configuracao });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao ler configuração.";

@@ -4,6 +4,7 @@ import {
   salvarConfiguracaoLocal,
   usandoModoDemo,
 } from "@/lib/local-db";
+import { lerConfiguracao, salvarConfiguracao } from "@/lib/pedidos-servidor";
 import type { Configuracao } from "@/types/database";
 
 /** Lê configuração (dono) */
@@ -14,10 +15,8 @@ export async function GET() {
       return NextResponse.json({ modo: "demo", configuracao });
     }
 
-    return NextResponse.json(
-      { erro: "Configuração no Supabase ainda não ligada." },
-      { status: 501 },
-    );
+    const configuracao = await lerConfiguracao();
+    return NextResponse.json({ modo: "supabase", configuracao });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao ler configuração.";
@@ -50,20 +49,20 @@ export async function PUT(request: Request) {
     );
   }
 
+  const config: Configuracao = {
+    taxa_entrega: taxa,
+    horario_abertura: corpo.horario_abertura,
+    horario_fechamento: corpo.horario_fechamento,
+  };
+
   try {
     if (usandoModoDemo()) {
-      const configuracao = await salvarConfiguracaoLocal({
-        taxa_entrega: taxa,
-        horario_abertura: corpo.horario_abertura,
-        horario_fechamento: corpo.horario_fechamento,
-      });
+      const configuracao = await salvarConfiguracaoLocal(config);
       return NextResponse.json({ modo: "demo", configuracao });
     }
 
-    return NextResponse.json(
-      { erro: "Configuração no Supabase ainda não ligada." },
-      { status: 501 },
-    );
+    const configuracao = await salvarConfiguracao(config);
+    return NextResponse.json({ modo: "supabase", configuracao });
   } catch (e) {
     const mensagem =
       e instanceof Error ? e.message : "Erro ao salvar configuração.";
