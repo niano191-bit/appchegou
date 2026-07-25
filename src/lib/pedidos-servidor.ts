@@ -732,6 +732,7 @@ export async function marcarPedidoPago(
       status_pagamento: "pago",
       forma_pagamento: forma,
       mp_payment_id: mpPaymentId ?? null,
+      atualizado_em: new Date().toISOString(),
     })
     .eq("id", pedidoId)
     .select("*")

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AvisoFila } from "@/components/aviso-fila";
 import { SeloAoVivo } from "@/components/selo-ao-vivo";
 import { useTempoRealPedidos } from "@/hooks/use-tempo-real-pedidos";
 import {
@@ -16,6 +17,12 @@ import {
   type PedidoDono,
   type ResumoDia,
 } from "@/lib/dono";
+import {
+  classificarPedidoCritico,
+  contarPedidosCriticos,
+  ordenarCriticosPrimeiro,
+  textoMinutosParado,
+} from "@/lib/pedidos-criticos";
 import { linkWhatsAppEntregadorComanda } from "@/lib/resumo-whatsapp";
 import type { Configuracao, Restaurante, Usuario } from "@/types/database";
 import {
@@ -43,6 +50,7 @@ export function PainelDono() {
   const [escolhaEntregador, setEscolhaEntregador] = useState<
     Record<string, string>
   >({});
+  const [agoraTick, setAgoraTick] = useState(() => Date.now());
   const [novoEntregador, setNovoEntregador] = useState({
     nome: "",
     email: "",
@@ -83,6 +91,26 @@ export function PainelDono() {
   useTempoRealPedidos(() => {
     void carregar(true);
   });
+
+  useEffect(() => {
+    const id = window.setInterval(() => setAgoraTick(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const agora = useMemo(() => new Date(agoraTick), [agoraTick]);
+  const pedidosOrdenados = useMemo(
+    () => ordenarCriticosPrimeiro(pedidos, agora),
+    [pedidos, agora],
+  );
+  const qtdCriticos = useMemo(
+    () => contarPedidosCriticos(pedidos, agora),
+    [pedidos, agora],
+  );
+
+  const contarCriticos = useCallback(async () => {
+    const lista = await buscarPedidosDono();
+    return contarPedidosCriticos(lista);
+  }, []);
 
   async function salvarConfig() {
     if (!config) return;
@@ -145,6 +173,15 @@ export function PainelDono() {
   return (
     <div className="flex flex-col gap-8">
       <SeloAoVivo />
+      <AvisoFila
+        chave="aviso-fila-dono-criticos"
+        contar={contarCriticos}
+        mensagem={(qtd) =>
+          qtd === 1
+            ? "1 pedido precisa de atenção agora!"
+            : `${qtd} pedidos precisam de atenção agora!`
+        }
+      />
 
       {erro ? (
         <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
@@ -154,6 +191,20 @@ export function PainelDono() {
       {msg ? (
         <div className="rounded-2xl border border-[#2F6B3A]/40 bg-[#E8F5E9] px-5 py-4 text-sm text-[#1B4332]">
           {msg}
+        </div>
+      ) : null}
+
+      {qtdCriticos > 0 ? (
+        <div className="rounded-2xl border border-dende/50 bg-dende-suave px-5 py-4 text-sm text-dende-escuro">
+          <p className="font-semibold">
+            {qtdCriticos === 1
+              ? "1 pedido atrasado / parado"
+              : `${qtdCriticos} pedidos atrasados / parados`}
+          </p>
+          <p className="mt-1 text-muted">
+            Eles aparecem no topo da lista. Atribua entregador ou fale com a
+            loja.
+          </p>
         </div>
       ) : null}
 
@@ -193,7 +244,7 @@ export function PainelDono() {
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {pedidos.slice(0, 20).map((p) => {
+            {pedidosOrdenados.slice(0, 20).map((p) => {
               const podeDespachar =
                 p.status_pagamento === "pago" &&
                 (p.status === "pronto" || p.status === "a_caminho");
@@ -208,11 +259,16 @@ export function PainelDono() {
                   ? linkWhatsAppEntregadorComanda(entregadorSel.telefone, p)
                   : null;
               const ocupado = atribuindoId === p.id;
+              const critico = classificarPedidoCritico(p, agora);
 
               return (
                 <li
                   key={p.id}
-                  className="rounded-2xl border border-linha bg-white px-4 py-3 text-sm"
+                  className={`rounded-2xl border px-4 py-3 text-sm ${
+                    critico.critico
+                      ? "border-dende/60 bg-dende-suave/40"
+                      : "border-linha bg-white"
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -226,6 +282,12 @@ export function PainelDono() {
                         Comissão {p.comissao_percentual}% ={" "}
                         {formatarReais(p.comissao_valor)}
                       </p>
+                      {critico.critico ? (
+                        <p className="mt-1 text-xs font-semibold text-dende">
+                          {critico.rotulo} ·{" "}
+                          {textoMinutosParado(critico.minutosParado)}
+                        </p>
+                      ) : null}
                       {atual ? (
                         <p className="mt-1 text-xs font-medium text-mar">
                           Entregador: {atual}
@@ -236,7 +298,13 @@ export function PainelDono() {
                         </p>
                       ) : null}
                     </div>
-                    <span className="rounded-full bg-dende-suave px-2.5 py-1 text-xs font-medium text-dende">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        critico.critico
+                          ? "bg-dende text-white"
+                          : "bg-dende-suave text-dende"
+                      }`}
+                    >
                       {p.status_pagamento === "pago"
                         ? STATUS_PEDIDO_LABEL[p.status]
                         : STATUS_PAGAMENTO_LABEL[p.status_pagamento]}
