@@ -1,4 +1,4 @@
-import type { BannerVitrine, CategoriaVitrine, TomBanner } from "@/types/database";
+import type { BannerVitrine, CategoriaVitrine } from "@/types/database";
 
 export async function buscarVitrinePublica() {
   const resposta = await fetch("/api/vitrine", { cache: "no-store" });
@@ -33,9 +33,7 @@ export async function buscarVitrineDono() {
 }
 
 export async function criarBannerDono(entrada: {
-  titulo: string;
-  texto?: string;
-  tom?: TomBanner;
+  imagem_url: string;
   ordem?: number;
 }) {
   const resposta = await fetch("/api/dono/vitrine", {
@@ -54,9 +52,7 @@ export async function criarBannerDono(entrada: {
 export async function atualizarBannerDono(
   id: string,
   patch: Partial<{
-    titulo: string;
-    texto: string;
-    tom: TomBanner;
+    imagem_url: string | null;
     ativo: boolean;
     ordem: number;
     excluir: boolean;

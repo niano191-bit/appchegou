@@ -21,6 +21,7 @@ export async function listarBannersVitrine(apenasAtivos = false) {
   if (error) throw new Error(error.message);
   return ((data ?? []) as BannerVitrine[]).map((b) => ({
     ...b,
+    imagem_url: b.imagem_url ?? null,
     tom: normalizarTom(b.tom),
   }));
 }
@@ -39,20 +40,19 @@ export async function listarCategoriasVitrine(apenasAtivos = false) {
 }
 
 export async function criarBannerVitrine(entrada: {
-  titulo: string;
-  texto?: string;
-  tom?: TomBanner;
+  imagem_url: string;
   ordem?: number;
 }) {
-  const titulo = entrada.titulo.trim();
-  if (!titulo) throw new Error("Informe o título do banner.");
+  const imagem = entrada.imagem_url.trim();
+  if (!imagem) throw new Error("Informe a URL da imagem do banner.");
   const supabase = createSupabaseClient();
   const { data, error } = await supabase
     .from("banners_vitrine")
     .insert({
-      titulo,
-      texto: (entrada.texto ?? "").trim(),
-      tom: entrada.tom === "mar" ? "mar" : "dende",
+      titulo: "Banner",
+      texto: "",
+      tom: "dende",
+      imagem_url: imagem,
       ativo: true,
       ordem: Number(entrada.ordem ?? 0),
     })
@@ -65,23 +65,17 @@ export async function criarBannerVitrine(entrada: {
 export async function atualizarBannerVitrine(
   id: string,
   patch: Partial<{
-    titulo: string;
-    texto: string;
-    tom: TomBanner;
+    imagem_url: string | null;
     ativo: boolean;
     ordem: number;
   }>,
 ) {
   const supabase = createSupabaseClient();
   const body: Record<string, unknown> = {};
-  if (patch.titulo !== undefined) {
-    const titulo = patch.titulo.trim();
-    if (!titulo) throw new Error("Informe o título do banner.");
-    body.titulo = titulo;
-  }
-  if (patch.texto !== undefined) body.texto = patch.texto.trim();
-  if (patch.tom !== undefined) {
-    body.tom = patch.tom === "mar" ? "mar" : "dende";
+  if (patch.imagem_url !== undefined) {
+    const imagem = (patch.imagem_url ?? "").trim();
+    if (!imagem) throw new Error("Informe a URL da imagem do banner.");
+    body.imagem_url = imagem;
   }
   if (patch.ativo !== undefined) body.ativo = patch.ativo;
   if (patch.ordem !== undefined) body.ordem = Number(patch.ordem);

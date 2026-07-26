@@ -224,16 +224,29 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
 
           {/* Banner */}
           {banner ? (
-            <div
-              className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${classeTomBanner(banner.tom)} px-5 py-6 text-white shadow-sm`}
-            >
-              <p className="font-display text-2xl font-semibold leading-tight">
-                {banner.titulo}
-              </p>
-              <p className="mt-2 max-w-[85%] text-sm text-white/90">
-                {banner.texto}
-              </p>
-              <div className="mt-4 flex gap-1.5">
+            <div className="relative overflow-hidden rounded-2xl shadow-sm">
+              {banner.imagem_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={banner.imagem_url}
+                  alt={banner.titulo?.trim() || "Banner"}
+                  className="aspect-[16/7] w-full object-cover bg-[#f0ebe4]"
+                />
+              ) : (
+                <div
+                  className={`relative aspect-[16/7] bg-gradient-to-br ${classeTomBanner(banner.tom)} px-5 py-6 text-white`}
+                >
+                  <p className="font-display text-2xl font-semibold leading-tight">
+                    {banner.titulo || "Banner"}
+                  </p>
+                  {banner.texto ? (
+                    <p className="mt-2 max-w-[85%] text-sm text-white/90">
+                      {banner.texto}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+              <div className="absolute right-0 bottom-3 left-0 flex justify-center gap-1.5">
                 {banners.map((b, i) => (
                   <button
                     key={b.id}
@@ -241,16 +254,12 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
                     aria-label={`Banner ${i + 1}`}
                     onClick={() => setBannerIdx(i)}
                     className={`h-1.5 rounded-full transition-all ${
-                      i === bannerIdx ? "w-5 bg-white" : "w-1.5 bg-white/45"
+                      i === bannerIdx
+                        ? "w-5 bg-white shadow"
+                        : "w-1.5 bg-white/55"
                     }`}
                   />
                 ))}
-              </div>
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -right-4 -bottom-6 text-7xl opacity-25"
-              >
-                🛵
               </div>
             </div>
           ) : null}

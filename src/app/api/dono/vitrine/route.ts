@@ -11,7 +11,6 @@ import {
   listarCategoriasVitrineLocal,
   usandoModoDemo,
 } from "@/lib/local-db";
-import type { TomBanner } from "@/types/database";
 import {
   atualizarBannerVitrine,
   atualizarCategoriaVitrine,
@@ -52,9 +51,7 @@ type CorpoVitrine = {
   tipo?: "banner" | "categoria";
   id?: string;
   excluir?: boolean;
-  titulo?: string;
-  texto?: string;
-  tom?: TomBanner;
+  imagem_url?: string | null;
   nome?: string;
   emoji?: string;
   palavras_chave?: string;
@@ -78,9 +75,7 @@ export async function POST(request: Request) {
 
     if (tipo === "banner") {
       const entrada = {
-        titulo: corpo.titulo ?? "",
-        texto: corpo.texto,
-        tom: corpo.tom,
+        imagem_url: corpo.imagem_url ?? "",
         ordem: corpo.ordem,
       };
       const banner = demo
@@ -145,9 +140,7 @@ export async function PATCH(request: Request) {
 
     if (corpo.tipo === "banner") {
       const patch = {
-        titulo: corpo.titulo,
-        texto: corpo.texto,
-        tom: corpo.tom,
+        imagem_url: corpo.imagem_url,
         ativo: corpo.ativo,
         ordem: corpo.ordem,
       };

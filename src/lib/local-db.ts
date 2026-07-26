@@ -401,6 +401,13 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
   if (!banco.banners_vitrine?.length) {
     banco.banners_vitrine = bannersPadrao(agora());
     mudou = true;
+  } else {
+    for (const b of banco.banners_vitrine) {
+      if (b.imagem_url === undefined) {
+        b.imagem_url = null;
+        mudou = true;
+      }
+    }
   }
 
   if (!banco.categorias_vitrine?.length) {
@@ -1760,19 +1767,18 @@ export async function listarCategoriasVitrineLocal(apenasAtivos = false) {
 }
 
 export async function criarBannerVitrineLocal(entrada: {
-  titulo: string;
-  texto?: string;
-  tom?: TomBanner;
+  imagem_url: string;
   ordem?: number;
 }) {
-  const titulo = entrada.titulo.trim();
-  if (!titulo) throw new Error("Informe o título do banner.");
+  const imagem = entrada.imagem_url.trim();
+  if (!imagem) throw new Error("Informe a URL da imagem do banner.");
   const banco = await lerBancoLocal();
   const banner: BannerVitrine = {
     id: crypto.randomUUID(),
-    titulo,
-    texto: (entrada.texto ?? "").trim(),
-    tom: entrada.tom === "mar" ? "mar" : "dende",
+    imagem_url: imagem,
+    titulo: "Banner",
+    texto: "",
+    tom: "dende",
     ativo: true,
     ordem: Number(entrada.ordem ?? banco.banners_vitrine.length + 1),
     criado_em: agora(),
@@ -1785,9 +1791,7 @@ export async function criarBannerVitrineLocal(entrada: {
 export async function atualizarBannerVitrineLocal(
   id: string,
   patch: Partial<{
-    titulo: string;
-    texto: string;
-    tom: TomBanner;
+    imagem_url: string | null;
     ativo: boolean;
     ordem: number;
   }>,
@@ -1795,14 +1799,10 @@ export async function atualizarBannerVitrineLocal(
   const banco = await lerBancoLocal();
   const banner = banco.banners_vitrine.find((b) => b.id === id);
   if (!banner) throw new Error("Banner não encontrado.");
-  if (patch.titulo !== undefined) {
-    const titulo = patch.titulo.trim();
-    if (!titulo) throw new Error("Informe o título do banner.");
-    banner.titulo = titulo;
-  }
-  if (patch.texto !== undefined) banner.texto = patch.texto.trim();
-  if (patch.tom !== undefined) {
-    banner.tom = patch.tom === "mar" ? "mar" : "dende";
+  if (patch.imagem_url !== undefined) {
+    const imagem = (patch.imagem_url ?? "").trim();
+    if (!imagem) throw new Error("Informe a URL da imagem do banner.");
+    banner.imagem_url = imagem;
   }
   if (patch.ativo !== undefined) banner.ativo = patch.ativo;
   if (patch.ordem !== undefined) banner.ordem = Number(patch.ordem);

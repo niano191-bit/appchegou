@@ -128,12 +128,15 @@ export type Cupom = {
 /** Tom visual do banner da home */
 export type TomBanner = "dende" | "mar";
 
-/** Banner do carrossel na home do cliente */
+/** Banner do carrossel na home do cliente (imagem) */
 export type BannerVitrine = {
   id: string;
-  titulo: string;
-  texto: string;
-  tom: TomBanner;
+  /** URL da imagem do banner */
+  imagem_url: string | null;
+  /** Legado — opcional */
+  titulo?: string | null;
+  texto?: string | null;
+  tom?: TomBanner | null;
   ativo: boolean;
   ordem: number;
   criado_em: string;

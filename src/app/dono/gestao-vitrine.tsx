@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { BannerVitrine, CategoriaVitrine, TomBanner } from "@/types/database";
+import type { BannerVitrine, CategoriaVitrine } from "@/types/database";
 import {
   atualizarBannerDono,
   atualizarCategoriaDono,
@@ -18,11 +18,7 @@ export function GestaoVitrine() {
   const [erro, setErro] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const [novoBanner, setNovoBanner] = useState({
-    titulo: "",
-    texto: "",
-    tom: "dende" as TomBanner,
-  });
+  const [novaImagem, setNovaImagem] = useState("");
   const [novaCat, setNovaCat] = useState({
     nome: "",
     emoji: "🍽️",
@@ -54,12 +50,10 @@ export function GestaoVitrine() {
     setMsg(null);
     try {
       await criarBannerDono({
-        titulo: novoBanner.titulo,
-        texto: novoBanner.texto,
-        tom: novoBanner.tom,
+        imagem_url: novaImagem,
         ordem: banners.length + 1,
       });
-      setNovoBanner({ titulo: "", texto: "", tom: "dende" });
+      setNovaImagem("");
       setMsg("Banner criado. Aparece na home do cliente.");
       await carregar();
     } catch (e) {
@@ -76,9 +70,7 @@ export function GestaoVitrine() {
     setMsg(null);
     try {
       await atualizarBannerDono(b.id, {
-        titulo: String(dados.get("titulo") ?? ""),
-        texto: String(dados.get("texto") ?? ""),
-        tom: String(dados.get("tom") ?? "dende") as TomBanner,
+        imagem_url: String(dados.get("imagem_url") ?? ""),
         ordem: Number(dados.get("ordem") ?? 0),
       });
       setMsg("Banner atualizado.");
@@ -162,45 +154,33 @@ export function GestaoVitrine() {
 
       <div className="rounded-2xl border border-linha bg-white px-4 py-4 space-y-3">
         <p className="text-sm font-semibold text-foreground">Novo banner</p>
+        <p className="text-xs text-muted">
+          Cole o link da imagem (JPG ou PNG). Ela aparece na home do cliente.
+        </p>
         <label className="block text-sm text-muted">
-          Título
+          URL da imagem
           <input
-            value={novoBanner.titulo}
-            onChange={(e) =>
-              setNovoBanner({ ...novoBanner, titulo: e.target.value })
-            }
+            value={novaImagem}
+            onChange={(e) => setNovaImagem(e.target.value)}
+            placeholder="https://..."
             className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
           />
         </label>
-        <label className="block text-sm text-muted">
-          Texto
-          <input
-            value={novoBanner.texto}
-            onChange={(e) =>
-              setNovoBanner({ ...novoBanner, texto: e.target.value })
-            }
-            className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+        {novaImagem.trim() ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={novaImagem.trim()}
+            alt=""
+            className="aspect-[16/7] w-full rounded-xl object-cover bg-[#f0ebe4]"
           />
-        </label>
-        <label className="block text-sm text-muted">
-          Cor
-          <select
-            value={novoBanner.tom}
-            onChange={(e) =>
-              setNovoBanner({
-                ...novoBanner,
-                tom: e.target.value as TomBanner,
-              })
-            }
-            className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
-          >
-            <option value="dende">Laranja (dendê)</option>
-            <option value="mar">Verde (mar)</option>
-          </select>
-        </label>
+        ) : (
+          <div className="flex aspect-[16/7] w-full items-center justify-center rounded-xl border border-dashed border-linha bg-[#f7f7f8] text-sm text-muted">
+            Prévia da imagem
+          </div>
+        )}
         <button
           type="button"
-          disabled={salvando || !novoBanner.titulo.trim()}
+          disabled={salvando || !novaImagem.trim()}
           onClick={() => void criarBanner()}
           className="rounded-xl bg-dende px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
         >
@@ -238,32 +218,36 @@ export function GestaoVitrine() {
                   {b.ativo ? "Desativar" : "Ativar"}
                 </button>
               </div>
-              <input
-                name="titulo"
-                defaultValue={b.titulo}
-                className="w-full rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
-              />
-              <input
-                name="texto"
-                defaultValue={b.texto}
-                className="w-full rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  name="tom"
-                  defaultValue={b.tom}
-                  className="rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
-                >
-                  <option value="dende">Laranja</option>
-                  <option value="mar">Verde</option>
-                </select>
+              {b.imagem_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={b.imagem_url}
+                  alt=""
+                  className="aspect-[16/7] w-full rounded-xl object-cover bg-[#f0ebe4]"
+                />
+              ) : (
+                <div className="flex aspect-[16/7] w-full items-center justify-center rounded-xl border border-dashed border-linha bg-[#f7f7f8] text-sm text-muted">
+                  Sem imagem
+                </div>
+              )}
+              <label className="block text-sm text-muted">
+                URL da imagem
+                <input
+                  name="imagem_url"
+                  defaultValue={b.imagem_url ?? ""}
+                  placeholder="https://..."
+                  className="mt-1 w-full rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
+                />
+              </label>
+              <label className="block text-sm text-muted">
+                Ordem
                 <input
                   name="ordem"
                   type="number"
                   defaultValue={b.ordem}
-                  className="rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
+                  className="mt-1 w-full rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
                 />
-              </div>
+              </label>
               <div className="flex gap-3">
                 <button
                   type="submit"

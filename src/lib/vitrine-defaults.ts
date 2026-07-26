@@ -1,20 +1,10 @@
 import type { BannerVitrine, CategoriaVitrine } from "@/types/database";
 
-/** Gradiente CSS a partir da chave salva no banco */
-export function classeTomBanner(tom: string) {
-  switch (tom) {
-    case "mar":
-      return "from-mar to-teal-800";
-    case "dende":
-    default:
-      return "from-dende to-dende-escuro";
-  }
-}
-
 export function bannersPadrao(criado = new Date().toISOString()): BannerVitrine[] {
   return [
     {
       id: "bann0001-0000-0000-0000-000000000001",
+      imagem_url: null,
       titulo: "O sabor da Bahia",
       texto: "Peça agora e receba quentinho na sua porta.",
       tom: "dende",
@@ -24,6 +14,7 @@ export function bannersPadrao(criado = new Date().toISOString()): BannerVitrine[
     },
     {
       id: "bann0002-0000-0000-0000-000000000001",
+      imagem_url: null,
       titulo: "Acompanhe ao vivo",
       texto: "Do fogão à entrega — status em tempo real.",
       tom: "mar",
@@ -114,4 +105,8 @@ export function regexDePalavrasChave(palavras: string): RegExp | null {
     .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   if (partes.length === 0) return null;
   return new RegExp(partes.join("|"), "i");
+}
+
+export function classeTomBanner(tom: string | null | undefined) {
+  return tom === "mar" ? "from-mar to-teal-800" : "from-dende to-dende-escuro";
 }
