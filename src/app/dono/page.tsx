@@ -1,4 +1,5 @@
 import { CabecalhoArea } from "@/components/cabecalho-area";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { lerSessao } from "@/lib/auth-servidor";
 import { PainelDono } from "./painel-dono";
 
@@ -17,7 +18,9 @@ export default async function PaginaDono() {
         titulo="Painel Admin"
         descricao="Gerencie a operação e o que o cliente vê no app."
       />
-      <PainelDono />
+      <ErrorBoundary titulo="O painel Admin travou ao abrir">
+        <PainelDono />
+      </ErrorBoundary>
     </div>
   );
 }

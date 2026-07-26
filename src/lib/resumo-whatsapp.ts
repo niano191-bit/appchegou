@@ -36,7 +36,7 @@ export function textoResumoPedidoWhatsApp(pedido: PedidoResumo) {
     Number(pedido.total) +
     Number(pedido.taxa_entrega) +
     Number(pedido.gorjeta ?? 0);
-  const itens = pedido.itens_pedido
+  const itens = (pedido.itens_pedido ?? [])
     .map((i) => {
       const obs = i.observacao?.trim()
         ? `\n  _Obs: ${i.observacao.trim()}_`

@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { CONTA_ADMIN_DEMO, SENHA_DEMO } from "@/lib/auth";
 import { entrar, sair } from "@/lib/sessao-cliente";
 
 export function FormAdminLogin() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -22,8 +20,9 @@ export function FormAdminLogin() {
         setErro("Esta conta não é de administrador. Use o login do cliente.");
         return;
       }
-      router.push(destino);
-      router.refresh();
+      // Reload completo evita ChunkLoadError após deploys (navegação suave quebrada)
+      window.location.assign(destino || "/dono");
+      return;
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível entrar.");
     } finally {
