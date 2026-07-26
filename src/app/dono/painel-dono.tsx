@@ -503,22 +503,40 @@ export function PainelDono() {
             href={linkWhatsAppFechamento({
               data: resumo.data ?? "",
               data_label: resumo.data_label ?? "",
-              qtd_pedidos: resumo.qtd_pedidos ?? 0,
-              faturamento: resumo.faturamento ?? 0,
-              faturamento_pix: resumo.faturamento_pix ?? 0,
-              faturamento_dinheiro: resumo.faturamento_dinheiro ?? 0,
-              comissao: resumo.comissao ?? 0,
-              ticket_medio: resumo.ticket_medio ?? 0,
-              taxa_entrega_total: resumo.taxa_entrega_total ?? 0,
-              gorjeta_total: resumo.gorjeta_total ?? 0,
-              repasse_pix_total: resumo.repasse_pix_total ?? 0,
-              a_receber_lojas: resumo.a_receber_lojas ?? 0,
-              entregues: resumo.entregues ?? 0,
-              cancelados: resumo.cancelados ?? 0,
-              em_andamento: resumo.em_andamento ?? 0,
-              por_loja: resumo.por_loja ?? [],
-              por_entregador: resumo.por_entregador ?? [],
-            } satisfies FechamentoDia)}
+              qtd_pedidos: Number(resumo.qtd_pedidos ?? 0),
+              faturamento: Number(resumo.faturamento ?? 0),
+              faturamento_pix: Number(resumo.faturamento_pix ?? 0),
+              faturamento_dinheiro: Number(resumo.faturamento_dinheiro ?? 0),
+              comissao: Number(resumo.comissao ?? 0),
+              ticket_medio: Number(resumo.ticket_medio ?? 0),
+              taxa_entrega_total: Number(resumo.taxa_entrega_total ?? 0),
+              gorjeta_total: Number(resumo.gorjeta_total ?? 0),
+              repasse_pix_total: Number(resumo.repasse_pix_total ?? 0),
+              a_receber_lojas: Number(resumo.a_receber_lojas ?? 0),
+              entregues: Number(resumo.entregues ?? 0),
+              cancelados: Number(resumo.cancelados ?? 0),
+              em_andamento: Number(resumo.em_andamento ?? 0),
+              por_loja: (resumo.por_loja ?? []).map((loja) => ({
+                restaurante_id: loja.restaurante_id ?? null,
+                nome: loja.nome,
+                chave_pix: loja.chave_pix ?? null,
+                pedidos: Number(loja.pedidos ?? 0),
+                faturamento: Number(loja.faturamento ?? 0),
+                faturamento_pix: Number(loja.faturamento_pix ?? 0),
+                faturamento_dinheiro: Number(loja.faturamento_dinheiro ?? 0),
+                comissao: Number(loja.comissao ?? 0),
+                liquido: Number(
+                  loja.liquido ??
+                    Number(loja.faturamento ?? 0) - Number(loja.comissao ?? 0),
+                ),
+                repasse_pix: Number(loja.repasse_pix ?? 0),
+              })),
+              por_entregador: (resumo.por_entregador ?? []).map((e) => ({
+                nome: e.nome,
+                entregas: Number(e.entregas ?? 0),
+                valor: Number(e.valor ?? 0),
+              })),
+            } as FechamentoDia)}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-xl bg-mar px-4 py-3 text-center text-sm font-semibold text-white"
