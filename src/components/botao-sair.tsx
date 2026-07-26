@@ -12,9 +12,12 @@ export function BotaoSair() {
       onClick={() => {
         void (async () => {
           await sair();
-          const destino = window.location.pathname.startsWith("/dono")
+          const path = window.location.pathname;
+          const destino = path.startsWith("/dono")
             ? "/admin"
-            : "/";
+            : path.startsWith("/restaurante")
+              ? "/login"
+              : "/";
           window.location.assign(destino);
         })();
       }}

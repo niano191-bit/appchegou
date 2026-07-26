@@ -1,30 +1,33 @@
-import Link from "next/link";
-import { CabecalhoArea } from "@/components/cabecalho-area";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { lerSessao } from "@/lib/auth-servidor";
 import { PainelRestaurante } from "./painel-restaurante";
+import type { SecaoLoja } from "./shell-loja";
 
 export const metadata = {
-  title: "Painel do Restaurante — Tentações da Neuza",
-  description: "Aceite pedidos e marque quando estiverem prontos.",
+  title: "Painel da Loja — Tentações da Neuza",
+  description: "Aceite pedidos, edite cardápio e configure sua loja.",
 };
 
-export default async function PaginaRestaurante() {
+export default async function PaginaRestaurante({
+  searchParams,
+}: {
+  searchParams: Promise<{ secao?: string }>;
+}) {
   const sessao = await lerSessao();
+  const params = await searchParams;
+  const secoes: SecaoLoja[] = ["pedidos", "cardapio", "esgotado", "loja"];
+  const secaoInicial = secoes.includes(params.secao as SecaoLoja)
+    ? (params.secao as SecaoLoja)
+    : "pedidos";
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-8">
-      <CabecalhoArea
-        rotulo={sessao?.nome ?? "Restaurante"}
-        titulo="Painel do Restaurante"
-        descricao="Pedidos novos aparecem aqui. Aceite e marque como pronto quando a comida estiver pronta para o entregador."
-      />
-      <Link
-        href="/restaurante/cardapio"
-        className="inline-flex items-center justify-center rounded-xl border border-mar bg-mar-suave px-4 py-3 text-sm font-semibold text-mar"
-      >
-        Editar cardápio e fotos
-      </Link>
-      <PainelRestaurante />
+    <div className="flex min-h-full flex-1 flex-col">
+      <ErrorBoundary titulo="O painel da loja travou ao abrir">
+        <PainelRestaurante
+          nomeLoja={sessao?.nome ?? "Restaurante"}
+          secaoInicial={secaoInicial}
+        />
+      </ErrorBoundary>
     </div>
   );
 }

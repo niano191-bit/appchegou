@@ -22,12 +22,23 @@ import { rotuloPedido } from "@/lib/pedido-rotulo";
 import { obterSessaoCliente } from "@/lib/sessao-cliente";
 import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
 import { EsgotadoRapido } from "./esgotado-rapido";
+import { GestaoCardapioLoja } from "./gestao-cardapio";
+import { ShellLoja, type SecaoLoja } from "./shell-loja";
 
-type Aba = "agora" | "historico";
+type Fila = "agora" | "historico";
 
-export function PainelRestaurante() {
+type Props = {
+  nomeLoja?: string | null;
+  secaoInicial?: SecaoLoja;
+};
+
+export function PainelRestaurante({
+  nomeLoja,
+  secaoInicial = "pedidos",
+}: Props) {
   const restauranteIdRef = useRef<string | null>(null);
-  const [aba, setAba] = useState<Aba>("agora");
+  const [secao, setSecao] = useState<SecaoLoja>(secaoInicial);
+  const [fila, setFila] = useState<Fila>("agora");
   const [pedidos, setPedidos] = useState<PedidoComItens[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -58,7 +69,7 @@ export function PainelRestaurante() {
         }
 
         const [dados, lojaRes] = await Promise.all([
-          aba === "agora"
+          fila === "agora"
             ? listarPedidosDoRestaurante(
                 restauranteIdRef.current,
                 ["novo", "aceito"],
@@ -93,7 +104,7 @@ export function PainelRestaurante() {
         setCarregando(false);
       }
     },
-    [aba],
+    [fila],
   );
 
   async function alternarPausa() {
@@ -295,7 +306,16 @@ export function PainelRestaurante() {
   }, []);
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <ShellLoja nome={nomeLoja} secao={secao} onSecao={setSecao}>
+      <div className="flex w-full flex-col gap-4">
+      {erro ? (
+        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
+          {erro}
+        </div>
+      ) : null}
+
+      {secao === "pedidos" ? (
+      <>
       <SeloAoVivo />
       <AvisoFila
         chave="aviso-fila-restaurante"
@@ -307,6 +327,256 @@ export function PainelRestaurante() {
         }
       />
 
+      <div
+        className={`rounded-2xl border px-4 py-3 ${
+          pausado
+            ? "border-dende/40 bg-dende-suave"
+            : "border-mar/30 bg-mar-suave/50"
+        }`}
+      >
+        <p className="text-sm font-medium text-foreground">
+          {pausado
+            ? "Pedidos pausados — clientes não conseguem pedir."
+            : "Loja recebendo pedidos (dentro do horário de funcionamento)."}
+        </p>
+        <button
+          type="button"
+          disabled={pausando}
+          onClick={() => void alternarPausa()}
+          className={`mt-2 w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60 ${
+            pausado
+              ? "bg-mar text-white"
+              : "border border-dende text-dende"
+          }`}
+        >
+          {pausando
+            ? "Salvando…"
+            : pausado
+              ? "Retomar pedidos"
+              : "Pausar pedidos"}
+        </button>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setFila("agora")}
+          className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+            fila === "agora"
+              ? "bg-dende text-white"
+              : "border border-linha bg-white text-muted"
+          }`}
+        >
+          Agora
+        </button>
+        <button
+          type="button"
+          onClick={() => setFila("historico")}
+          className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+            fila === "historico"
+              ? "bg-dende text-white"
+              : "border border-linha bg-white text-muted"
+          }`}
+        >
+          Histórico
+        </button>
+      </div>
+
+      {carregando ? (
+        <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
+          Carregando pedidos…
+        </p>
+      ) : null}
+
+      {!carregando && pedidos.length === 0 && !erro ? (
+        <div className="rounded-2xl border border-dashed border-linha bg-white/60 px-5 py-10 text-center text-sm text-muted">
+          {fila === "agora"
+            ? "Nenhum pedido novo ou em preparo no momento."
+            : "Ainda não há pedidos no histórico."}
+        </div>
+      ) : null}
+
+      <ul className="flex flex-col gap-4">
+        {pedidos.map((pedido) => {
+          const ocupado = acaoId === pedido.id;
+          const totalComEntrega =
+            Number(pedido.total) +
+            Number(pedido.taxa_entrega) +
+            Number(pedido.gorjeta ?? 0);
+
+          return (
+            <li
+              key={pedido.id}
+              className="rounded-2xl border border-linha bg-white px-5 py-4 shadow-sm"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-medium tracking-wide text-muted uppercase">
+                    Pedido {rotuloPedido(pedido)}
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">
+                    {formatarReais(totalComEntrega)}
+                  </p>
+                  {pedidoEhDinheiroPendente(pedido) ? (
+                    <p className="mt-1 text-xs font-semibold text-dende">
+                      {textoCobrancaDinheiro(pedido)}
+                    </p>
+                  ) : null}
+                </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    pedido.status === "novo"
+                      ? "bg-dende-suave text-dende"
+                      : pedido.status === "entregue"
+                        ? "bg-linha text-muted"
+                        : "bg-mar-suave text-mar"
+                  }`}
+                >
+                  {STATUS_PEDIDO_LABEL[pedido.status]}
+                </span>
+              </div>
+
+              <ContatoPedido
+                nome={pedido.cliente_nome}
+                telefone={pedido.cliente_telefone}
+              />
+              <LinksWhatsAppPedido pedido={pedido} />
+
+              <p className="mt-3 text-sm text-muted">
+                Entrega: {pedido.endereco_entrega}
+                {pedido.bairro_entrega ? ` (${pedido.bairro_entrega})` : ""}
+              </p>
+              {pedido.observacao ? (
+                <p className="mt-1 text-sm text-muted">
+                  Obs.: {pedido.observacao}
+                </p>
+              ) : null}
+
+              <ul className="mt-3 border-t border-linha pt-3 text-sm text-foreground">
+                {pedido.itens_pedido.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex justify-between gap-3 py-0.5"
+                  >
+                    <span>
+                      {item.quantidade}× {item.nome}
+                      {item.observacao?.trim() ? (
+                        <span className="mt-0.5 block text-xs text-dende">
+                          Obs.: {item.observacao.trim()}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="text-muted">
+                      {formatarReais(
+                        Number(item.preco_unitario) * item.quantidade,
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => baixarComandaPdf(pedido)}
+                  className="rounded-xl border border-mar/40 bg-mar-suave/40 px-4 py-2.5 text-sm font-semibold text-mar"
+                >
+                  Salvar PDF da comanda
+                </button>
+
+                {fila === "agora" ? (
+                  <>
+                    {pedido.status === "novo" &&
+                    escolhendoEtaId === pedido.id ? (
+                      <div className="rounded-xl border border-dende/30 bg-dende-suave/60 px-3 py-3">
+                        <p className="text-sm font-medium text-foreground">
+                          Em quanto tempo entrega?
+                        </p>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {OPCOES_ETA_MINUTOS.map((min) => (
+                            <button
+                              key={min}
+                              type="button"
+                              disabled={ocupado}
+                              onClick={() =>
+                                void mudarStatus(pedido.id, "aceito", min)
+                              }
+                              className="rounded-xl bg-dende px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                            >
+                              {ocupado ? "…" : `${min} min`}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={ocupado}
+                          onClick={() => setEscolhendoEtaId(null)}
+                          className="mt-2 w-full text-xs font-semibold text-muted underline-offset-2 hover:underline"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : null}
+
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      {pedido.status === "novo" &&
+                      escolhendoEtaId !== pedido.id ? (
+                        <button
+                          type="button"
+                          disabled={ocupado}
+                          onClick={() => setEscolhendoEtaId(pedido.id)}
+                          className="flex-1 rounded-xl bg-dende px-4 py-3 text-sm font-semibold text-white transition hover:bg-dende-escuro disabled:opacity-60"
+                        >
+                          Aceitar e salvar PDF
+                        </button>
+                      ) : null}
+
+                      {pedido.status === "aceito" ? (
+                        <button
+                          type="button"
+                          disabled={ocupado}
+                          onClick={() => void mudarStatus(pedido.id, "pronto")}
+                          className="flex-1 rounded-xl bg-mar px-4 py-3 text-sm font-semibold text-white transition hover:bg-mar/90 disabled:opacity-60"
+                        >
+                          {ocupado ? "Salvando…" : "Marcar como pronto"}
+                        </button>
+                      ) : null}
+                    </div>
+
+                    {pedido.status === "aceito" &&
+                    pedido.tempo_estimado_minutos ? (
+                      <p className="text-xs text-muted">
+                        Previsão enviada ao cliente:{" "}
+                        {pedido.tempo_estimado_minutos} min
+                      </p>
+                    ) : null}
+
+                    {pedido.status === "novo" || pedido.status === "aceito" ? (
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => void recusar(pedido.id)}
+                        className="rounded-xl border border-dende px-4 py-2.5 text-sm font-semibold text-dende disabled:opacity-60"
+                      >
+                        Recusar pedido
+                      </button>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      </>
+      ) : null}
+
+      {secao === "cardapio" ? <GestaoCardapioLoja /> : null}
+
+      {secao === "esgotado" ? <EsgotadoRapido /> : null}
+
+      {secao === "loja" ? (
+      <>
       <div
         className={`rounded-2xl border px-4 py-3 ${
           pausado
@@ -421,226 +691,9 @@ export function PainelRestaurante() {
           {salvandoPix ? "Salvando…" : "Salvar chave Pix"}
         </button>
       </div>
-
-      <EsgotadoRapido />
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setAba("agora")}
-          className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-            aba === "agora"
-              ? "bg-dende text-white"
-              : "border border-linha bg-white text-muted"
-          }`}
-        >
-          Agora
-        </button>
-        <button
-          type="button"
-          onClick={() => setAba("historico")}
-          className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
-            aba === "historico"
-              ? "bg-dende text-white"
-              : "border border-linha bg-white text-muted"
-          }`}
-        >
-          Histórico
-        </button>
+      </>
+      ) : null}
       </div>
-
-      {erro ? (
-        <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
-          {erro}
-        </div>
-      ) : null}
-
-      {carregando ? (
-        <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
-          Carregando pedidos…
-        </p>
-      ) : null}
-
-      {!carregando && pedidos.length === 0 && !erro ? (
-        <div className="rounded-2xl border border-dashed border-linha bg-white/60 px-5 py-10 text-center text-sm text-muted">
-          {aba === "agora"
-            ? "Nenhum pedido novo ou em preparo no momento."
-            : "Ainda não há pedidos no histórico."}
-        </div>
-      ) : null}
-
-      <ul className="flex flex-col gap-4">
-        {pedidos.map((pedido) => {
-          const ocupado = acaoId === pedido.id;
-          const totalComEntrega =
-            Number(pedido.total) +
-            Number(pedido.taxa_entrega) +
-            Number(pedido.gorjeta ?? 0);
-
-          return (
-            <li
-              key={pedido.id}
-              className="rounded-2xl border border-linha bg-white px-5 py-4 shadow-sm"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs font-medium tracking-wide text-muted uppercase">
-                    Pedido {rotuloPedido(pedido)}
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-foreground">
-                    {formatarReais(totalComEntrega)}
-                  </p>
-                  {pedidoEhDinheiroPendente(pedido) ? (
-                    <p className="mt-1 text-xs font-semibold text-dende">
-                      {textoCobrancaDinheiro(pedido)}
-                    </p>
-                  ) : null}
-                </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    pedido.status === "novo"
-                      ? "bg-dende-suave text-dende"
-                      : pedido.status === "entregue"
-                        ? "bg-linha text-muted"
-                        : "bg-mar-suave text-mar"
-                  }`}
-                >
-                  {STATUS_PEDIDO_LABEL[pedido.status]}
-                </span>
-              </div>
-
-              <ContatoPedido
-                nome={pedido.cliente_nome}
-                telefone={pedido.cliente_telefone}
-              />
-              <LinksWhatsAppPedido pedido={pedido} />
-
-              <p className="mt-3 text-sm text-muted">
-                Entrega: {pedido.endereco_entrega}
-                {pedido.bairro_entrega ? ` (${pedido.bairro_entrega})` : ""}
-              </p>
-              {pedido.observacao ? (
-                <p className="mt-1 text-sm text-muted">
-                  Obs.: {pedido.observacao}
-                </p>
-              ) : null}
-
-              <ul className="mt-3 border-t border-linha pt-3 text-sm text-foreground">
-                {pedido.itens_pedido.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex justify-between gap-3 py-0.5"
-                  >
-                    <span>
-                      {item.quantidade}× {item.nome}
-                      {item.observacao?.trim() ? (
-                        <span className="mt-0.5 block text-xs text-dende">
-                          Obs.: {item.observacao.trim()}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="text-muted">
-                      {formatarReais(
-                        Number(item.preco_unitario) * item.quantidade,
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-4 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => baixarComandaPdf(pedido)}
-                  className="rounded-xl border border-mar/40 bg-mar-suave/40 px-4 py-2.5 text-sm font-semibold text-mar"
-                >
-                  Salvar PDF da comanda
-                </button>
-
-                {aba === "agora" ? (
-                  <>
-                    {pedido.status === "novo" &&
-                    escolhendoEtaId === pedido.id ? (
-                      <div className="rounded-xl border border-dende/30 bg-dende-suave/60 px-3 py-3">
-                        <p className="text-sm font-medium text-foreground">
-                          Em quanto tempo entrega?
-                        </p>
-                        <div className="mt-2 grid grid-cols-2 gap-2">
-                          {OPCOES_ETA_MINUTOS.map((min) => (
-                            <button
-                              key={min}
-                              type="button"
-                              disabled={ocupado}
-                              onClick={() =>
-                                void mudarStatus(pedido.id, "aceito", min)
-                              }
-                              className="rounded-xl bg-dende px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-                            >
-                              {ocupado ? "…" : `${min} min`}
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          disabled={ocupado}
-                          onClick={() => setEscolhendoEtaId(null)}
-                          className="mt-2 w-full text-xs font-semibold text-muted underline-offset-2 hover:underline"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    ) : null}
-
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      {pedido.status === "novo" &&
-                      escolhendoEtaId !== pedido.id ? (
-                        <button
-                          type="button"
-                          disabled={ocupado}
-                          onClick={() => setEscolhendoEtaId(pedido.id)}
-                          className="flex-1 rounded-xl bg-dende px-4 py-3 text-sm font-semibold text-white transition hover:bg-dende-escuro disabled:opacity-60"
-                        >
-                          Aceitar e salvar PDF
-                        </button>
-                      ) : null}
-
-                      {pedido.status === "aceito" ? (
-                        <button
-                          type="button"
-                          disabled={ocupado}
-                          onClick={() => void mudarStatus(pedido.id, "pronto")}
-                          className="flex-1 rounded-xl bg-mar px-4 py-3 text-sm font-semibold text-white transition hover:bg-mar/90 disabled:opacity-60"
-                        >
-                          {ocupado ? "Salvando…" : "Marcar como pronto"}
-                        </button>
-                      ) : null}
-                    </div>
-
-                    {pedido.status === "aceito" &&
-                    pedido.tempo_estimado_minutos ? (
-                      <p className="text-xs text-muted">
-                        Previsão enviada ao cliente:{" "}
-                        {pedido.tempo_estimado_minutos} min
-                      </p>
-                    ) : null}
-
-                    {pedido.status === "novo" || pedido.status === "aceito" ? (
-                      <button
-                        type="button"
-                        disabled={ocupado}
-                        onClick={() => void recusar(pedido.id)}
-                        className="rounded-xl border border-dende px-4 py-2.5 text-sm font-semibold text-dende disabled:opacity-60"
-                      >
-                        Recusar pedido
-                      </button>
-                    ) : null}
-                  </>
-                ) : null}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+    </ShellLoja>
   );
 }
