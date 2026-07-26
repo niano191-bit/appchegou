@@ -1,4 +1,3 @@
-import { CabecalhoArea } from "@/components/cabecalho-area";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { lerSessao } from "@/lib/auth-servidor";
 import { PainelDono } from "./painel-dono";
@@ -12,14 +11,9 @@ export default async function PaginaDono() {
   const sessao = await lerSessao();
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-8">
-      <CabecalhoArea
-        rotulo={sessao?.nome ?? "Admin"}
-        titulo="Painel Admin"
-        descricao="Gerencie a operação e o que o cliente vê no app."
-      />
+    <div className="flex min-h-full flex-1 flex-col">
       <ErrorBoundary titulo="O painel Admin travou ao abrir">
-        <PainelDono />
+        <PainelDono nomeAdmin={sessao?.nome ?? "Admin"} />
       </ErrorBoundary>
     </div>
   );

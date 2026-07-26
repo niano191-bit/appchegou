@@ -12,8 +12,10 @@ export function BotaoSair() {
       onClick={() => {
         void (async () => {
           await sair();
-          router.push("/");
-          router.refresh();
+          const destino = window.location.pathname.startsWith("/dono")
+            ? "/admin"
+            : "/";
+          window.location.assign(destino);
         })();
       }}
       className="text-sm font-medium text-muted underline-offset-2 hover:underline"

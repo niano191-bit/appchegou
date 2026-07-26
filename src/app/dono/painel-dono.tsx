@@ -49,8 +49,14 @@ import { GestaoBairros } from "./gestao-bairros";
 import { GestaoCupons } from "./gestao-cupons";
 import { GestaoLojas } from "./gestao-lojas";
 import { GestaoVitrine } from "./gestao-vitrine";
+import { ShellAdmin, type AbaAdmin } from "./shell-admin";
 
-export function PainelDono() {
+type Props = {
+  nomeAdmin?: string | null;
+};
+
+export function PainelDono({ nomeAdmin }: Props) {
+  const [aba, setAba] = useState<AbaAdmin>("operacao");
   const [resumo, setResumo] = useState<ResumoDia | null>(null);
   const [pedidos, setPedidos] = useState<PedidoDono[]>([]);
   const [restaurantes, setRestaurantes] = useState<Restaurante[]>([]);
@@ -255,25 +261,17 @@ export function PainelDono() {
 
   if (carregando) {
     return (
-      <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
-        Carregando painel…
-      </p>
+      <ShellAdmin nome={nomeAdmin} aba={aba} onAba={setAba}>
+        <p className="rounded-2xl bg-white/70 px-5 py-4 text-sm text-muted">
+          Carregando painel…
+        </p>
+      </ShellAdmin>
     );
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <SeloAoVivo />
-      <AvisoFila
-        chave="aviso-fila-dono-criticos"
-        contar={contarCriticos}
-        mensagem={(qtd) =>
-          qtd === 1
-            ? "1 pedido precisa de atenção agora!"
-            : `${qtd} pedidos precisam de atenção agora!`
-        }
-      />
-
+    <ShellAdmin nome={nomeAdmin} aba={aba} onAba={setAba}>
+      <div className="flex flex-col gap-6">
       {erro ? (
         <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
           {erro}
@@ -284,6 +282,19 @@ export function PainelDono() {
           {msg}
         </div>
       ) : null}
+
+      {aba === "operacao" ? (
+      <div className="flex flex-col gap-8">
+      <SeloAoVivo />
+      <AvisoFila
+        chave="aviso-fila-dono-criticos"
+        contar={contarCriticos}
+        mensagem={(qtd) =>
+          qtd === 1
+            ? "1 pedido precisa de atenção agora!"
+            : `${qtd} pedidos precisam de atenção agora!`
+        }
+      />
 
       {qtdCriticos > 0 ? (
         <div className="rounded-2xl border border-dende/50 bg-dende-suave px-5 py-4 text-sm text-dende-escuro">
@@ -758,19 +769,23 @@ export function PainelDono() {
           </ul>
         )}
       </section>
+      </div>
+      ) : null}
 
-      <GestaoVitrine />
+      {aba === "vitrine" ? <GestaoVitrine /> : null}
 
-      <GestaoLojas
-        restaurantes={restaurantes}
-        onAtualizou={() => carregar(true)}
-      />
+      {aba === "restaurantes" ? (
+        <GestaoLojas
+          restaurantes={restaurantes}
+          onAtualizou={() => carregar(true)}
+        />
+      ) : null}
 
-      <GestaoBairros />
+      {aba === "bairros" ? <GestaoBairros /> : null}
 
-      <GestaoCupons />
+      {aba === "cupons" ? <GestaoCupons /> : null}
 
-      {/* Entregadores */}
+      {aba === "entregadores" ? (
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Entregadores
@@ -939,8 +954,9 @@ export function PainelDono() {
           })}
         </ul>
       </section>
+      ) : null}
 
-      {/* Configurações */}
+      {aba === "config" ? (
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
           Configurações
@@ -1060,7 +1076,9 @@ export function PainelDono() {
           </div>
         ) : null}
       </section>
-    </div>
+      ) : null}
+      </div>
+    </ShellAdmin>
   );
 }
 

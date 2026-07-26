@@ -96,3 +96,8 @@ body:has(.cliente-app) {
   background-color: #ffffff;
   background-image: none;
 }
+
+body:has(.admin-shell) {
+  background-color: #f7f4f0;
+  background-image: none;
+}
