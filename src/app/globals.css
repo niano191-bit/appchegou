@@ -85,3 +85,14 @@ body {
 .marca-entrada-atraso-2 {
   animation: marca-sobe 0.7s ease-out 0.24s both;
 }
+
+/* Home do cliente — fundo limpo estilo app delivery */
+.cliente-app {
+  background-color: #ffffff;
+  background-image: none;
+}
+
+body:has(.cliente-app) {
+  background-color: #ffffff;
+  background-image: none;
+}

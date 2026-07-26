@@ -52,17 +52,33 @@ export default async function Home() {
               >
                 Ir para minha área
               </Link>
+              {sessao.papel === "cliente" ? (
+                <Link
+                  href="/cliente"
+                  className="inline-flex w-full items-center justify-center rounded-xl border border-linha bg-white/80 px-5 py-3.5 text-sm font-semibold text-foreground transition hover:border-dende/40"
+                >
+                  Ver restaurantes
+                </Link>
+              ) : null}
               <div className="flex justify-center">
                 <BotaoSair />
               </div>
             </>
           ) : (
-            <Link
-              href="/login"
-              className="inline-flex w-full items-center justify-center rounded-xl bg-dende px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-dende-escuro"
-            >
-              Entrar e pedir
-            </Link>
+            <>
+              <Link
+                href="/cliente"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-dende px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-dende-escuro"
+              >
+                Ver restaurantes
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex w-full items-center justify-center rounded-xl border border-linha bg-white/80 px-5 py-3.5 text-sm font-semibold text-foreground transition hover:border-dende/40"
+              >
+                Entrar
+              </Link>
+            </>
           )}
 
           {!sessao && supabase.configured ? (
