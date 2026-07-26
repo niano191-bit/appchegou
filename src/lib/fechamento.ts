@@ -222,50 +222,54 @@ export function montarFechamentoDia(entrada: {
 }
 
 function textoRepasseLoja(loja: LinhaLojaFechamento) {
-  if (loja.repasse_pix > 0) {
-    return `→ Transferir Pix: ${formatarReais(loja.repasse_pix)}`;
+  const repasse = Number(loja.repasse_pix ?? 0);
+  if (repasse > 0) {
+    return `→ Transferir Pix: ${formatarReais(repasse)}`;
   }
-  if (loja.repasse_pix < 0) {
-    return `→ Loja deve: ${formatarReais(Math.abs(loja.repasse_pix))}`;
+  if (repasse < 0) {
+    return `→ Loja deve: ${formatarReais(Math.abs(repasse))}`;
   }
   return `→ Sem transferir (zerado)`;
 }
 
 /** Texto pronto para WhatsApp */
 export function textoFechamentoWhatsApp(f: FechamentoDia) {
+  const porLoja = f.por_loja ?? [];
+  const porEntregador = f.por_entregador ?? [];
+  const gorjeta = Number(f.gorjeta_total ?? 0);
+  const aReceber = Number(f.a_receber_lojas ?? 0);
+
   const linhas: (string | null)[] = [
     `*${MARCA.nome}*`,
     `*Fechamento do dia*`,
-    f.data_label,
+    f.data_label ?? "",
     "",
-    `Pedidos pagos: ${f.qtd_pedidos}`,
-    `Entregues: ${f.entregues}`,
-    `Em andamento: ${f.em_andamento}`,
-    `Cancelados: ${f.cancelados}`,
+    `Pedidos pagos: ${f.qtd_pedidos ?? 0}`,
+    `Entregues: ${f.entregues ?? 0}`,
+    `Em andamento: ${f.em_andamento ?? 0}`,
+    `Cancelados: ${f.cancelados ?? 0}`,
     "",
-    `Faturamento: ${formatarReais(f.faturamento)}`,
-    `  Pix/online: ${formatarReais(f.faturamento_pix)}`,
-    `  Dinheiro: ${formatarReais(f.faturamento_dinheiro)}`,
-    `Comissão: ${formatarReais(f.comissao)}`,
-    `Taxas de entrega: ${formatarReais(f.taxa_entrega_total)}`,
-    f.gorjeta_total > 0
-      ? `Gorjetas: ${formatarReais(f.gorjeta_total)}`
-      : null,
-    `Ticket médio: ${formatarReais(f.ticket_medio)}`,
+    `Faturamento: ${formatarReais(Number(f.faturamento ?? 0))}`,
+    `  Pix/online: ${formatarReais(Number(f.faturamento_pix ?? 0))}`,
+    `  Dinheiro: ${formatarReais(Number(f.faturamento_dinheiro ?? 0))}`,
+    `Comissão: ${formatarReais(Number(f.comissao ?? 0))}`,
+    `Taxas de entrega: ${formatarReais(Number(f.taxa_entrega_total ?? 0))}`,
+    gorjeta > 0 ? `Gorjetas: ${formatarReais(gorjeta)}` : null,
+    `Ticket médio: ${formatarReais(Number(f.ticket_medio ?? 0))}`,
     "",
-    `*Repasse às lojas (Pix):* ${formatarReais(f.repasse_pix_total)}`,
-    f.a_receber_lojas > 0
-      ? `*A receber das lojas:* ${formatarReais(f.a_receber_lojas)}`
+    `*Repasse às lojas (Pix):* ${formatarReais(Number(f.repasse_pix_total ?? 0))}`,
+    aReceber > 0
+      ? `*A receber das lojas:* ${formatarReais(aReceber)}`
       : null,
   ];
 
-  if (f.por_loja.length > 0) {
+  if (porLoja.length > 0) {
     linhas.push("", "*Por loja*");
-    for (const loja of f.por_loja) {
+    for (const loja of porLoja) {
       linhas.push(
         `• *${loja.nome}* (${loja.pedidos} ped.)`,
-        `  Fat. ${formatarReais(loja.faturamento)} · Pix ${formatarReais(loja.faturamento_pix)} · Din. ${formatarReais(loja.faturamento_dinheiro)}`,
-        `  Comissão ${formatarReais(loja.comissao)} · Líquido ${formatarReais(loja.liquido)}`,
+        `  Fat. ${formatarReais(Number(loja.faturamento ?? 0))} · Pix ${formatarReais(Number(loja.faturamento_pix ?? 0))} · Din. ${formatarReais(Number(loja.faturamento_dinheiro ?? 0))}`,
+        `  Comissão ${formatarReais(Number(loja.comissao ?? 0))} · Líquido ${formatarReais(Number(loja.liquido ?? 0))}`,
         `  ${textoRepasseLoja(loja)}`,
         loja.chave_pix?.trim()
           ? `  Chave Pix: ${loja.chave_pix.trim()}`
@@ -274,11 +278,11 @@ export function textoFechamentoWhatsApp(f: FechamentoDia) {
     }
   }
 
-  if (f.por_entregador.length > 0) {
+  if (porEntregador.length > 0) {
     linhas.push("", "*Entregadores*");
-    for (const e of f.por_entregador) {
+    for (const e of porEntregador) {
       linhas.push(
-        `• ${e.nome}: ${e.entregas} · ${formatarReais(e.valor)}`,
+        `• ${e.nome}: ${e.entregas} · ${formatarReais(Number(e.valor ?? 0))}`,
       );
     }
   }

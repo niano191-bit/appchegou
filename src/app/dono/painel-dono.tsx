@@ -500,7 +500,25 @@ export function PainelDono() {
 
         {resumo ? (
           <a
-            href={linkWhatsAppFechamento(resumo as FechamentoDia)}
+            href={linkWhatsAppFechamento({
+              data: resumo.data ?? "",
+              data_label: resumo.data_label ?? "",
+              qtd_pedidos: resumo.qtd_pedidos ?? 0,
+              faturamento: resumo.faturamento ?? 0,
+              faturamento_pix: resumo.faturamento_pix ?? 0,
+              faturamento_dinheiro: resumo.faturamento_dinheiro ?? 0,
+              comissao: resumo.comissao ?? 0,
+              ticket_medio: resumo.ticket_medio ?? 0,
+              taxa_entrega_total: resumo.taxa_entrega_total ?? 0,
+              gorjeta_total: resumo.gorjeta_total ?? 0,
+              repasse_pix_total: resumo.repasse_pix_total ?? 0,
+              a_receber_lojas: resumo.a_receber_lojas ?? 0,
+              entregues: resumo.entregues ?? 0,
+              cancelados: resumo.cancelados ?? 0,
+              em_andamento: resumo.em_andamento ?? 0,
+              por_loja: resumo.por_loja ?? [],
+              por_entregador: resumo.por_entregador ?? [],
+            } satisfies FechamentoDia)}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-xl bg-mar px-4 py-3 text-center text-sm font-semibold text-white"
