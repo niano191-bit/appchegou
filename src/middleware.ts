@@ -45,8 +45,14 @@ export function middleware(request: NextRequest) {
           );
         }
         const url = request.nextUrl.clone();
-        url.pathname = "/login";
-        url.searchParams.set("next", pathname);
+        // Admin/dono entra por /admin; demais áreas usam /login
+        url.pathname =
+          regra.prefixo === "/dono" || regra.prefixo === "/api/dono"
+            ? "/admin"
+            : "/login";
+        if (url.pathname === "/login") {
+          url.searchParams.set("next", pathname);
+        }
         return NextResponse.redirect(url);
       }
 
@@ -58,8 +64,13 @@ export function middleware(request: NextRequest) {
           );
         }
         const url = request.nextUrl.clone();
-        url.pathname = "/login";
-        url.searchParams.set("erro", "sem_permissao");
+        url.pathname =
+          regra.prefixo === "/dono" || regra.prefixo === "/api/dono"
+            ? "/admin"
+            : "/login";
+        if (url.pathname === "/login") {
+          url.searchParams.set("erro", "sem_permissao");
+        }
         return NextResponse.redirect(url);
       }
     }

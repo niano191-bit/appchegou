@@ -27,6 +27,7 @@ const files = [
   ["018", "supabase/migrations/018_fase26_cancel_dono.sql"],
   ["019", "supabase/migrations/019_fase27_disponibilidade_entregador.sql"],
   ["020", "supabase/migrations/020_fase28_chave_pix_loja.sql"],
+  ["021", "supabase/migrations/021_fase29_vitrine.sql"],
 ];
 
 async function runQuery(query) {

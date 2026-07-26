@@ -48,6 +48,7 @@ import {
 import { GestaoBairros } from "./gestao-bairros";
 import { GestaoCupons } from "./gestao-cupons";
 import { GestaoLojas } from "./gestao-lojas";
+import { GestaoVitrine } from "./gestao-vitrine";
 
 export function PainelDono() {
   const [resumo, setResumo] = useState<ResumoDia | null>(null);
@@ -721,6 +722,8 @@ export function PainelDono() {
           </ul>
         )}
       </section>
+
+      <GestaoVitrine />
 
       <GestaoLojas
         restaurantes={restaurantes}

@@ -125,6 +125,32 @@ export type Cupom = {
   criado_em: string;
 };
 
+/** Tom visual do banner da home */
+export type TomBanner = "dende" | "mar";
+
+/** Banner do carrossel na home do cliente */
+export type BannerVitrine = {
+  id: string;
+  titulo: string;
+  texto: string;
+  tom: TomBanner;
+  ativo: boolean;
+  ordem: number;
+  criado_em: string;
+};
+
+/** Categoria da rolagem na home (filtra lojas por palavras-chave) */
+export type CategoriaVitrine = {
+  id: string;
+  nome: string;
+  emoji: string;
+  /** Palavras separadas por vírgula; vazio = "Todos" (sem filtro) */
+  palavras_chave: string;
+  ativo: boolean;
+  ordem: number;
+  criado_em: string;
+};
+
 export type ItemPedido = {
   id: string;
   pedido_id: string;

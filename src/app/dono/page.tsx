@@ -3,8 +3,8 @@ import { lerSessao } from "@/lib/auth-servidor";
 import { PainelDono } from "./painel-dono";
 
 export const metadata = {
-  title: "Painel do Dono — Tentações da Neuza",
-  description: "Operação, comissões, entregadores e configurações.",
+  title: "Admin — Tentações da Neuza",
+  description: "Operação, vitrine, lojas, entregadores e configurações.",
 };
 
 export default async function PaginaDono() {
@@ -13,9 +13,9 @@ export default async function PaginaDono() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-8">
       <CabecalhoArea
-        rotulo={sessao?.nome ?? "Dono"}
-        titulo="Painel do Dono"
-        descricao="Visão da operação do dia. Só quem tem papel dono entra aqui."
+        rotulo={sessao?.nome ?? "Admin"}
+        titulo="Painel Admin"
+        descricao="Gerencie a operação e o que o cliente vê no app."
       />
       <PainelDono />
     </div>

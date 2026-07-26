@@ -102,6 +102,7 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
         nome: String(dados.get("nome") ?? ""),
         descricao: String(dados.get("descricao") ?? ""),
         endereco: String(dados.get("endereco") ?? ""),
+        imagem_url: String(dados.get("imagem_url") ?? "").trim() || null,
         comissao_percentual: Number(dados.get("comissao") ?? 0),
         pedido_minimo: Number(dados.get("pedido_minimo") ?? 0),
         horario_abertura: String(dados.get("horario_abertura") ?? "").trim() || null,
@@ -339,6 +340,15 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
                       <input
                         name="endereco"
                         defaultValue={loja.endereco ?? ""}
+                        className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+                      />
+                    </label>
+                    <label className="block text-sm text-muted">
+                      Foto da loja (URL) — aparece na home
+                      <input
+                        name="imagem_url"
+                        defaultValue={loja.imagem_url ?? ""}
+                        placeholder="https://..."
                         className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
                       />
                     </label>

@@ -5,6 +5,8 @@ import { SENHA_DEMO } from "@/lib/auth";
 import { gerarHashSenha } from "@/lib/senha";
 import type {
   BairroEntrega,
+  BannerVitrine,
+  CategoriaVitrine,
   Configuracao,
   Cupom,
   DisponibilidadeEntregador,
@@ -14,6 +16,7 @@ import type {
   Restaurante,
   StatusPedido,
   TipoCupom,
+  TomBanner,
   Usuario,
 } from "@/types/database";
 import { ordemDisponibilidade } from "@/types/database";
@@ -24,6 +27,10 @@ import {
   normalizarCodigoCupom,
 } from "@/lib/cupom";
 import { montarFechamentoDia } from "@/lib/fechamento";
+import {
+  bannersPadrao,
+  categoriasPadrao,
+} from "@/lib/vitrine-defaults";
 import {
   dataPedidoSalvador,
   horaParaMinutos,
@@ -44,6 +51,8 @@ type BancoLocal = {
   configuracao: Configuracao;
   bairros: BairroEntrega[];
   cupons: Cupom[];
+  banners_vitrine: BannerVitrine[];
+  categorias_vitrine: CategoriaVitrine[];
 };
 
 function bairrosIniciais(criado: string): BairroEntrega[] {
@@ -99,6 +108,8 @@ function dadosIniciais(): BancoLocal {
   return {
     configuracao: configuracaoPadrao(),
     bairros: bairrosIniciais(criado),
+    banners_vitrine: bannersPadrao(criado),
+    categorias_vitrine: categoriasPadrao(criado),
     cupons: [
       {
         id: "c1000000-0000-0000-0000-000000000001",
@@ -384,6 +395,16 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
         criado_em: agora(),
       },
     ];
+    mudou = true;
+  }
+
+  if (!banco.banners_vitrine?.length) {
+    banco.banners_vitrine = bannersPadrao(agora());
+    mudou = true;
+  }
+
+  if (!banco.categorias_vitrine?.length) {
+    banco.categorias_vitrine = categoriasPadrao(agora());
     mudou = true;
   }
 
@@ -1716,4 +1737,148 @@ export function usandoModoDemo() {
     process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
   );
+}
+
+function ordenarVitrine<T extends { ordem: number; criado_em: string }>(
+  lista: T[],
+) {
+  return [...lista].sort(
+    (a, b) => a.ordem - b.ordem || a.criado_em.localeCompare(b.criado_em),
+  );
+}
+
+export async function listarBannersVitrineLocal(apenasAtivos = false) {
+  const banco = await lerBancoLocal();
+  const lista = ordenarVitrine(banco.banners_vitrine ?? []);
+  return apenasAtivos ? lista.filter((b) => b.ativo) : lista;
+}
+
+export async function listarCategoriasVitrineLocal(apenasAtivos = false) {
+  const banco = await lerBancoLocal();
+  const lista = ordenarVitrine(banco.categorias_vitrine ?? []);
+  return apenasAtivos ? lista.filter((c) => c.ativo) : lista;
+}
+
+export async function criarBannerVitrineLocal(entrada: {
+  titulo: string;
+  texto?: string;
+  tom?: TomBanner;
+  ordem?: number;
+}) {
+  const titulo = entrada.titulo.trim();
+  if (!titulo) throw new Error("Informe o título do banner.");
+  const banco = await lerBancoLocal();
+  const banner: BannerVitrine = {
+    id: crypto.randomUUID(),
+    titulo,
+    texto: (entrada.texto ?? "").trim(),
+    tom: entrada.tom === "mar" ? "mar" : "dende",
+    ativo: true,
+    ordem: Number(entrada.ordem ?? banco.banners_vitrine.length + 1),
+    criado_em: agora(),
+  };
+  banco.banners_vitrine.push(banner);
+  await salvarBancoLocal(banco);
+  return banner;
+}
+
+export async function atualizarBannerVitrineLocal(
+  id: string,
+  patch: Partial<{
+    titulo: string;
+    texto: string;
+    tom: TomBanner;
+    ativo: boolean;
+    ordem: number;
+  }>,
+) {
+  const banco = await lerBancoLocal();
+  const banner = banco.banners_vitrine.find((b) => b.id === id);
+  if (!banner) throw new Error("Banner não encontrado.");
+  if (patch.titulo !== undefined) {
+    const titulo = patch.titulo.trim();
+    if (!titulo) throw new Error("Informe o título do banner.");
+    banner.titulo = titulo;
+  }
+  if (patch.texto !== undefined) banner.texto = patch.texto.trim();
+  if (patch.tom !== undefined) {
+    banner.tom = patch.tom === "mar" ? "mar" : "dende";
+  }
+  if (patch.ativo !== undefined) banner.ativo = patch.ativo;
+  if (patch.ordem !== undefined) banner.ordem = Number(patch.ordem);
+  await salvarBancoLocal(banco);
+  return banner;
+}
+
+export async function excluirBannerVitrineLocal(id: string) {
+  const banco = await lerBancoLocal();
+  const antes = banco.banners_vitrine.length;
+  banco.banners_vitrine = banco.banners_vitrine.filter((b) => b.id !== id);
+  if (banco.banners_vitrine.length === antes) {
+    throw new Error("Banner não encontrado.");
+  }
+  await salvarBancoLocal(banco);
+}
+
+export async function criarCategoriaVitrineLocal(entrada: {
+  nome: string;
+  emoji?: string;
+  palavras_chave?: string;
+  ordem?: number;
+}) {
+  const nome = entrada.nome.trim();
+  if (!nome) throw new Error("Informe o nome da categoria.");
+  const banco = await lerBancoLocal();
+  const categoria: CategoriaVitrine = {
+    id: crypto.randomUUID(),
+    nome,
+    emoji: (entrada.emoji ?? "🍽️").trim() || "🍽️",
+    palavras_chave: (entrada.palavras_chave ?? "").trim(),
+    ativo: true,
+    ordem: Number(entrada.ordem ?? banco.categorias_vitrine.length),
+    criado_em: agora(),
+  };
+  banco.categorias_vitrine.push(categoria);
+  await salvarBancoLocal(banco);
+  return categoria;
+}
+
+export async function atualizarCategoriaVitrineLocal(
+  id: string,
+  patch: Partial<{
+    nome: string;
+    emoji: string;
+    palavras_chave: string;
+    ativo: boolean;
+    ordem: number;
+  }>,
+) {
+  const banco = await lerBancoLocal();
+  const categoria = banco.categorias_vitrine.find((c) => c.id === id);
+  if (!categoria) throw new Error("Categoria não encontrada.");
+  if (patch.nome !== undefined) {
+    const nome = patch.nome.trim();
+    if (!nome) throw new Error("Informe o nome da categoria.");
+    categoria.nome = nome;
+  }
+  if (patch.emoji !== undefined) {
+    categoria.emoji = patch.emoji.trim() || "🍽️";
+  }
+  if (patch.palavras_chave !== undefined) {
+    categoria.palavras_chave = patch.palavras_chave.trim();
+  }
+  if (patch.ativo !== undefined) categoria.ativo = patch.ativo;
+  if (patch.ordem !== undefined) categoria.ordem = Number(patch.ordem);
+  await salvarBancoLocal(banco);
+  return categoria;
+}
+
+export async function excluirCategoriaVitrineLocal(id: string) {
+  const banco = await lerBancoLocal();
+  const antes = banco.categorias_vitrine.length;
+  banco.categorias_vitrine = banco.categorias_vitrine.filter((c) => c.id !== id);
+  if (banco.categorias_vitrine.length === antes) {
+    throw new Error("Categoria não encontrada.");
+  }
+  await salvarBancoLocal(banco);
 }

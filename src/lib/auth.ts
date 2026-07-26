@@ -27,7 +27,7 @@ export function destinoPorPapel(papel: PapelUsuario) {
   }
 }
 
-/** Contas de teste para a tela de login */
+/** Contas de teste para a tela de login do cliente/operação (Admin fica em /admin) */
 export const CONTAS_DEMO = [
   {
     rotulo: "Cliente Teste",
@@ -44,9 +44,11 @@ export const CONTAS_DEMO = [
     email: "entregador.teste@chegou.local",
     papel: "entregador" as const,
   },
-  {
-    rotulo: "Dono Teste",
-    email: "dono.teste@chegou.local",
-    papel: "dono" as const,
-  },
 ];
+
+/** Conta demo do Admin (só em /admin) */
+export const CONTA_ADMIN_DEMO = {
+  rotulo: "Admin",
+  email: "dono.teste@chegou.local",
+  papel: "dono" as const,
+};

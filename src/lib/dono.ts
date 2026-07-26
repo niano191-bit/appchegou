@@ -103,6 +103,7 @@ export async function atualizarRestauranteDono(entrada: {
   nome?: string;
   descricao?: string | null;
   endereco?: string | null;
+  imagem_url?: string | null;
   comissao_percentual?: number;
   ativo?: boolean;
   pedido_minimo?: number;

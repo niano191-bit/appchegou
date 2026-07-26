@@ -13,7 +13,20 @@ import {
 } from "@/lib/horario";
 import { MARCA } from "@/lib/marca";
 import { textoPedidoMinimo, valorPedidoMinimo } from "@/lib/pedido-minimo";
-import { formatarReais, type Configuracao, type Restaurante } from "@/types/database";
+import { buscarVitrinePublica } from "@/lib/vitrine";
+import {
+  bannersPadrao,
+  categoriasPadrao,
+  classeTomBanner,
+  regexDePalavrasChave,
+} from "@/lib/vitrine-defaults";
+import {
+  formatarReais,
+  type BannerVitrine,
+  type CategoriaVitrine,
+  type Configuracao,
+  type Restaurante,
+} from "@/types/database";
 import { HistoricoPedidos } from "./historico-pedidos";
 
 type Props = {
@@ -23,68 +36,6 @@ type Props = {
 
 type Aba = "inicio" | "buscar" | "pedidos" | "perfil";
 
-type Categoria = {
-  id: string;
-  label: string;
-  emoji: string;
-  match: RegExp | null;
-};
-
-const CATEGORIAS: Categoria[] = [
-  { id: "todos", label: "Todos", emoji: "🍽️", match: null },
-  {
-    id: "baiana",
-    label: "Baiana",
-    emoji: "🌴",
-    match: /acaraj|moqueca|vatap|baian|dend[eê]|abar[aá]|xinxim|caruru|bob[oó]/i,
-  },
-  {
-    id: "lanches",
-    label: "Lanches",
-    emoji: "🍔",
-    match: /lanche|hamb|burger|sandu[ií]|hot.?dog|pastel/i,
-  },
-  {
-    id: "peixe",
-    label: "Peixe",
-    emoji: "🐟",
-    match: /peixe|camar[aã]o|frutos|marisco|siri|moqueca/i,
-  },
-  {
-    id: "pizza",
-    label: "Pizza",
-    emoji: "🍕",
-    match: /pizza|italiana|massa/i,
-  },
-  {
-    id: "doces",
-    label: "Doces",
-    emoji: "🍰",
-    match: /doce|sobremesa|bolo|pudim|brigadeiro|sorvete/i,
-  },
-  {
-    id: "saudavel",
-    label: "Saudável",
-    emoji: "🥗",
-    match: /saud[aá]v|salada|light|fit|natural/i,
-  },
-];
-
-const BANNERS = [
-  {
-    id: "1",
-    titulo: "O sabor da Bahia",
-    texto: "Peça agora e receba quentinho na sua porta.",
-    tom: "from-dende to-dende-escuro",
-  },
-  {
-    id: "2",
-    titulo: "Acompanhe ao vivo",
-    texto: "Do fogão à entrega — status em tempo real.",
-    tom: "from-mar to-teal-800",
-  },
-];
-
 function textoLoja(loja: Restaurante) {
   return `${loja.nome} ${loja.descricao ?? ""} ${loja.endereco ?? ""}`;
 }
@@ -92,9 +43,15 @@ function textoLoja(loja: Restaurante) {
 export function HomeCliente({ logado, nomeUsuario }: Props) {
   const [restaurantes, setRestaurantes] = useState<Restaurante[]>([]);
   const [config, setConfig] = useState<Configuracao | null>(null);
+  const [banners, setBanners] = useState<BannerVitrine[]>(() =>
+    bannersPadrao().filter((b) => b.ativo),
+  );
+  const [categorias, setCategorias] = useState<CategoriaVitrine[]>(() =>
+    categoriasPadrao().filter((c) => c.ativo),
+  );
   const [favoritos, setFavoritos] = useState<string[]>([]);
   const [busca, setBusca] = useState("");
-  const [categoria, setCategoria] = useState("todos");
+  const [categoria, setCategoria] = useState<string>("");
   const [aba, setAba] = useState<Aba>("inicio");
   const [bannerIdx, setBannerIdx] = useState(0);
   const [carregando, setCarregando] = useState(true);
@@ -106,9 +63,13 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
     void (async () => {
       try {
         setErro(null);
-        const [lojas, cfg] = await Promise.all([
+        const [lojas, cfg, vitrine] = await Promise.all([
           buscarRestaurantes(),
           buscarConfiguracaoPublica().catch(() => null),
+          buscarVitrinePublica().catch(() => ({
+            banners: bannersPadrao().filter((b) => b.ativo),
+            categorias: categoriasPadrao().filter((c) => c.ativo),
+          })),
         ]);
         setRestaurantes(
           lojas.map((l) => ({
@@ -118,6 +79,19 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
           })),
         );
         setConfig(cfg);
+        const cats =
+          vitrine.categorias.length > 0
+            ? vitrine.categorias
+            : categoriasPadrao().filter((c) => c.ativo);
+        const bans =
+          vitrine.banners.length > 0
+            ? vitrine.banners
+            : bannersPadrao().filter((b) => b.ativo);
+        setCategorias(cats);
+        setBanners(bans);
+        setCategoria((atual) =>
+          atual && cats.some((c) => c.id === atual) ? atual : (cats[0]?.id ?? ""),
+        );
       } catch (e) {
         setErro(
           e instanceof Error
@@ -131,19 +105,22 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
   }, []);
 
   useEffect(() => {
+    if (banners.length === 0) return;
     const t = window.setInterval(() => {
-      setBannerIdx((i) => (i + 1) % BANNERS.length);
+      setBannerIdx((i) => (i + 1) % banners.length);
     }, 5000);
     return () => window.clearInterval(t);
-  }, []);
+  }, [banners.length]);
 
   const filtrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    const cat = CATEGORIAS.find((c) => c.id === categoria) ?? CATEGORIAS[0];
+    const cat =
+      categorias.find((c) => c.id === categoria) ?? categorias[0] ?? null;
+    const match = cat ? regexDePalavrasChave(cat.palavras_chave) : null;
 
     let base = restaurantes;
-    if (cat.match) {
-      base = base.filter((l) => cat.match!.test(textoLoja(l)));
+    if (match) {
+      base = base.filter((l) => match.test(textoLoja(l)));
     }
     if (q) {
       base = base.filter((l) => textoLoja(l).toLowerCase().includes(q));
@@ -156,7 +133,7 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
       if (af !== bf) return af - bf;
       return a.nome.localeCompare(b.nome, "pt-BR");
     });
-  }, [restaurantes, busca, categoria, favoritos]);
+  }, [restaurantes, busca, categoria, favoritos, categorias]);
 
   function toggleFavorito(
     id: string,
@@ -176,7 +153,9 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
   }
 
   const taxaBase = config?.taxa_entrega ?? 8;
-  const banner = BANNERS[bannerIdx];
+  const banner = banners[bannerIdx] ?? banners[0] ?? null;
+  const categoriaAtiva =
+    categorias.find((c) => c.id === categoria) ?? categorias[0] ?? null;
 
   return (
     <div className="cliente-app mx-auto flex min-h-full w-full max-w-lg flex-1 flex-col bg-white pb-24">
@@ -244,40 +223,42 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
           </label>
 
           {/* Banner */}
-          <div
-            className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${banner.tom} px-5 py-6 text-white shadow-sm`}
-          >
-            <p className="font-display text-2xl font-semibold leading-tight">
-              {banner.titulo}
-            </p>
-            <p className="mt-2 max-w-[85%] text-sm text-white/90">
-              {banner.texto}
-            </p>
-            <div className="mt-4 flex gap-1.5">
-              {BANNERS.map((b, i) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  aria-label={`Banner ${i + 1}`}
-                  onClick={() => setBannerIdx(i)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === bannerIdx ? "w-5 bg-white" : "w-1.5 bg-white/45"
-                  }`}
-                />
-              ))}
-            </div>
+          {banner ? (
             <div
-              aria-hidden
-              className="pointer-events-none absolute -right-4 -bottom-6 text-7xl opacity-25"
+              className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${classeTomBanner(banner.tom)} px-5 py-6 text-white shadow-sm`}
             >
-              🛵
+              <p className="font-display text-2xl font-semibold leading-tight">
+                {banner.titulo}
+              </p>
+              <p className="mt-2 max-w-[85%] text-sm text-white/90">
+                {banner.texto}
+              </p>
+              <div className="mt-4 flex gap-1.5">
+                {banners.map((b, i) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    aria-label={`Banner ${i + 1}`}
+                    onClick={() => setBannerIdx(i)}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === bannerIdx ? "w-5 bg-white" : "w-1.5 bg-white/45"
+                    }`}
+                  />
+                ))}
+              </div>
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-4 -bottom-6 text-7xl opacity-25"
+              >
+                🛵
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Categorias */}
           <div className="-mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <ul className="flex w-max gap-3">
-              {CATEGORIAS.map((c) => {
+              {categorias.map((c) => {
                 const ativa = categoria === c.id;
                 return (
                   <li key={c.id}>
@@ -300,7 +281,7 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
                           ativa ? "text-dende" : "text-muted"
                         }`}
                       >
-                        {c.label}
+                        {c.nome}
                       </span>
                     </button>
                   </li>
@@ -312,9 +293,9 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
           {/* Lista */}
           <section id="restaurantes" className="pb-2">
             <h2 className="mb-3 text-base font-semibold text-foreground">
-              {categoria === "todos"
+              {!categoriaAtiva?.palavras_chave.trim()
                 ? "Todos os restaurantes"
-                : CATEGORIAS.find((c) => c.id === categoria)?.label}
+                : categoriaAtiva.nome}
             </h2>
 
             {carregando ? (
