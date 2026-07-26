@@ -1,19 +1,11 @@
-import { lerSessao } from "@/lib/auth-servidor";
-import { HomeCliente } from "./home-cliente";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Início — Tentações da Neuza",
   description: "Escolha um restaurante e faça seu pedido.",
 };
 
-export default async function PaginaCliente() {
-  const sessao = await lerSessao();
-  const ehCliente = !sessao || sessao.papel === "cliente";
-
-  return (
-    <HomeCliente
-      logado={Boolean(sessao && ehCliente)}
-      nomeUsuario={sessao && ehCliente ? sessao.nome : null}
-    />
-  );
+/** Lista de restaurantes fica na raiz; /cliente redireciona para lá */
+export default function PaginaCliente() {
+  redirect("/");
 }

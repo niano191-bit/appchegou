@@ -182,7 +182,7 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
     <div className="cliente-app mx-auto flex min-h-full w-full max-w-lg flex-1 flex-col bg-white pb-24">
       {/* Header laranja */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-dende px-4 py-3 shadow-sm">
-        <Link href="/cliente" className="min-w-0">
+        <Link href="/" className="min-w-0">
           <span className="block truncate font-display text-xl font-semibold tracking-tight text-white lowercase">
             {MARCA.nomeCurto.toLowerCase()}
           </span>

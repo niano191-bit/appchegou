@@ -16,6 +16,13 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessao = lerSessaoDoCookie(request);
 
+  // Home do app fica na raiz — /cliente só redireciona
+  if (pathname === "/cliente" || pathname === "/cliente/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
   const regras: { prefixo: string; papeis: SessaoUsuario["papel"][] }[] = [
     { prefixo: "/cliente", papeis: ["cliente"] },
     { prefixo: "/restaurante", papeis: ["restaurante"] },

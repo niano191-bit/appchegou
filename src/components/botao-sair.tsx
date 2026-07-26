@@ -12,7 +12,7 @@ export function BotaoSair() {
       onClick={() => {
         void (async () => {
           await sair();
-          router.push("/login");
+          router.push("/");
           router.refresh();
         })();
       }}

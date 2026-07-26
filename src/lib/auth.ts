@@ -17,7 +17,7 @@ export type SessaoUsuario = {
 export function destinoPorPapel(papel: PapelUsuario) {
   switch (papel) {
     case "cliente":
-      return "/cliente";
+      return "/";
     case "restaurante":
       return "/restaurante";
     case "entregador":
