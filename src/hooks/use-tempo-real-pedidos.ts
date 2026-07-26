@@ -9,7 +9,7 @@ import {
 /**
  * Avisa a tela quando algum pedido muda.
  * Com Supabase: escuta em tempo real.
- * No modo demo: atualiza a cada 2 segundos (até o Docker/Supabase estar ok).
+ * Se o realtime falhar: atualiza a cada 2 segundos.
  */
 export function useTempoRealPedidos(onMudanca: () => void) {
   const onMudancaRef = useRef(onMudanca);
@@ -20,23 +20,47 @@ export function useTempoRealPedidos(onMudanca: () => void) {
       onMudancaRef.current();
     };
 
-    if (isSupabaseConfigured()) {
-      const supabase = createSupabaseClient();
-      const canal = supabase
-        .channel("chegou-pedidos")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "pedidos" },
-          disparar,
-        )
-        .subscribe();
+    let intervalo: number | undefined;
+    let supabase: ReturnType<typeof createSupabaseClient> | null = null;
+    let canal: ReturnType<
+      ReturnType<typeof createSupabaseClient>["channel"]
+    > | null = null;
 
-      return () => {
-        void supabase.removeChannel(canal);
-      };
+    const usarPolling = () => {
+      if (intervalo != null) return;
+      intervalo = window.setInterval(disparar, 2000);
+    };
+
+    if (isSupabaseConfigured()) {
+      try {
+        supabase = createSupabaseClient();
+        // Nome único: o cliente Supabase é singleton e reutilizar
+        // "chegou-pedidos" após subscribe() quebra o painel no remount.
+        const nome = `chegou-pedidos-${crypto.randomUUID()}`;
+        canal = supabase
+          .channel(nome)
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "pedidos" },
+            disparar,
+          )
+          .subscribe((status) => {
+            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              usarPolling();
+            }
+          });
+      } catch {
+        usarPolling();
+      }
+    } else {
+      usarPolling();
     }
 
-    const intervalo = window.setInterval(disparar, 2000);
-    return () => window.clearInterval(intervalo);
+    return () => {
+      if (intervalo != null) window.clearInterval(intervalo);
+      if (supabase && canal) {
+        void supabase.removeChannel(canal);
+      }
+    };
   }, []);
 }
