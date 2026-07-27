@@ -24,6 +24,8 @@ export function GestaoVitrine() {
 
   const [arquivoNovo, setArquivoNovo] = useState<File | null>(null);
   const [previaNova, setPreviaNova] = useState<string | null>(null);
+  const [abertoBanners, setAbertoBanners] = useState(true);
+  const [abertoCategorias, setAbertoCategorias] = useState(true);
   const [novaCat, setNovaCat] = useState({
     nome: "",
     emoji: "🍽️",
@@ -210,17 +212,39 @@ export function GestaoVitrine() {
       ) : null}
 
       {/* ——— Banners ——— */}
-      <div className="rounded-2xl border border-linha bg-white p-4 space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-2">
+      <div className="rounded-2xl border border-linha bg-white p-4">
+        <button
+          type="button"
+          onClick={() => setAbertoBanners((v) => !v)}
+          className="flex w-full items-start justify-between gap-3 text-left"
+          aria-expanded={abertoBanners}
+        >
           <div>
-            <p className="text-sm font-semibold text-foreground">Banners</p>
+            <p className="text-sm font-semibold text-foreground">
+              Banners
+              <span className="ml-2 font-normal text-muted">
+                ({banners.length})
+              </span>
+            </p>
             <p className="text-xs text-muted">
               Imagens da home (JPG ou PNG, até 3 MB).
             </p>
           </div>
-        </div>
+          <span
+            aria-hidden
+            className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-linha text-lg leading-none text-foreground transition-transform ${
+              abertoBanners ? "rotate-180" : ""
+            }`}
+          >
+            ▾
+          </span>
+        </button>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className={`mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 ${
+            abertoBanners ? "" : "hidden"
+          }`}
+        >
           <div className="flex flex-col gap-2 rounded-xl border border-dashed border-linha bg-[#faf8f5] p-3">
             <label className="flex aspect-[16/7] cursor-pointer flex-col items-center justify-center gap-1 overflow-hidden rounded-lg border border-dashed border-linha bg-white text-center transition hover:border-dende/50">
               {previaNova ? (
@@ -355,14 +379,37 @@ export function GestaoVitrine() {
       </div>
 
       {/* ——— Categorias ——— */}
-      <div className="rounded-2xl border border-linha bg-white p-4 space-y-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">Categorias</p>
-          <p className="text-xs text-muted">
-            Rolagem da home. Palavras-chave vazias = “Todos” (sem filtro).
-          </p>
-        </div>
+      <div className="rounded-2xl border border-linha bg-white p-4">
+        <button
+          type="button"
+          onClick={() => setAbertoCategorias((v) => !v)}
+          className="flex w-full items-start justify-between gap-3 text-left"
+          aria-expanded={abertoCategorias}
+        >
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Categorias
+              <span className="ml-2 font-normal text-muted">
+                ({categorias.length})
+              </span>
+            </p>
+            <p className="text-xs text-muted">
+              Rolagem da home. Palavras-chave vazias = “Todos” (sem filtro).
+            </p>
+          </div>
+          <span
+            aria-hidden
+            className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-linha text-lg leading-none text-foreground transition-transform ${
+              abertoCategorias ? "rotate-180" : ""
+            }`}
+          >
+            ▾
+          </span>
+        </button>
 
+        <div
+          className={`mt-3 space-y-3 ${abertoCategorias ? "" : "hidden"}`}
+        >
         <div className="grid gap-2 rounded-xl border border-dashed border-linha bg-[#faf8f5] p-3 sm:grid-cols-[3.5rem_minmax(0,8rem)_1fr_auto]">
           <input
             value={novaCat.emoji}
@@ -480,6 +527,7 @@ export function GestaoVitrine() {
               </li>
             ))}
           </ul>
+        </div>
         </div>
       </div>
     </section>
