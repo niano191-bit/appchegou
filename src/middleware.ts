@@ -11,12 +11,21 @@ function lerSessaoDoCookie(req: NextRequest): SessaoUsuario | null {
   }
 }
 
-/** Protege cada área pelo papel do usuário logado */
+function loginDaArea(prefixo: string) {
+  if (prefixo === "/dono" || prefixo === "/api/dono") return "/admin";
+  if (prefixo === "/restaurante" || prefixo === "/api/restaurante") {
+    return "/login/restaurante";
+  }
+  if (prefixo === "/entregador") return "/login/entregador";
+  if (prefixo === "/cliente") return "/login/cliente";
+  return "/login";
+}
+
+/** Protege cada área pelo papel — Admin (dono) acessa todas */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessao = lerSessaoDoCookie(request);
 
-  // Home do app fica na raiz — /cliente só redireciona
   if (pathname === "/cliente" || pathname === "/cliente/") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
@@ -24,12 +33,12 @@ export function middleware(request: NextRequest) {
   }
 
   const regras: { prefixo: string; papeis: SessaoUsuario["papel"][] }[] = [
-    { prefixo: "/cliente", papeis: ["cliente"] },
-    { prefixo: "/restaurante", papeis: ["restaurante"] },
-    { prefixo: "/entregador", papeis: ["entregador"] },
+    { prefixo: "/cliente", papeis: ["cliente", "dono"] },
+    { prefixo: "/restaurante", papeis: ["restaurante", "dono"] },
+    { prefixo: "/entregador", papeis: ["entregador", "dono"] },
     { prefixo: "/dono", papeis: ["dono"] },
     { prefixo: "/api/dono", papeis: ["dono"] },
-    { prefixo: "/api/restaurante", papeis: ["restaurante"] },
+    { prefixo: "/api/restaurante", papeis: ["restaurante", "dono"] },
   ];
 
   for (const regra of regras) {
@@ -45,12 +54,8 @@ export function middleware(request: NextRequest) {
           );
         }
         const url = request.nextUrl.clone();
-        // Admin/dono entra por /admin; demais áreas usam /login
-        url.pathname =
-          regra.prefixo === "/dono" || regra.prefixo === "/api/dono"
-            ? "/admin"
-            : "/login";
-        if (url.pathname === "/login") {
+        url.pathname = loginDaArea(regra.prefixo);
+        if (url.pathname.startsWith("/login")) {
           url.searchParams.set("next", pathname);
         }
         return NextResponse.redirect(url);
@@ -64,11 +69,8 @@ export function middleware(request: NextRequest) {
           );
         }
         const url = request.nextUrl.clone();
-        url.pathname =
-          regra.prefixo === "/dono" || regra.prefixo === "/api/dono"
-            ? "/admin"
-            : "/login";
-        if (url.pathname === "/login") {
+        url.pathname = loginDaArea(regra.prefixo);
+        if (url.pathname.startsWith("/login")) {
           url.searchParams.set("erro", "sem_permissao");
         }
         return NextResponse.redirect(url);

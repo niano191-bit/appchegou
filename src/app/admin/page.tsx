@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { lerSessao } from "@/lib/auth-servidor";
 import { MARCA } from "@/lib/marca";
@@ -22,11 +23,22 @@ export default async function PaginaAdmin() {
         </p>
         <h1 className="font-display text-3xl text-foreground">Admin</h1>
         <p className="text-sm leading-relaxed text-muted">
-          Gestão de {MARCA.nome}. Só contas de administrador.
+          Gestão de {MARCA.nome}. O Admin acessa todas as áreas (loja,
+          entregador e cliente).
         </p>
       </header>
 
       <FormAdminLogin />
+
+      <p className="text-center text-sm text-muted">
+        Outro acesso?{" "}
+        <Link
+          href="/login"
+          className="font-medium text-dende underline-offset-2 hover:underline"
+        >
+          Cliente, loja ou entregador
+        </Link>
+      </p>
     </div>
   );
 }

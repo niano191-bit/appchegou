@@ -11,12 +11,14 @@ import {
   criarItemCardapio,
   listarCardapioAdmin,
 } from "@/lib/pedidos-servidor";
+import { restauranteIdEfetivo } from "@/lib/restaurante-sessao";
 
 /** Cardápio da loja logada */
 export async function GET() {
   try {
     const sessao = await exigirSessao("restaurante");
-    if (!sessao.restaurante_id) {
+    const lojaId = await restauranteIdEfetivo(sessao);
+    if (!lojaId) {
       return NextResponse.json(
         { erro: "Sua conta não está ligada a um restaurante." },
         { status: 400 },
@@ -25,15 +27,15 @@ export async function GET() {
 
     if (usandoModoDemo()) {
       const [cardapio, restaurante] = await Promise.all([
-        listarCardapioAdminLocal(sessao.restaurante_id),
-        buscarRestauranteLocal(sessao.restaurante_id),
+        listarCardapioAdminLocal(lojaId),
+        buscarRestauranteLocal(lojaId),
       ]);
       return NextResponse.json({ modo: "demo", cardapio, restaurante });
     }
 
     const [cardapio, restaurante] = await Promise.all([
-      listarCardapioAdmin(sessao.restaurante_id),
-      buscarRestaurante(sessao.restaurante_id),
+      listarCardapioAdmin(lojaId),
+      buscarRestaurante(lojaId),
     ]);
     return NextResponse.json({ modo: "supabase", cardapio, restaurante });
   } catch (e) {
@@ -68,7 +70,8 @@ export async function POST(request: Request) {
 
   try {
     const sessao = await exigirSessao("restaurante");
-    if (!sessao.restaurante_id) {
+    const lojaId = await restauranteIdEfetivo(sessao);
+    if (!lojaId) {
       return NextResponse.json(
         { erro: "Sua conta não está ligada a um restaurante." },
         { status: 400 },
@@ -76,7 +79,7 @@ export async function POST(request: Request) {
     }
 
     const entrada = {
-      restaurante_id: sessao.restaurante_id,
+      restaurante_id: lojaId,
       nome: corpo.nome,
       descricao: corpo.descricao,
       preco: corpo.preco,

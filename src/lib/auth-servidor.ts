@@ -216,7 +216,7 @@ export async function criarEntregador(entrada: {
   return data as Usuario;
 }
 
-/** Exige login; se passar papel, exige esse papel */
+/** Exige login; se passar papel, exige esse papel. Admin (dono) acessa todos. */
 export async function exigirSessao(papel?: PapelUsuario | PapelUsuario[]) {
   const sessao = await lerSessao();
   if (!sessao) {
@@ -225,6 +225,9 @@ export async function exigirSessao(papel?: PapelUsuario | PapelUsuario[]) {
 
   if (papel) {
     const permitidos = Array.isArray(papel) ? papel : [papel];
+    if (sessao.papel === "dono") {
+      return sessao;
+    }
     if (!permitidos.includes(sessao.papel)) {
       throw new Error("Você não tem permissão para esta área.");
     }

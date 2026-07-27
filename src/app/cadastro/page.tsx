@@ -25,7 +25,7 @@ export default function PaginaCadastro() {
       <p className="text-center text-sm text-muted">
         Já tem conta?{" "}
         <Link
-          href="/login"
+          href="/login/cliente"
           className="font-medium text-dende underline-offset-2 hover:underline"
         >
           Entrar

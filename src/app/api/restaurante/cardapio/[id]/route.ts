@@ -9,6 +9,7 @@ import {
   atualizarItemCardapio,
   listarCardapioAdmin,
 } from "@/lib/pedidos-servidor";
+import { restauranteIdEfetivo } from "@/lib/restaurante-sessao";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -31,7 +32,8 @@ export async function PATCH(request: Request, ctx: Ctx) {
 
   try {
     const sessao = await exigirSessao("restaurante");
-    if (!sessao.restaurante_id) {
+    const lojaId = await restauranteIdEfetivo(sessao);
+    if (!lojaId) {
       return NextResponse.json(
         { erro: "Sua conta não está ligada a um restaurante." },
         { status: 400 },
@@ -39,8 +41,8 @@ export async function PATCH(request: Request, ctx: Ctx) {
     }
 
     const cardapio = usandoModoDemo()
-      ? await listarCardapioAdminLocal(sessao.restaurante_id)
-      : await listarCardapioAdmin(sessao.restaurante_id);
+      ? await listarCardapioAdminLocal(lojaId)
+      : await listarCardapioAdmin(lojaId);
 
     if (!cardapio.some((i) => i.id === id)) {
       return NextResponse.json(

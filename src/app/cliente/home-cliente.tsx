@@ -179,7 +179,7 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
           </Link>
         ) : (
           <Link
-            href="/login"
+            href="/login/cliente"
             className="shrink-0 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-dende shadow-sm"
           >
             Entrar
@@ -195,7 +195,7 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
           {MARCA.tagline}
         </p>
         <Link
-          href={logado ? "#restaurantes" : "/login"}
+          href={logado ? "#restaurantes" : "/login/cliente"}
           className="shrink-0 text-xs font-semibold underline-offset-2 hover:underline"
         >
           Pedir ›
@@ -452,7 +452,7 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
                 Entre para ver o histórico dos seus pedidos.
               </p>
               <Link
-                href="/login"
+                href="/login/cliente"
                 className="mt-4 inline-flex rounded-full bg-dende px-5 py-2.5 text-sm font-semibold text-white"
               >
                 Entrar
@@ -492,7 +492,7 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
                 Entre para acompanhar pedidos e favoritos.
               </p>
               <Link
-                href="/login"
+                href="/login/cliente"
                 className="mt-4 inline-flex rounded-full bg-dende px-5 py-2.5 text-sm font-semibold text-white"
               >
                 Entrar

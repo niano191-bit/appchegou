@@ -9,12 +9,14 @@ import {
   atualizarRestaurante,
   buscarRestaurante,
 } from "@/lib/pedidos-servidor";
+import { restauranteIdEfetivo } from "@/lib/restaurante-sessao";
 
-/** Dados da própria loja */
+/** Dados da própria loja (Admin pode abrir a primeira loja) */
 export async function GET() {
   try {
     const sessao = await exigirSessao("restaurante");
-    if (!sessao.restaurante_id) {
+    const lojaId = await restauranteIdEfetivo(sessao);
+    if (!lojaId) {
       return NextResponse.json(
         { erro: "Sua conta não está ligada a um restaurante." },
         { status: 400 },
@@ -22,7 +24,7 @@ export async function GET() {
     }
 
     if (usandoModoDemo()) {
-      const restaurante = await buscarRestauranteLocal(sessao.restaurante_id);
+      const restaurante = await buscarRestauranteLocal(lojaId);
       if (!restaurante) {
         return NextResponse.json(
           { erro: "Restaurante não encontrado." },
@@ -32,7 +34,7 @@ export async function GET() {
       return NextResponse.json({ modo: "demo", restaurante });
     }
 
-    const restaurante = await buscarRestaurante(sessao.restaurante_id);
+    const restaurante = await buscarRestaurante(lojaId);
     if (!restaurante) {
       return NextResponse.json(
         { erro: "Restaurante não encontrado." },
@@ -75,7 +77,8 @@ export async function PATCH(request: Request) {
 
   try {
     const sessao = await exigirSessao("restaurante");
-    if (!sessao.restaurante_id) {
+    const lojaId = await restauranteIdEfetivo(sessao);
+    if (!lojaId) {
       return NextResponse.json(
         { erro: "Sua conta não está ligada a um restaurante." },
         { status: 400 },
@@ -95,17 +98,11 @@ export async function PATCH(request: Request) {
     };
 
     if (usandoModoDemo()) {
-      const restaurante = await atualizarRestauranteLocal(
-        sessao.restaurante_id,
-        patch,
-      );
+      const restaurante = await atualizarRestauranteLocal(lojaId, patch);
       return NextResponse.json({ modo: "demo", restaurante });
     }
 
-    const restaurante = await atualizarRestaurante(
-      sessao.restaurante_id,
-      patch,
-    );
+    const restaurante = await atualizarRestaurante(lojaId, patch);
     return NextResponse.json({
       modo: "supabase",
       restaurante: {

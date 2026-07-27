@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { MarcaLogo } from "@/components/marca-logo";
-import { FormLogin } from "./form-login";
+import { ACESSOS_LOGIN } from "@/lib/acessos";
 
 export const metadata = {
   title: "Entrar — Tentações da Neuza",
-  description: "Entre com sua conta para pedir ou gerenciar pedidos.",
+  description: "Escolha se você é cliente, restaurante, entregador ou admin.",
 };
 
 export default async function PaginaLogin({
@@ -21,19 +21,38 @@ export default async function PaginaLogin({
         <div className="flex flex-col gap-2">
           <h1 className="font-display text-3xl text-foreground">Entrar</h1>
           <p className="text-sm leading-relaxed text-muted">
-            Use sua conta ou as de teste (senha{" "}
-            <strong className="text-foreground">teste123</strong>).
+            Escolha o seu tipo de acesso. Cada área tem o seu login.
           </p>
         </div>
       </header>
 
       {params.erro === "sem_permissao" ? (
         <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-dende-escuro">
-          Essa área não é do seu tipo de conta. Entre com a conta certa.
+          Essa área não é do seu tipo de conta. Escolha o acesso certo abaixo.
         </div>
       ) : null}
 
-      <FormLogin nextUrl={params.next} />
+      <ul className="flex flex-col gap-3">
+        {ACESSOS_LOGIN.map((acesso) => {
+          const href =
+            acesso.papel === "dono"
+              ? acesso.href
+              : params.next
+                ? `${acesso.href}?next=${encodeURIComponent(params.next)}`
+                : acesso.href;
+          return (
+            <li key={acesso.papel}>
+              <Link
+                href={href}
+                className="block rounded-2xl border border-linha bg-white px-5 py-4 transition hover:border-dende/50 hover:bg-background"
+              >
+                <p className="font-semibold text-foreground">{acesso.titulo}</p>
+                <p className="mt-1 text-sm text-muted">{acesso.descricao}</p>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
 
       <p className="text-center text-sm text-muted">
         Cliente novo?{" "}

@@ -1,13 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CONTAS_DEMO, SENHA_DEMO } from "@/lib/auth";
-import { entrar } from "@/lib/sessao-cliente";
+import { entrar, sair } from "@/lib/sessao-cliente";
+import type { PapelUsuario } from "@/types/database";
 
-export function FormLogin({ nextUrl }: { nextUrl?: string }) {
+type Props = {
+  papel: Exclude<PapelUsuario, "dono">;
+  titulo: string;
+  destinoPadrao: string;
+  nextUrl?: string;
+};
+
+function contaDemoDoPapel(papel: Props["papel"]) {
+  return CONTAS_DEMO.find((c) => c.papel === papel) ?? CONTAS_DEMO[0];
+}
+
+export function FormLoginPapel({
+  papel,
+  titulo,
+  destinoPadrao,
+  nextUrl,
+}: Props) {
   const router = useRouter();
-  const [email, setEmail] = useState(CONTAS_DEMO[0].email);
+  const demo = contaDemoDoPapel(papel);
+  const [email, setEmail] = useState(demo.email);
   const [senha, setSenha] = useState(SENHA_DEMO);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -16,8 +35,21 @@ export function FormLogin({ nextUrl }: { nextUrl?: string }) {
     setCarregando(true);
     setErro(null);
     try {
-      const { destino } = await entrar(emailLogin, senhaLogin);
-      router.push(nextUrl && nextUrl.startsWith("/") ? nextUrl : destino);
+      const { sessao, destino } = await entrar(emailLogin, senhaLogin);
+      if (sessao.papel !== papel && sessao.papel !== "dono") {
+        await sair();
+        setErro(
+          `Esta conta não é de ${titulo.toLowerCase()}. Use o link certo.`,
+        );
+        return;
+      }
+      const irPara =
+        nextUrl && nextUrl.startsWith("/")
+          ? nextUrl
+          : sessao.papel === "dono"
+            ? destino
+            : destinoPadrao || destino;
+      router.push(irPara);
       router.refresh();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível entrar.");
@@ -32,18 +64,15 @@ export function FormLogin({ nextUrl }: { nextUrl?: string }) {
         <p className="text-sm font-semibold tracking-wide text-muted uppercase">
           Entrar rápido
         </p>
-        {CONTAS_DEMO.map((conta) => (
-          <button
-            key={conta.email}
-            type="button"
-            disabled={carregando}
-            onClick={() => void fazerLogin(conta.email, SENHA_DEMO)}
-            className="rounded-2xl border border-linha bg-white px-4 py-3 text-left transition hover:border-dende/50 hover:bg-background disabled:opacity-60"
-          >
-            <p className="font-semibold text-foreground">{conta.rotulo}</p>
-            <p className="text-xs text-muted">{conta.email}</p>
-          </button>
-        ))}
+        <button
+          type="button"
+          disabled={carregando}
+          onClick={() => void fazerLogin(demo.email, SENHA_DEMO)}
+          className="rounded-2xl border border-linha bg-white px-4 py-3 text-left transition hover:border-dende/50 hover:bg-background disabled:opacity-60"
+        >
+          <p className="font-semibold text-foreground">{demo.rotulo}</p>
+          <p className="text-xs text-muted">{demo.email}</p>
+        </button>
       </div>
 
       <form
@@ -84,9 +113,19 @@ export function FormLogin({ nextUrl }: { nextUrl?: string }) {
           disabled={carregando}
           className="w-full rounded-xl bg-dende px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
         >
-          {carregando ? "Entrando…" : "Entrar"}
+          {carregando ? "Entrando…" : `Entrar como ${titulo}`}
         </button>
       </form>
+
+      <p className="text-center text-sm text-muted">
+        Outro tipo de conta?{" "}
+        <Link
+          href="/login"
+          className="font-medium text-dende underline-offset-2 hover:underline"
+        >
+          Escolher acesso
+        </Link>
+      </p>
     </div>
   );
 }

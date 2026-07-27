@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { BotaoSair } from "@/components/botao-sair";
 import { MARCA } from "@/lib/marca";
 
@@ -78,7 +79,21 @@ export function ShellAdmin({ nome, aba, onAba, children }: Props) {
           ) : null}
         </div>
         <div className="flex-1 overflow-y-auto">{nav}</div>
-        <div className="border-t border-linha px-4 py-3">
+        <div className="space-y-2 border-t border-linha px-4 py-3">
+          <p className="text-[10px] font-semibold tracking-wide text-muted uppercase">
+            Acessar áreas
+          </p>
+          <div className="flex flex-col gap-1 text-xs">
+            <Link href="/" className="text-mar hover:underline">
+              App cliente
+            </Link>
+            <Link href="/restaurante" className="text-mar hover:underline">
+              Painel loja
+            </Link>
+            <Link href="/entregador" className="text-mar hover:underline">
+              Painel entregador
+            </Link>
+          </div>
           <BotaoSair />
         </div>
       </aside>
@@ -111,7 +126,21 @@ export function ShellAdmin({ nome, aba, onAba, children }: Props) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">{nav}</div>
-            <div className="border-t border-linha px-4 py-3">
+            <div className="space-y-2 border-t border-linha px-4 py-3">
+              <p className="text-[10px] font-semibold tracking-wide text-muted uppercase">
+                Acessar áreas
+              </p>
+              <div className="flex flex-col gap-1 text-xs">
+                <Link href="/" className="text-mar hover:underline">
+                  App cliente
+                </Link>
+                <Link href="/restaurante" className="text-mar hover:underline">
+                  Painel loja
+                </Link>
+                <Link href="/entregador" className="text-mar hover:underline">
+                  Painel entregador
+                </Link>
+              </div>
               <BotaoSair />
             </div>
           </aside>

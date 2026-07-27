@@ -47,14 +47,20 @@ export async function GET(request: Request) {
 
   let restauranteId = searchParams.get("restauranteId");
 
-  if (sessao?.papel === "restaurante") {
-    if (!sessao.restaurante_id) {
-      return NextResponse.json(
-        { erro: "Sua conta não está ligada a um restaurante." },
-        { status: 400 },
-      );
+  if (sessao?.papel === "restaurante" || sessao?.papel === "dono") {
+    if (sessao.papel === "restaurante") {
+      if (!sessao.restaurante_id) {
+        return NextResponse.json(
+          { erro: "Sua conta não está ligada a um restaurante." },
+          { status: 400 },
+        );
+      }
+      restauranteId = sessao.restaurante_id;
     }
-    restauranteId = sessao.restaurante_id;
+    // Admin: usa restauranteId da query se vier; senão a própria sessão
+    if (sessao.papel === "dono" && !restauranteId && sessao.restaurante_id) {
+      restauranteId = sessao.restaurante_id;
+    }
   }
 
   if (!restauranteId) {

@@ -75,10 +75,20 @@ export function PainelRestaurante({
 
         if (!restauranteIdRef.current) {
           const user = await obterSessaoCliente();
-          if (!user?.restaurante_id) {
+          if (user?.restaurante_id) {
+            restauranteIdRef.current = user.restaurante_id;
+          } else if (user?.papel === "dono") {
+            const lojaBoot = await fetch("/api/restaurante/loja", {
+              cache: "no-store",
+            }).then((r) => r.json());
+            const idLoja = lojaBoot?.restaurante?.id as string | undefined;
+            if (!idLoja) {
+              throw new Error("Nenhuma loja disponível para o Admin.");
+            }
+            restauranteIdRef.current = idLoja;
+          } else {
             throw new Error("Sua conta não está ligada a um restaurante.");
           }
-          restauranteIdRef.current = user.restaurante_id;
         }
 
         const [dados, lojaRes] = await Promise.all([
