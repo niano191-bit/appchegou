@@ -1,7 +1,7 @@
 import { ErrorBoundary } from "@/components/error-boundary";
 import { lerSessao } from "@/lib/auth-servidor";
 import { PainelRestaurante } from "./painel-restaurante";
-import type { SecaoLoja } from "./shell-loja";
+import { normalizarSecaoLoja } from "./secoes-loja";
 
 export const metadata = {
   title: "Painel da Loja — Tentações da Neuza",
@@ -15,10 +15,7 @@ export default async function PaginaRestaurante({
 }) {
   const sessao = await lerSessao();
   const params = await searchParams;
-  const secoes: SecaoLoja[] = ["pedidos", "cardapio", "esgotado", "loja"];
-  const secaoInicial = secoes.includes(params.secao as SecaoLoja)
-    ? (params.secao as SecaoLoja)
-    : "pedidos";
+  const secaoInicial = normalizarSecaoLoja(params.secao);
 
   return (
     <div className="flex min-h-full flex-1 flex-col">

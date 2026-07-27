@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AvisoFila } from "@/components/aviso-fila";
 import { ContatoPedido } from "@/components/contato-pedido";
 import { LinksWhatsAppPedido } from "@/components/links-whatsapp-pedido";
@@ -21,9 +22,14 @@ import {
 import { rotuloPedido } from "@/lib/pedido-rotulo";
 import { obterSessaoCliente } from "@/lib/sessao-cliente";
 import { formatarReais, STATUS_PEDIDO_LABEL } from "@/types/database";
+import { AvaliacoesLoja } from "./avaliacoes-loja";
+import { EmBreve } from "./em-breve";
 import { EsgotadoRapido } from "./esgotado-rapido";
+import { FinanceiroLoja } from "./financeiro-loja";
 import { GestaoCardapioLoja } from "./gestao-cardapio";
-import { ShellLoja, type SecaoLoja } from "./shell-loja";
+import type { SecaoLoja } from "./secoes-loja";
+import { ShellLoja } from "./shell-loja";
+import { VisaoGeralLoja } from "./visao-geral";
 
 type Fila = "agora" | "historico";
 
@@ -36,8 +42,15 @@ export function PainelRestaurante({
   nomeLoja,
   secaoInicial = "pedidos",
 }: Props) {
+  const router = useRouter();
   const restauranteIdRef = useRef<string | null>(null);
-  const [secao, setSecao] = useState<SecaoLoja>(secaoInicial);
+  const [secao, setSecaoState] = useState<SecaoLoja>(secaoInicial);
+  const [badgePedidos, setBadgePedidos] = useState(0);
+
+  function setSecao(proxima: SecaoLoja) {
+    setSecaoState(proxima);
+    router.replace(`/restaurante?secao=${proxima}`, { scroll: false });
+  }
   const [fila, setFila] = useState<Fila>("agora");
   const [pedidos, setPedidos] = useState<PedidoComItens[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -86,6 +99,15 @@ export function PainelRestaurante({
         ]);
 
         setPedidos(dados);
+        if (fila === "agora") {
+          setBadgePedidos(dados.filter((p) => p.status === "novo").length);
+        } else if (restauranteIdRef.current) {
+          void listarPedidosDoRestaurante(
+            restauranteIdRef.current,
+            ["novo"],
+            "asc",
+          ).then((novos) => setBadgePedidos(novos.length));
+        }
         if (lojaRes?.restaurante) {
           setPausado(Boolean(lojaRes.restaurante.pausado));
           setPedidoMinimo(String(Number(lojaRes.restaurante.pedido_minimo ?? 0)));
@@ -305,13 +327,149 @@ export function PainelRestaurante({
     return novos.length;
   }, []);
 
+  const blocoPausa = (
+    <div
+      className={`rounded-2xl border px-4 py-3 ${
+        pausado
+          ? "border-dende/40 bg-dende-suave"
+          : "border-mar/30 bg-mar-suave/50"
+      }`}
+    >
+      <p className="text-sm font-medium text-foreground">
+        {pausado
+          ? "Pedidos pausados — clientes não conseguem pedir."
+          : "Loja recebendo pedidos (dentro do horário de funcionamento)."}
+      </p>
+      <button
+        type="button"
+        disabled={pausando}
+        onClick={() => void alternarPausa()}
+        className={`mt-2 w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60 ${
+          pausado ? "bg-mar text-white" : "border border-dende text-dende"
+        }`}
+      >
+        {pausando
+          ? "Salvando…"
+          : pausado
+            ? "Retomar pedidos"
+            : "Pausar pedidos"}
+      </button>
+    </div>
+  );
+
+  const blocoHorario = (
+    <div className="rounded-2xl border border-linha bg-white px-4 py-3">
+      <p className="text-sm font-medium text-foreground">Horário desta loja</p>
+      <p className="mt-1 text-xs text-muted">
+        Deixe em branco para usar o horário geral do app. Formato HH:MM
+        (Salvador).
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <label className="block text-xs text-muted">
+          Abre
+          <input
+            type="time"
+            value={horarioAbertura}
+            onChange={(e) => setHorarioAbertura(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
+          />
+        </label>
+        <label className="block text-xs text-muted">
+          Fecha
+          <input
+            type="time"
+            value={horarioFechamento}
+            onChange={(e) => setHorarioFechamento(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
+          />
+        </label>
+      </div>
+      <button
+        type="button"
+        disabled={salvandoHorario}
+        onClick={() => void salvarHorarioLoja()}
+        className="mt-2 w-full rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+      >
+        {salvandoHorario ? "Salvando…" : "Salvar horário"}
+      </button>
+    </div>
+  );
+
+  const blocoPix = (
+    <div className="rounded-2xl border border-linha bg-white px-4 py-3">
+      <p className="text-sm font-medium text-foreground">Chave Pix da loja</p>
+      <p className="mt-1 text-xs text-muted">
+        Usada no fechamento do dia para o dono te transferir o repasse.
+      </p>
+      <input
+        value={chavePix}
+        onChange={(e) => setChavePix(e.target.value)}
+        placeholder="CPF, e-mail, telefone ou chave aleatória"
+        className="mt-2 w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
+      />
+      <button
+        type="button"
+        disabled={salvandoPix}
+        onClick={() => void salvarChavePix()}
+        className="mt-2 w-full rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+      >
+        {salvandoPix ? "Salvando…" : "Salvar chave Pix"}
+      </button>
+    </div>
+  );
+
+  const blocoMinimo = (
+    <div className="rounded-2xl border border-linha bg-white px-4 py-3">
+      <p className="text-sm font-medium text-foreground">Pedido mínimo</p>
+      <p className="mt-1 text-xs text-muted">
+        Subtotal mínimo para o cliente pedir (sem a taxa de entrega). Use 0
+        para não ter mínimo.
+      </p>
+      <div className="mt-2 flex gap-2">
+        <input
+          type="number"
+          min={0}
+          step={0.5}
+          value={pedidoMinimo}
+          onChange={(e) => setPedidoMinimo(e.target.value)}
+          className="w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
+        />
+        <button
+          type="button"
+          disabled={salvandoMinimo}
+          onClick={() => void salvarPedidoMinimo()}
+          className="shrink-0 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {salvandoMinimo ? "…" : "Salvar"}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <ShellLoja nome={nomeLoja} secao={secao} onSecao={setSecao}>
+    <ShellLoja
+      nome={nomeLoja}
+      secao={secao}
+      onSecao={setSecao}
+      badgePedidos={badgePedidos}
+    >
       <div className="flex w-full flex-col gap-4">
       {erro ? (
         <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-muted">
           {erro}
         </div>
+      ) : null}
+
+      {secao === "visao" ? (
+        <VisaoGeralLoja
+          pausado={pausado}
+          pedidosNaFila={badgePedidos}
+          horarioAbertura={horarioAbertura}
+          horarioFechamento={horarioFechamento}
+          onIr={setSecao}
+          onAlternarPausa={() => void alternarPausa()}
+          pausando={pausando}
+        />
       ) : null}
 
       {secao === "pedidos" ? (
@@ -327,35 +485,7 @@ export function PainelRestaurante({
         }
       />
 
-      <div
-        className={`rounded-2xl border px-4 py-3 ${
-          pausado
-            ? "border-dende/40 bg-dende-suave"
-            : "border-mar/30 bg-mar-suave/50"
-        }`}
-      >
-        <p className="text-sm font-medium text-foreground">
-          {pausado
-            ? "Pedidos pausados — clientes não conseguem pedir."
-            : "Loja recebendo pedidos (dentro do horário de funcionamento)."}
-        </p>
-        <button
-          type="button"
-          disabled={pausando}
-          onClick={() => void alternarPausa()}
-          className={`mt-2 w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60 ${
-            pausado
-              ? "bg-mar text-white"
-              : "border border-dende text-dende"
-          }`}
-        >
-          {pausando
-            ? "Salvando…"
-            : pausado
-              ? "Retomar pedidos"
-              : "Pausar pedidos"}
-        </button>
-      </div>
+      {blocoPausa}
 
       <div className="flex gap-2">
         <button
@@ -571,127 +701,125 @@ export function PainelRestaurante({
       </>
       ) : null}
 
-      {secao === "cardapio" ? <GestaoCardapioLoja /> : null}
+      {secao === "conversas" ? (
+        <EmBreve
+          titulo="Conversas"
+          texto="Em breve você poderá falar com o cliente por aqui. Por enquanto use o WhatsApp nos pedidos."
+        />
+      ) : null}
 
-      {secao === "esgotado" ? <EsgotadoRapido /> : null}
+      {secao === "avaliacoes" ? <AvaliacoesLoja /> : null}
 
-      {secao === "loja" ? (
-      <>
-      <div
-        className={`rounded-2xl border px-4 py-3 ${
-          pausado
-            ? "border-dende/40 bg-dende-suave"
-            : "border-mar/30 bg-mar-suave/50"
-        }`}
-      >
-        <p className="text-sm font-medium text-foreground">
-          {pausado
-            ? "Pedidos pausados — clientes não conseguem pedir."
-            : "Loja recebendo pedidos (dentro do horário de funcionamento)."}
-        </p>
-        <button
-          type="button"
-          disabled={pausando}
-          onClick={() => void alternarPausa()}
-          className={`mt-2 w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60 ${
-            pausado
-              ? "bg-mar text-white"
-              : "border border-dende text-dende"
-          }`}
-        >
-          {pausando
-            ? "Salvando…"
-            : pausado
-              ? "Retomar pedidos"
-              : "Pausar pedidos"}
-        </button>
-      </div>
+      {secao === "produtos" ? <GestaoCardapioLoja /> : null}
 
-      <div className="rounded-2xl border border-linha bg-white px-4 py-3">
-        <p className="text-sm font-medium text-foreground">Pedido mínimo</p>
-        <p className="mt-1 text-xs text-muted">
-          Subtotal mínimo para o cliente pedir (sem a taxa de entrega). Use 0
-          para não ter mínimo.
-        </p>
-        <div className="mt-2 flex gap-2">
-          <input
-            type="number"
-            min={0}
-            step={0.5}
-            value={pedidoMinimo}
-            onChange={(e) => setPedidoMinimo(e.target.value)}
-            className="w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
+      {secao === "categorias" ? (
+        <EmBreve
+          titulo="Categorias do cardápio"
+          texto="Ainda não há categorias por loja. Organize os pratos em Produtos; as categorias da home ficam no Admin."
+        />
+      ) : null}
+
+      {secao === "adicionais" ? (
+        <EmBreve
+          titulo="Adicionais"
+          texto="Em breve você poderá cadastrar adicionais (queijo, molho, etc.) nos pratos."
+        />
+      ) : null}
+
+      {secao === "estoque" ? <EsgotadoRapido /> : null}
+
+      {secao === "entregador" ? (
+        <EmBreve
+          titulo="Chamar entregador"
+          texto="Hoje o Admin atribui o entregador. Em breve a loja poderá chamar por aqui."
+        />
+      ) : null}
+
+      {secao === "bairros" ? (
+        <EmBreve
+          titulo="Bairros e taxas"
+          texto="As taxas de entrega por bairro são definidas no painel Admin."
+        />
+      ) : null}
+
+      {secao === "horarios" ? blocoHorario : null}
+
+      {secao === "financeiro" ? <FinanceiroLoja /> : null}
+
+      {secao === "repasses" ? (
+        <div className="flex flex-col gap-3">
+          <EmBreve
+            titulo="Repasses"
+            texto="O valor a receber aparece no fechamento do dia no Admin. Cadastre sua chave Pix abaixo."
           />
+          {blocoPix}
+        </div>
+      ) : null}
+
+      {secao === "cupons" ? (
+        <EmBreve
+          titulo="Cupons"
+          texto="Os cupons do app são criados pelo Admin. Em breve a loja poderá ter cupons próprios."
+        />
+      ) : null}
+
+      {secao === "pagamentos" ? (
+        <div className="flex flex-col gap-3">
+          <div className="rounded-2xl border border-linha bg-white px-4 py-4 text-sm text-muted">
+            <p className="font-medium text-foreground">
+              Formas aceitas no app
+            </p>
+            <p className="mt-2">
+              Pix e dinheiro (conforme configuração do Admin). Sua chave Pix é
+              usada no repasse da loja.
+            </p>
+          </div>
+          {blocoPix}
+        </div>
+      ) : null}
+
+      {secao === "impressao" ? (
+        <div className="rounded-2xl border border-linha bg-white px-4 py-4 text-sm text-muted">
+          <p className="font-medium text-foreground">Impressão de comanda</p>
+          <p className="mt-2">
+            Em cada pedido, use <strong>Salvar PDF da comanda</strong> para
+            imprimir ou compartilhar. Ao aceitar um pedido novo, o PDF é gerado
+            automaticamente.
+          </p>
           <button
             type="button"
-            disabled={salvandoMinimo}
-            onClick={() => void salvarPedidoMinimo()}
-            className="shrink-0 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            onClick={() => setSecao("pedidos")}
+            className="mt-4 w-full rounded-xl bg-dende px-4 py-2.5 text-sm font-semibold text-white"
           >
-            {salvandoMinimo ? "…" : "Salvar"}
+            Ir para Pedidos
           </button>
         </div>
-      </div>
+      ) : null}
 
-      <div className="rounded-2xl border border-linha bg-white px-4 py-3">
-        <p className="text-sm font-medium text-foreground">
-          Horário desta loja
-        </p>
-        <p className="mt-1 text-xs text-muted">
-          Deixe em branco para usar o horário geral do app. Formato HH:MM
-          (Salvador).
-        </p>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <label className="block text-xs text-muted">
-            Abre
-            <input
-              type="time"
-              value={horarioAbertura}
-              onChange={(e) => setHorarioAbertura(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
-            />
-          </label>
-          <label className="block text-xs text-muted">
-            Fecha
-            <input
-              type="time"
-              value={horarioFechamento}
-              onChange={(e) => setHorarioFechamento(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
-            />
-          </label>
-        </div>
-        <button
-          type="button"
-          disabled={salvandoHorario}
-          onClick={() => void salvarHorarioLoja()}
-          className="mt-2 w-full rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {salvandoHorario ? "Salvando…" : "Salvar horário"}
-        </button>
-      </div>
-
-      <div className="rounded-2xl border border-linha bg-white px-4 py-3">
-        <p className="text-sm font-medium text-foreground">Chave Pix da loja</p>
-        <p className="mt-1 text-xs text-muted">
-          Usada no fechamento do dia para o dono te transferir o repasse.
-        </p>
-        <input
-          value={chavePix}
-          onChange={(e) => setChavePix(e.target.value)}
-          placeholder="CPF, e-mail, telefone ou chave aleatória"
-          className="mt-2 w-full rounded-xl border border-linha px-3 py-2.5 text-sm text-foreground outline-none focus:border-dende"
-        />
-        <button
-          type="button"
-          disabled={salvandoPix}
-          onClick={() => void salvarChavePix()}
-          className="mt-2 w-full rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {salvandoPix ? "Salvando…" : "Salvar chave Pix"}
-        </button>
-      </div>
-      </>
+      {secao === "config" ? (
+        <>
+          {blocoPausa}
+          {blocoMinimo}
+          <p className="text-xs text-muted">
+            Nome, foto e endereço da loja ficam em{" "}
+            <button
+              type="button"
+              onClick={() => setSecao("produtos")}
+              className="font-semibold text-mar underline-offset-2 hover:underline"
+            >
+              Produtos
+            </button>
+            . Horário em{" "}
+            <button
+              type="button"
+              onClick={() => setSecao("horarios")}
+              className="font-semibold text-mar underline-offset-2 hover:underline"
+            >
+              Horários
+            </button>
+            .
+          </p>
+        </>
       ) : null}
       </div>
     </ShellLoja>
