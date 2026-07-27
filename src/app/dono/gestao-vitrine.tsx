@@ -11,6 +11,9 @@ import {
   uploadImagemBannerDono,
 } from "@/lib/vitrine";
 
+const inputCls =
+  "rounded-lg border border-linha bg-white px-2.5 py-2 text-sm text-foreground outline-none focus:border-dende";
+
 export function GestaoVitrine() {
   const [banners, setBanners] = useState<BannerVitrine[]>([]);
   const [categorias, setCategorias] = useState<CategoriaVitrine[]>([]);
@@ -91,7 +94,10 @@ export function GestaoVitrine() {
     }
   }
 
-  async function trocarImagemBanner(b: BannerVitrine, fileList: FileList | null) {
+  async function trocarImagemBanner(
+    b: BannerVitrine,
+    fileList: FileList | null,
+  ) {
     const file = fileList?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -182,13 +188,15 @@ export function GestaoVitrine() {
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
-        Vitrine / Home
-      </h2>
-      <p className="text-sm text-muted">
-        Banners e categorias que o cliente vê na tela inicial.
-      </p>
+    <section className="flex flex-col gap-6">
+      <div>
+        <h2 className="text-sm font-semibold tracking-wide text-muted uppercase">
+          Vitrine / Home
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Banners e categorias que o cliente vê na tela inicial.
+        </p>
+      </div>
 
       {erro ? (
         <div className="rounded-2xl border border-dende/30 bg-dende-suave px-5 py-4 text-sm text-dende-escuro">
@@ -201,67 +209,121 @@ export function GestaoVitrine() {
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-linha bg-white px-4 py-4 space-y-3">
-        <p className="text-sm font-semibold text-foreground">Novo banner</p>
-        <p className="text-xs text-muted">
-          Escolha a imagem do celular ou do computador (JPG ou PNG, até 3 MB).
-        </p>
-        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-linha bg-[#f7f7f8] px-4 py-8 text-center transition hover:border-dende/50 hover:bg-[#f0ebe4]/40">
-          <span className="text-sm font-medium text-foreground">
-            {arquivoNovo ? "Trocar imagem" : "Escolher imagem"}
-          </span>
-          <span className="text-xs text-muted">
-            Toque aqui para abrir a galeria ou arquivos
-          </span>
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="sr-only"
-            onChange={(e) => {
-              escolherArquivo(e.target.files);
-              e.target.value = "";
-            }}
-          />
-        </label>
-        {previaNova ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={previaNova}
-            alt=""
-            className="aspect-[16/7] w-full rounded-xl object-cover bg-[#f0ebe4]"
-          />
-        ) : (
-          <div className="flex aspect-[16/7] w-full items-center justify-center rounded-xl border border-dashed border-linha bg-[#f7f7f8] text-sm text-muted">
-            Prévia da imagem
+      {/* ——— Banners ——— */}
+      <div className="rounded-2xl border border-linha bg-white p-4 space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Banners</p>
+            <p className="text-xs text-muted">
+              Imagens da home (JPG ou PNG, até 3 MB).
+            </p>
           </div>
-        )}
-        <button
-          type="button"
-          disabled={salvando || !arquivoNovo}
-          onClick={() => void criarBanner()}
-          className="rounded-xl bg-dende px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {salvando ? "Enviando…" : "Adicionar banner"}
-        </button>
-      </div>
+        </div>
 
-      <ul className="flex flex-col gap-3">
-        {banners.map((b) => (
-          <li
-            key={b.id}
-            className="rounded-2xl border border-linha bg-white px-4 py-4"
-          >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-2 rounded-xl border border-dashed border-linha bg-[#faf8f5] p-3">
+            <label className="flex aspect-[16/7] cursor-pointer flex-col items-center justify-center gap-1 overflow-hidden rounded-lg border border-dashed border-linha bg-white text-center transition hover:border-dende/50">
+              {previaNova ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previaNova}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <>
+                  <span className="text-sm font-medium text-foreground">
+                    + Novo banner
+                  </span>
+                  <span className="px-2 text-xs text-muted">
+                    Toque para escolher a imagem
+                  </span>
+                </>
+              )}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="sr-only"
+                onChange={(e) => {
+                  escolherArquivo(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              disabled={salvando || !arquivoNovo}
+              onClick={() => void criarBanner()}
+              className="rounded-lg bg-dende px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {salvando && arquivoNovo ? "Enviando…" : "Adicionar"}
+            </button>
+          </div>
+
+          {banners.map((b) => (
             <form
-              className="space-y-2"
+              key={b.id}
+              className={`flex flex-col gap-2 rounded-xl border p-3 ${
+                b.ativo
+                  ? "border-linha bg-[#faf8f5]"
+                  : "border-linha/60 bg-[#f3f1ee] opacity-70"
+              }`}
               onSubmit={(e) => {
                 e.preventDefault();
                 void salvarOrdemBanner(b, e.currentTarget);
               }}
             >
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-foreground">
-                  Banner · ordem {b.ordem}
-                </p>
+              <div className="relative aspect-[16/7] overflow-hidden rounded-lg bg-[#f0ebe4]">
+                {b.imagem_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={b.imagem_url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-xs text-muted">
+                    Sem imagem
+                  </div>
+                )}
+                {!b.ativo ? (
+                  <span className="absolute left-2 top-2 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    Inativo
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-muted">
+                  Ordem
+                  <input
+                    name="ordem"
+                    type="number"
+                    defaultValue={b.ordem}
+                    className={`${inputCls} w-16`}
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={salvando}
+                  className="text-xs font-semibold text-mar"
+                >
+                  Salvar
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                <label className="cursor-pointer font-medium text-foreground underline-offset-2 hover:underline">
+                  Trocar
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="sr-only"
+                    disabled={salvando}
+                    onChange={(e) => {
+                      void trocarImagemBanner(b, e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
                 <button
                   type="button"
                   disabled={salvando}
@@ -270,52 +332,9 @@ export function GestaoVitrine() {
                       ativo: !b.ativo,
                     }).then(carregar)
                   }
-                  className="text-xs font-medium text-dende underline-offset-2 hover:underline"
+                  className="font-medium text-dende"
                 >
                   {b.ativo ? "Desativar" : "Ativar"}
-                </button>
-              </div>
-              {b.imagem_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={b.imagem_url}
-                  alt=""
-                  className="aspect-[16/7] w-full rounded-xl object-cover bg-[#f0ebe4]"
-                />
-              ) : (
-                <div className="flex aspect-[16/7] w-full items-center justify-center rounded-xl border border-dashed border-linha bg-[#f7f7f8] text-sm text-muted">
-                  Sem imagem
-                </div>
-              )}
-              <label className="inline-flex cursor-pointer items-center rounded-xl border border-linha px-3 py-2 text-sm font-medium text-foreground hover:border-dende">
-                Trocar imagem
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="sr-only"
-                  disabled={salvando}
-                  onChange={(e) => {
-                    void trocarImagemBanner(b, e.target.files);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-              <label className="block text-sm text-muted">
-                Ordem
-                <input
-                  name="ordem"
-                  type="number"
-                  defaultValue={b.ordem}
-                  className="mt-1 w-full rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
-                />
-              </label>
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  disabled={salvando}
-                  className="text-sm font-semibold text-mar"
-                >
-                  Salvar
                 </button>
                 <button
                   type="button"
@@ -325,133 +344,144 @@ export function GestaoVitrine() {
                       carregar,
                     )
                   }
-                  className="text-sm font-medium text-dende"
+                  className="font-medium text-dende"
                 >
                   Excluir
                 </button>
               </div>
             </form>
-          </li>
-        ))}
-      </ul>
+          ))}
+        </div>
+      </div>
 
-      <div className="rounded-2xl border border-linha bg-white px-4 py-4 space-y-3">
-        <p className="text-sm font-semibold text-foreground">Nova categoria</p>
-        <label className="block text-sm text-muted">
-          Nome
-          <input
-            value={novaCat.nome}
-            onChange={(e) => setNovaCat({ ...novaCat, nome: e.target.value })}
-            className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
-          />
-        </label>
-        <label className="block text-sm text-muted">
-          Emoji
+      {/* ——— Categorias ——— */}
+      <div className="rounded-2xl border border-linha bg-white p-4 space-y-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Categorias</p>
+          <p className="text-xs text-muted">
+            Rolagem da home. Palavras-chave vazias = “Todos” (sem filtro).
+          </p>
+        </div>
+
+        <div className="grid gap-2 rounded-xl border border-dashed border-linha bg-[#faf8f5] p-3 sm:grid-cols-[3.5rem_minmax(0,8rem)_1fr_auto]">
           <input
             value={novaCat.emoji}
             onChange={(e) => setNovaCat({ ...novaCat, emoji: e.target.value })}
-            className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+            aria-label="Emoji"
+            title="Emoji"
+            className={`${inputCls} text-center`}
           />
-        </label>
-        <label className="block text-sm text-muted">
-          Palavras-chave (vírgula). Vazio = Todos (sem filtro)
+          <input
+            value={novaCat.nome}
+            onChange={(e) => setNovaCat({ ...novaCat, nome: e.target.value })}
+            placeholder="Nome"
+            aria-label="Nome"
+            className={inputCls}
+          />
           <input
             value={novaCat.palavras_chave}
             onChange={(e) =>
               setNovaCat({ ...novaCat, palavras_chave: e.target.value })
             }
-            placeholder="ex: pizza, massa, italiana"
-            className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+            placeholder="Palavras-chave (vírgula)"
+            aria-label="Palavras-chave"
+            className={inputCls}
           />
-        </label>
-        <button
-          type="button"
-          disabled={salvando || !novaCat.nome.trim()}
-          onClick={() => void criarCat()}
-          className="rounded-xl bg-dende px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          Adicionar categoria
-        </button>
-      </div>
-
-      <ul className="flex flex-col gap-3">
-        {categorias.map((c) => (
-          <li
-            key={c.id}
-            className="rounded-2xl border border-linha bg-white px-4 py-4"
+          <button
+            type="button"
+            disabled={salvando || !novaCat.nome.trim()}
+            onClick={() => void criarCat()}
+            className="rounded-lg bg-dende px-3 py-2 text-sm font-semibold text-white disabled:opacity-60 sm:self-stretch"
           >
-            <form
-              className="space-y-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void salvarCat(c, e.currentTarget);
-              }}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-foreground">
-                  {c.emoji} {c.nome}
-                </p>
-                <button
-                  type="button"
-                  disabled={salvando}
-                  onClick={() =>
-                    void atualizarCategoriaDono(c.id, {
-                      ativo: !c.ativo,
-                    }).then(carregar)
-                  }
-                  className="text-xs font-medium text-dende underline-offset-2 hover:underline"
+            Adicionar
+          </button>
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border border-linha">
+          <div className="hidden min-w-[560px] grid-cols-[3.5rem_minmax(0,8rem)_1fr_4rem_auto] gap-2 border-b border-linha bg-[#faf8f5] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted sm:grid">
+            <span>Emoji</span>
+            <span>Nome</span>
+            <span>Palavras-chave</span>
+            <span>Ord.</span>
+            <span>Ações</span>
+          </div>
+          <ul className="min-w-[560px] divide-y divide-linha">
+            {categorias.map((c) => (
+              <li
+                key={c.id}
+                className={c.ativo ? "bg-white" : "bg-[#f3f1ee] opacity-75"}
+              >
+                <form
+                  className="grid grid-cols-[3.5rem_minmax(0,8rem)_1fr_4rem_auto] items-center gap-2 px-3 py-2.5"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void salvarCat(c, e.currentTarget);
+                  }}
                 >
-                  {c.ativo ? "Desativar" : "Ativar"}
-                </button>
-              </div>
-              <div className="grid grid-cols-[4rem_1fr] gap-2">
-                <input
-                  name="emoji"
-                  defaultValue={c.emoji}
-                  className="rounded-xl border border-linha px-2 py-2 text-center text-sm outline-none focus:border-dende"
-                />
-                <input
-                  name="nome"
-                  defaultValue={c.nome}
-                  className="rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
-                />
-              </div>
-              <input
-                name="palavras_chave"
-                defaultValue={c.palavras_chave}
-                className="w-full rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
-              />
-              <input
-                name="ordem"
-                type="number"
-                defaultValue={c.ordem}
-                className="w-full rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
-              />
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  disabled={salvando}
-                  className="text-sm font-semibold text-mar"
-                >
-                  Salvar
-                </button>
-                <button
-                  type="button"
-                  disabled={salvando}
-                  onClick={() =>
-                    void atualizarCategoriaDono(c.id, { excluir: true }).then(
-                      carregar,
-                    )
-                  }
-                  className="text-sm font-medium text-dende"
-                >
-                  Excluir
-                </button>
-              </div>
-            </form>
-          </li>
-        ))}
-      </ul>
+                  <input
+                    name="emoji"
+                    defaultValue={c.emoji}
+                    aria-label={`Emoji ${c.nome}`}
+                    className={`${inputCls} text-center`}
+                  />
+                  <input
+                    name="nome"
+                    defaultValue={c.nome}
+                    aria-label={`Nome ${c.nome}`}
+                    className={inputCls}
+                  />
+                  <input
+                    name="palavras_chave"
+                    defaultValue={c.palavras_chave}
+                    aria-label={`Palavras-chave ${c.nome}`}
+                    className={inputCls}
+                  />
+                  <input
+                    name="ordem"
+                    type="number"
+                    defaultValue={c.ordem}
+                    aria-label={`Ordem ${c.nome}`}
+                    className={`${inputCls} w-full`}
+                  />
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 whitespace-nowrap text-xs">
+                    <button
+                      type="submit"
+                      disabled={salvando}
+                      className="font-semibold text-mar"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={salvando}
+                      onClick={() =>
+                        void atualizarCategoriaDono(c.id, {
+                          ativo: !c.ativo,
+                        }).then(carregar)
+                      }
+                      className="font-medium text-dende"
+                    >
+                      {c.ativo ? "Desativar" : "Ativar"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={salvando}
+                      onClick={() =>
+                        void atualizarCategoriaDono(c.id, {
+                          excluir: true,
+                        }).then(carregar)
+                      }
+                      className="font-medium text-dende"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </section>
   );
 }
