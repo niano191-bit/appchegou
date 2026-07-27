@@ -8,6 +8,7 @@ import {
   buscarVitrineDono,
   criarBannerDono,
   criarCategoriaDono,
+  uploadImagemBannerDono,
 } from "@/lib/vitrine";
 
 export function GestaoVitrine() {
@@ -18,7 +19,8 @@ export function GestaoVitrine() {
   const [erro, setErro] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const [novaImagem, setNovaImagem] = useState("");
+  const [arquivoNovo, setArquivoNovo] = useState<File | null>(null);
+  const [previaNova, setPreviaNova] = useState<string | null>(null);
   const [novaCat, setNovaCat] = useState({
     nome: "",
     emoji: "🍽️",
@@ -44,16 +46,42 @@ export function GestaoVitrine() {
     })();
   }, [carregar]);
 
+  useEffect(() => {
+    if (!arquivoNovo) {
+      setPreviaNova(null);
+      return;
+    }
+    const url = URL.createObjectURL(arquivoNovo);
+    setPreviaNova(url);
+    return () => URL.revokeObjectURL(url);
+  }, [arquivoNovo]);
+
+  function escolherArquivo(fileList: FileList | null) {
+    const file = fileList?.[0] ?? null;
+    if (!file) {
+      setArquivoNovo(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setErro("Escolha um arquivo de imagem (JPG ou PNG).");
+      return;
+    }
+    setErro(null);
+    setArquivoNovo(file);
+  }
+
   async function criarBanner() {
+    if (!arquivoNovo) return;
     setSalvando(true);
     setErro(null);
     setMsg(null);
     try {
+      const imagem_url = await uploadImagemBannerDono(arquivoNovo);
       await criarBannerDono({
-        imagem_url: novaImagem,
+        imagem_url,
         ordem: banners.length + 1,
       });
-      setNovaImagem("");
+      setArquivoNovo(null);
       setMsg("Banner criado. Aparece na home do cliente.");
       await carregar();
     } catch (e) {
@@ -63,14 +91,35 @@ export function GestaoVitrine() {
     }
   }
 
-  async function salvarBanner(b: BannerVitrine, form: HTMLFormElement) {
+  async function trocarImagemBanner(b: BannerVitrine, fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErro("Escolha um arquivo de imagem (JPG ou PNG).");
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    setMsg(null);
+    try {
+      const imagem_url = await uploadImagemBannerDono(file);
+      await atualizarBannerDono(b.id, { imagem_url });
+      setMsg("Imagem do banner atualizada.");
+      await carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao trocar imagem.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function salvarOrdemBanner(b: BannerVitrine, form: HTMLFormElement) {
     const dados = new FormData(form);
     setSalvando(true);
     setErro(null);
     setMsg(null);
     try {
       await atualizarBannerDono(b.id, {
-        imagem_url: String(dados.get("imagem_url") ?? ""),
         ordem: Number(dados.get("ordem") ?? 0),
       });
       setMsg("Banner atualizado.");
@@ -155,21 +204,29 @@ export function GestaoVitrine() {
       <div className="rounded-2xl border border-linha bg-white px-4 py-4 space-y-3">
         <p className="text-sm font-semibold text-foreground">Novo banner</p>
         <p className="text-xs text-muted">
-          Cole o link da imagem (JPG ou PNG). Ela aparece na home do cliente.
+          Escolha a imagem do celular ou do computador (JPG ou PNG, até 3 MB).
         </p>
-        <label className="block text-sm text-muted">
-          URL da imagem
+        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-linha bg-[#f7f7f8] px-4 py-8 text-center transition hover:border-dende/50 hover:bg-[#f0ebe4]/40">
+          <span className="text-sm font-medium text-foreground">
+            {arquivoNovo ? "Trocar imagem" : "Escolher imagem"}
+          </span>
+          <span className="text-xs text-muted">
+            Toque aqui para abrir a galeria ou arquivos
+          </span>
           <input
-            value={novaImagem}
-            onChange={(e) => setNovaImagem(e.target.value)}
-            placeholder="https://..."
-            className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="sr-only"
+            onChange={(e) => {
+              escolherArquivo(e.target.files);
+              e.target.value = "";
+            }}
           />
         </label>
-        {novaImagem.trim() ? (
+        {previaNova ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={novaImagem.trim()}
+            src={previaNova}
             alt=""
             className="aspect-[16/7] w-full rounded-xl object-cover bg-[#f0ebe4]"
           />
@@ -180,11 +237,11 @@ export function GestaoVitrine() {
         )}
         <button
           type="button"
-          disabled={salvando || !novaImagem.trim()}
+          disabled={salvando || !arquivoNovo}
           onClick={() => void criarBanner()}
           className="rounded-xl bg-dende px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
         >
-          Adicionar banner
+          {salvando ? "Enviando…" : "Adicionar banner"}
         </button>
       </div>
 
@@ -198,7 +255,7 @@ export function GestaoVitrine() {
               className="space-y-2"
               onSubmit={(e) => {
                 e.preventDefault();
-                void salvarBanner(b, e.currentTarget);
+                void salvarOrdemBanner(b, e.currentTarget);
               }}
             >
               <div className="flex items-center justify-between gap-2">
@@ -230,13 +287,17 @@ export function GestaoVitrine() {
                   Sem imagem
                 </div>
               )}
-              <label className="block text-sm text-muted">
-                URL da imagem
+              <label className="inline-flex cursor-pointer items-center rounded-xl border border-linha px-3 py-2 text-sm font-medium text-foreground hover:border-dende">
+                Trocar imagem
                 <input
-                  name="imagem_url"
-                  defaultValue={b.imagem_url ?? ""}
-                  placeholder="https://..."
-                  className="mt-1 w-full rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  disabled={salvando}
+                  onChange={(e) => {
+                    void trocarImagemBanner(b, e.target.files);
+                    e.target.value = "";
+                  }}
                 />
               </label>
               <label className="block text-sm text-muted">

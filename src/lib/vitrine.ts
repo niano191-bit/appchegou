@@ -32,6 +32,20 @@ export async function buscarVitrineDono() {
   };
 }
 
+/** Envia arquivo de imagem e devolve a URL pública (ou data URL no demo). */
+export async function uploadImagemBannerDono(arquivo: File) {
+  const form = new FormData();
+  form.append("arquivo", arquivo);
+  const resposta = await fetch("/api/dono/vitrine/upload", {
+    method: "POST",
+    body: form,
+  });
+  const json = (await resposta.json()) as { url?: string; erro?: string };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao enviar imagem.");
+  if (!json.url) throw new Error("Upload sem URL de retorno.");
+  return json.url;
+}
+
 export async function criarBannerDono(entrada: {
   imagem_url: string;
   ordem?: number;

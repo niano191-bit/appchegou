@@ -1,6 +1,6 @@
 # SQL no Supabase (produção)
 
-**Atualizado:** migrations `004` → `022` (banner com imagem).
+**Atualizado:** migrations `004` → `023` (storage de banners).
 
 Se criar um projeto novo do zero, rode nesta ordem:
 
@@ -26,6 +26,7 @@ Se criar um projeto novo do zero, rode nesta ordem:
 20. `020_fase28_chave_pix_loja.sql`
 21. `021_fase29_vitrine.sql`
 22. `022_fase30_banner_imagem.sql`
+23. `023_fase31_storage_vitrine.sql`
 
 Script local (com `SUPABASE_ACCESS_TOKEN`):
 
