@@ -36,7 +36,10 @@ export async function listarCategoriasVitrine(apenasAtivos = false) {
   if (apenasAtivos) q = q.eq("ativo", true);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
-  return (data ?? []) as CategoriaVitrine[];
+  return ((data ?? []) as CategoriaVitrine[]).map((c) => ({
+    ...c,
+    imagem_url: c.imagem_url ?? null,
+  }));
 }
 
 export async function criarBannerVitrine(entrada: {
@@ -125,6 +128,7 @@ export async function atualizarCategoriaVitrine(
   patch: Partial<{
     nome: string;
     emoji: string;
+    imagem_url: string | null;
     palavras_chave: string;
     ativo: boolean;
     ordem: number;
@@ -138,6 +142,9 @@ export async function atualizarCategoriaVitrine(
     body.nome = nome;
   }
   if (patch.emoji !== undefined) body.emoji = patch.emoji.trim() || "🍽️";
+  if (patch.imagem_url !== undefined) {
+    body.imagem_url = patch.imagem_url?.trim() || null;
+  }
   if (patch.palavras_chave !== undefined) {
     body.palavras_chave = patch.palavras_chave.trim();
   }

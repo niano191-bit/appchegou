@@ -413,6 +413,13 @@ export async function lerBancoLocal(): Promise<BancoLocal> {
   if (!banco.categorias_vitrine?.length) {
     banco.categorias_vitrine = categoriasPadrao(agora());
     mudou = true;
+  } else {
+    for (const c of banco.categorias_vitrine) {
+      if (c.imagem_url === undefined) {
+        c.imagem_url = null;
+        mudou = true;
+      }
+    }
   }
 
   // Pedidos antigos sem campo de pagamento: considera pagos
@@ -1833,6 +1840,7 @@ export async function criarCategoriaVitrineLocal(entrada: {
     id: crypto.randomUUID(),
     nome,
     emoji: (entrada.emoji ?? "🍽️").trim() || "🍽️",
+    imagem_url: null,
     palavras_chave: (entrada.palavras_chave ?? "").trim(),
     ativo: true,
     ordem: Number(entrada.ordem ?? banco.categorias_vitrine.length),
@@ -1848,6 +1856,7 @@ export async function atualizarCategoriaVitrineLocal(
   patch: Partial<{
     nome: string;
     emoji: string;
+    imagem_url: string | null;
     palavras_chave: string;
     ativo: boolean;
     ordem: number;
@@ -1863,6 +1872,9 @@ export async function atualizarCategoriaVitrineLocal(
   }
   if (patch.emoji !== undefined) {
     categoria.emoji = patch.emoji.trim() || "🍽️";
+  }
+  if (patch.imagem_url !== undefined) {
+    categoria.imagem_url = patch.imagem_url?.trim() || null;
   }
   if (patch.palavras_chave !== undefined) {
     categoria.palavras_chave = patch.palavras_chave.trim();

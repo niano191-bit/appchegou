@@ -27,8 +27,11 @@ export async function POST(request: Request) {
     );
   }
 
+  const pastaRaw = String(form.get("pasta") ?? "banners");
+  const pasta = pastaRaw === "categorias" ? "categorias" : "banners";
+
   try {
-    const url = await uploadImagemVitrine(arquivo);
+    const url = await uploadImagemVitrine(arquivo, pasta);
     return NextResponse.json({ url });
   } catch (e) {
     const mensagem =

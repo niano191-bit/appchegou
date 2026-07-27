@@ -147,6 +147,8 @@ export type CategoriaVitrine = {
   id: string;
   nome: string;
   emoji: string;
+  /** Imagem do botão na home; se vazio, usa o emoji */
+  imagem_url?: string | null;
   /** Palavras separadas por vírgula; vazio = "Todos" (sem filtro) */
   palavras_chave: string;
   ativo: boolean;

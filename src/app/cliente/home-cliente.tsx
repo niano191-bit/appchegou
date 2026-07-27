@@ -277,13 +277,22 @@ export function HomeCliente({ logado, nomeUsuario }: Props) {
                       className="flex w-[4.5rem] flex-col items-center gap-1.5"
                     >
                       <span
-                        className={`flex h-14 w-14 items-center justify-center rounded-2xl text-2xl transition ${
+                        className={`flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl text-2xl transition ${
                           ativa
                             ? "border-2 border-dende bg-dende-suave"
                             : "border border-linha bg-[#f7f7f8]"
                         }`}
                       >
-                        {c.emoji}
+                        {c.imagem_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={c.imagem_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          c.emoji
+                        )}
                       </span>
                       <span
                         className={`text-center text-[11px] font-medium leading-tight ${

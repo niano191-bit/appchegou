@@ -41,11 +41,14 @@ export async function arquivoParaDataUrl(arquivo: File | Blob, tipo: string) {
 }
 
 /**
- * Faz upload da imagem do banner.
+ * Faz upload da imagem da vitrine (banner ou categoria).
  * Em produção: Supabase Storage (bucket vitrine).
  * Em demo: data URL gravada no JSON local.
  */
-export async function uploadImagemVitrine(arquivo: File) {
+export async function uploadImagemVitrine(
+  arquivo: File,
+  pasta: "banners" | "categorias" = "banners",
+) {
   const tipo = (arquivo.type || "").toLowerCase();
   if (!TIPOS_OK.has(tipo)) {
     throw new Error("Envie uma imagem JPG, PNG ou WEBP.");
@@ -62,7 +65,7 @@ export async function uploadImagemVitrine(arquivo: File) {
   }
 
   const supabase = clienteStorage();
-  const nome = `banners/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${extensao(tipo, arquivo.name)}`;
+  const nome = `${pasta}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${extensao(tipo, arquivo.name)}`;
   const bytes = new Uint8Array(await arquivo.arrayBuffer());
 
   const { error } = await supabase.storage.from("vitrine").upload(nome, bytes, {

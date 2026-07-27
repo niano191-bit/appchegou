@@ -26,6 +26,7 @@ export function GestaoVitrine() {
   const [previaNova, setPreviaNova] = useState<string | null>(null);
   const [abertoBanners, setAbertoBanners] = useState(true);
   const [abertoCategorias, setAbertoCategorias] = useState(true);
+  const [catImagemId, setCatImagemId] = useState<string | null>(null);
   const [novaCat, setNovaCat] = useState({
     nome: "",
     emoji: "🍽️",
@@ -134,6 +135,31 @@ export function GestaoVitrine() {
       await carregar();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar banner.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function trocarImagemCategoria(
+    c: CategoriaVitrine,
+    fileList: FileList | null,
+  ) {
+    const file = fileList?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErro("Escolha um arquivo de imagem (JPG ou PNG).");
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    setMsg(null);
+    try {
+      const imagem_url = await uploadImagemBannerDono(file, "categorias");
+      await atualizarCategoriaDono(c.id, { imagem_url });
+      setMsg(`Imagem de “${c.nome}” atualizada. Aparece na home.`);
+      await carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao enviar imagem.");
     } finally {
       setSalvando(false);
     }
@@ -410,6 +436,132 @@ export function GestaoVitrine() {
         <div
           className={`mt-3 space-y-3 ${abertoCategorias ? "" : "hidden"}`}
         >
+        <div>
+          <p className="mb-2 text-xs text-muted">
+            Toque no botão da home para escolher a imagem dele.
+          </p>
+          <div className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <ul className="flex w-max gap-3">
+              {categorias.map((c) => {
+                const ativa = catImagemId === c.id;
+                return (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCatImagemId(c.id);
+                        setAbertoCategorias(true);
+                      }}
+                      className="flex w-[4.5rem] flex-col items-center gap-1.5"
+                    >
+                      <span
+                        className={`flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl text-2xl transition ${
+                          ativa
+                            ? "border-2 border-dende bg-dende-suave"
+                            : "border border-linha bg-[#f7f7f8]"
+                        }`}
+                      >
+                        {c.imagem_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={c.imagem_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          c.emoji
+                        )}
+                      </span>
+                      <span
+                        className={`text-center text-[11px] font-medium leading-tight ${
+                          ativa ? "text-dende" : "text-muted"
+                        }`}
+                      >
+                        {c.nome}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+
+        {catImagemId
+          ? (() => {
+              const c = categorias.find((x) => x.id === catImagemId);
+              if (!c) return null;
+              return (
+                <div className="rounded-xl border border-dende/30 bg-dende-suave/40 p-3 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        Imagem · {c.nome}
+                      </p>
+                      <p className="text-xs text-muted">
+                        JPG ou PNG. Sem imagem, o app usa o emoji.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCatImagemId(null)}
+                      className="text-xs font-medium text-muted"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-linha bg-white text-3xl">
+                      {c.imagem_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.imagem_url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        c.emoji
+                      )}
+                    </span>
+                    <div className="flex flex-col gap-2">
+                      <label className="inline-flex cursor-pointer items-center rounded-lg bg-dende px-3 py-2 text-sm font-semibold text-white">
+                        {salvando ? "Enviando…" : "Escolher imagem"}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="sr-only"
+                          disabled={salvando}
+                          onChange={(e) => {
+                            void trocarImagemCategoria(c, e.target.files);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                      {c.imagem_url ? (
+                        <button
+                          type="button"
+                          disabled={salvando}
+                          onClick={() =>
+                            void atualizarCategoriaDono(c.id, {
+                              imagem_url: null,
+                            })
+                              .then(carregar)
+                              .then(() =>
+                                setMsg(`Imagem de “${c.nome}” removida.`),
+                              )
+                          }
+                          className="text-left text-xs font-medium text-dende"
+                        >
+                          Remover imagem (voltar ao emoji)
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
+          : null}
+
         <div className="grid gap-2 rounded-xl border border-dashed border-linha bg-[#faf8f5] p-3 sm:grid-cols-[3.5rem_minmax(0,8rem)_1fr_auto]">
           <input
             value={novaCat.emoji}

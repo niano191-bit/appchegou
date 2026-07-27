@@ -33,9 +33,13 @@ export async function buscarVitrineDono() {
 }
 
 /** Envia arquivo de imagem e devolve a URL pública (ou data URL no demo). */
-export async function uploadImagemBannerDono(arquivo: File) {
+export async function uploadImagemBannerDono(
+  arquivo: File,
+  pasta: "banners" | "categorias" = "banners",
+) {
   const form = new FormData();
   form.append("arquivo", arquivo);
+  form.append("pasta", pasta);
   const resposta = await fetch("/api/dono/vitrine/upload", {
     method: "POST",
     body: form,
@@ -109,6 +113,7 @@ export async function atualizarCategoriaDono(
   patch: Partial<{
     nome: string;
     emoji: string;
+    imagem_url: string | null;
     palavras_chave: string;
     ativo: boolean;
     ordem: number;

@@ -156,6 +156,7 @@ export async function PATCH(request: Request) {
     const patch = {
       nome: corpo.nome,
       emoji: corpo.emoji,
+      imagem_url: corpo.imagem_url,
       palavras_chave: corpo.palavras_chave,
       ativo: corpo.ativo,
       ordem: corpo.ordem,

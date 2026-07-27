@@ -30,6 +30,7 @@ const files = [
   ["021", "supabase/migrations/021_fase29_vitrine.sql"],
   ["022", "supabase/migrations/022_fase30_banner_imagem.sql"],
   ["023", "supabase/migrations/023_fase31_storage_vitrine.sql"],
+  ["024", "supabase/migrations/024_fase32_categoria_imagem.sql"],
 ];
 
 async function runQuery(query) {
