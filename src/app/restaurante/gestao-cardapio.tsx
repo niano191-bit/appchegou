@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { lerImagemComoDataUrl } from "@/lib/imagem";
 import {
   atualizarMeuPrato,
   atualizarMinhaLoja,
   buscarMeuCardapio,
   criarMeuPrato,
+  uploadImagemLoja,
 } from "@/lib/restaurante-loja";
 import type { ItemCardapio, Restaurante } from "@/types/database";
 import { formatarReais } from "@/types/database";
@@ -52,7 +52,7 @@ export function GestaoCardapioLoja() {
         nome: String(dados.get("nome") ?? ""),
         descricao: String(dados.get("descricao") ?? ""),
         endereco: String(dados.get("endereco") ?? ""),
-        imagem_url: String(dados.get("imagem_url") ?? "") || null,
+        imagem_url: loja?.imagem_url ?? null,
       });
       setMsg("Dados da loja salvos.");
       await carregar();
@@ -67,10 +67,11 @@ export function GestaoCardapioLoja() {
     if (!arquivo || !loja) return;
     setSalvando(true);
     setErro(null);
+    setMsg(null);
     try {
-      const url = await lerImagemComoDataUrl(arquivo);
+      const url = await uploadImagemLoja(arquivo);
       await atualizarMinhaLoja({ imagem_url: url });
-      setMsg("Foto da loja atualizada.");
+      setMsg("Foto da loja atualizada — aparece na home do cliente.");
       await carregar();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro na foto.");
@@ -109,7 +110,7 @@ export function GestaoCardapioLoja() {
         nome: String(dados.get("nome") ?? ""),
         descricao: String(dados.get("descricao") ?? ""),
         preco: Number(dados.get("preco") ?? 0),
-        imagem_url: String(dados.get("imagem_url") ?? "") || null,
+        imagem_url: item.imagem_url ?? null,
       });
       setMsg("Prato atualizado.");
       await carregar();
@@ -125,7 +126,7 @@ export function GestaoCardapioLoja() {
     setSalvando(true);
     setErro(null);
     try {
-      const url = await lerImagemComoDataUrl(arquivo);
+      const url = await uploadImagemLoja(arquivo);
       await atualizarMeuPrato(item.id, { imagem_url: url });
       setMsg("Foto do prato atualizada.");
       await carregar();
@@ -139,7 +140,7 @@ export function GestaoCardapioLoja() {
   async function onFotoNovo(arquivo: File | null) {
     if (!arquivo) return;
     try {
-      const url = await lerImagemComoDataUrl(arquivo);
+      const url = await uploadImagemLoja(arquivo);
       setNovo((n) => ({ ...n, imagem_url: url }));
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro na foto.");
@@ -164,24 +165,55 @@ export function GestaoCardapioLoja() {
       ) : null}
 
       {loja ? (
-        <section className="rounded-2xl border border-linha bg-white px-4 py-4 space-y-3">
-          <p className="text-sm font-semibold text-foreground">Sua loja</p>
-          {loja.imagem_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={loja.imagem_url}
-              alt={loja.nome}
-              className="h-28 w-full rounded-xl object-cover"
+        <section className="rounded-2xl border-2 border-dende/40 bg-white px-4 py-4 space-y-3">
+          <div>
+            <p className="text-base font-semibold text-foreground">
+              Foto da loja (home)
+            </p>
+            <p className="mt-1 text-sm text-muted">
+              Esta imagem aparece no card grande da home do cliente. Toque no
+              botão laranja para escolher.
+            </p>
+          </div>
+
+          <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-linha bg-[#f0ebe4]">
+            {loja.imagem_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={loja.imagem_url}
+                alt={loja.nome}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-muted">
+                <span className="text-4xl opacity-40">🍲</span>
+                <span className="text-sm">Ainda sem foto</span>
+              </div>
+            )}
+          </div>
+
+          <label className="flex w-full cursor-pointer items-center justify-center rounded-xl bg-dende px-4 py-3.5 text-center text-sm font-semibold text-white">
+            {salvando ? "Enviando foto…" : "Escolher foto da loja"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="sr-only"
+              disabled={salvando}
+              onChange={(e) => {
+                void onFotoLoja(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
             />
-          ) : null}
+          </label>
+
           <form
-            className="space-y-3"
+            className="space-y-3 border-t border-linha pt-3"
             onSubmit={(e) => {
               e.preventDefault();
               void salvarLoja(e.currentTarget);
             }}
           >
-            <input type="hidden" name="imagem_url" defaultValue={loja.imagem_url ?? ""} />
+            <p className="text-sm font-semibold text-foreground">Dados da loja</p>
             <label className="block text-sm text-muted">
               Nome
               <input
@@ -206,23 +238,12 @@ export function GestaoCardapioLoja() {
                 className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
               />
             </label>
-            <label className="block text-sm text-muted">
-              Foto da loja (até 350 KB)
-              <input
-                type="file"
-                accept="image/*"
-                className="mt-1 block w-full text-sm"
-                onChange={(e) =>
-                  void onFotoLoja(e.target.files?.[0] ?? null)
-                }
-              />
-            </label>
             <button
               type="submit"
               disabled={salvando}
-              className="w-full rounded-xl bg-dende px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+              className="w-full rounded-xl border border-dende px-4 py-2.5 text-sm font-semibold text-dende disabled:opacity-60"
             >
-              Salvar loja
+              Salvar dados da loja
             </button>
           </form>
         </section>
@@ -241,14 +262,33 @@ export function GestaoCardapioLoja() {
                 key={item.id}
                 className="rounded-2xl border border-linha bg-white px-4 py-3 space-y-2"
               >
-                {item.imagem_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.imagem_url}
-                    alt={item.nome}
-                    className="h-24 w-full rounded-xl object-cover"
+                <div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-[#f0ebe4]">
+                  {item.imagem_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.imagem_url}
+                      alt={item.nome}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-sm text-muted">
+                      Sem foto do prato
+                    </div>
+                  )}
+                </div>
+                <label className="inline-flex cursor-pointer items-center rounded-lg bg-dende px-3 py-2 text-sm font-semibold text-white">
+                  {salvando ? "Enviando…" : "Escolher foto do prato"}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="sr-only"
+                    disabled={salvando}
+                    onChange={(e) => {
+                      void onFotoPrato(item, e.target.files?.[0] ?? null);
+                      e.target.value = "";
+                    }}
                   />
-                ) : null}
+                </label>
                 <form
                   className="space-y-2"
                   onSubmit={(e) => {
@@ -308,22 +348,6 @@ export function GestaoCardapioLoja() {
                     defaultValue={item.preco}
                     className="w-full rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
                   />
-                  <input
-                    type="hidden"
-                    name="imagem_url"
-                    defaultValue={item.imagem_url ?? ""}
-                  />
-                  <label className="block text-xs text-muted">
-                    Trocar foto
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="mt-1 block w-full"
-                      onChange={(e) =>
-                        void onFotoPrato(item, e.target.files?.[0] ?? null)
-                      }
-                    />
-                  </label>
                   <button
                     type="submit"
                     disabled={salvando}
@@ -346,9 +370,21 @@ export function GestaoCardapioLoja() {
             <img
               src={novo.imagem_url}
               alt=""
-              className="h-20 w-full rounded-xl object-cover"
+              className="aspect-[16/9] w-full rounded-xl object-cover"
             />
           ) : null}
+          <label className="inline-flex cursor-pointer items-center rounded-lg border border-linha px-3 py-2 text-sm font-medium text-foreground">
+            Foto do prato
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="sr-only"
+              onChange={(e) => {
+                void onFotoNovo(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
+            />
+          </label>
           <input
             value={novo.nome}
             onChange={(e) => setNovo({ ...novo, nome: e.target.value })}
@@ -369,12 +405,6 @@ export function GestaoCardapioLoja() {
             onChange={(e) => setNovo({ ...novo, preco: e.target.value })}
             placeholder="Preço"
             className="w-full rounded-xl border border-linha px-3 py-2 text-sm outline-none focus:border-dende"
-          />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => void onFotoNovo(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm"
           />
           <button
             type="button"

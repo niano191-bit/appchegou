@@ -65,3 +65,18 @@ export async function atualizarMinhaLoja(entrada: {
   const json = (await resposta.json()) as { erro?: string };
   if (!resposta.ok) throw new Error(json.erro ?? "Erro ao salvar loja.");
 }
+
+/** Envia foto da loja/prato (até 3 MB) e devolve a URL */
+export async function uploadImagemLoja(arquivo: File) {
+  const form = new FormData();
+  form.append("arquivo", arquivo);
+  form.append("pasta", "lojas");
+  const resposta = await fetch("/api/restaurante/upload", {
+    method: "POST",
+    body: form,
+  });
+  const json = (await resposta.json()) as { url?: string; erro?: string };
+  if (!resposta.ok) throw new Error(json.erro ?? "Erro ao enviar imagem.");
+  if (!json.url) throw new Error("Upload sem URL de retorno.");
+  return json.url;
+}
