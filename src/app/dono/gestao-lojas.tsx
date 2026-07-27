@@ -8,6 +8,7 @@ import {
   criarItemCardapioDono,
   criarRestauranteDono,
 } from "@/lib/dono";
+import { uploadImagemBannerDono } from "@/lib/vitrine";
 import type { ItemCardapio, Restaurante } from "@/types/database";
 import { formatarReais } from "@/types/database";
 import { SENHA_DEMO } from "@/lib/auth";
@@ -114,6 +115,28 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
       await onAtualizou();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar loja.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function trocarFotoLoja(loja: Restaurante, fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErro("Escolha um arquivo de imagem (JPG ou PNG).");
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    setMsg(null);
+    try {
+      const imagem_url = await uploadImagemBannerDono(file, "lojas");
+      await atualizarRestauranteDono({ id: loja.id, imagem_url });
+      setMsg(`Foto de “${loja.nome}” atualizada. Aparece na home do cliente.`);
+      await onAtualizou();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao enviar foto.");
     } finally {
       setSalvando(false);
     }
@@ -343,15 +366,75 @@ export function GestaoLojas({ restaurantes, onAtualizou }: Props) {
                         className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
                       />
                     </label>
-                    <label className="block text-sm text-muted">
-                      Foto da loja (URL) — aparece na home
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">
+                        Foto da loja
+                      </p>
+                      <p className="text-xs text-muted">
+                        Aparece no card da home (Baiana, Lanches, etc.).
+                      </p>
+                      <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-linha bg-[#f0ebe4]">
+                        {loja.imagem_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={loja.imagem_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-4xl opacity-40">
+                            🍲
+                          </div>
+                        )}
+                      </div>
                       <input
+                        type="hidden"
                         name="imagem_url"
-                        defaultValue={loja.imagem_url ?? ""}
-                        placeholder="https://..."
-                        className="mt-1 w-full rounded-xl border border-linha px-3 py-2.5 text-foreground outline-none focus:border-dende"
+                        value={loja.imagem_url ?? ""}
+                        readOnly
                       />
-                    </label>
+                      <div className="flex flex-wrap gap-3">
+                        <label className="inline-flex cursor-pointer items-center rounded-xl bg-dende px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+                          {salvando ? "Enviando…" : "Escolher imagem"}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            className="sr-only"
+                            disabled={salvando}
+                            onChange={(e) => {
+                              void trocarFotoLoja(loja, e.target.files);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                        {loja.imagem_url ? (
+                          <button
+                            type="button"
+                            disabled={salvando}
+                            onClick={() =>
+                              void atualizarRestauranteDono({
+                                id: loja.id,
+                                imagem_url: null,
+                              })
+                                .then(onAtualizou)
+                                .then(() =>
+                                  setMsg(`Foto de “${loja.nome}” removida.`),
+                                )
+                                .catch((e) =>
+                                  setErro(
+                                    e instanceof Error
+                                      ? e.message
+                                      : "Erro ao remover foto.",
+                                  ),
+                                )
+                            }
+                            className="text-sm font-medium text-dende"
+                          >
+                            Remover foto
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
                     <label className="block text-sm text-muted">
                       Comissão (%)
                       <input

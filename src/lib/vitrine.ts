@@ -35,7 +35,7 @@ export async function buscarVitrineDono() {
 /** Envia arquivo de imagem e devolve a URL pública (ou data URL no demo). */
 export async function uploadImagemBannerDono(
   arquivo: File,
-  pasta: "banners" | "categorias" = "banners",
+  pasta: "banners" | "categorias" | "lojas" = "banners",
 ) {
   const form = new FormData();
   form.append("arquivo", arquivo);

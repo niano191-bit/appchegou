@@ -28,7 +28,12 @@ export async function POST(request: Request) {
   }
 
   const pastaRaw = String(form.get("pasta") ?? "banners");
-  const pasta = pastaRaw === "categorias" ? "categorias" : "banners";
+  const pasta =
+    pastaRaw === "categorias"
+      ? "categorias"
+      : pastaRaw === "lojas"
+        ? "lojas"
+        : "banners";
 
   try {
     const url = await uploadImagemVitrine(arquivo, pasta);

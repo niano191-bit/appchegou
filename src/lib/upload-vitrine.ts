@@ -47,7 +47,7 @@ export async function arquivoParaDataUrl(arquivo: File | Blob, tipo: string) {
  */
 export async function uploadImagemVitrine(
   arquivo: File,
-  pasta: "banners" | "categorias" = "banners",
+  pasta: "banners" | "categorias" | "lojas" = "banners",
 ) {
   const tipo = (arquivo.type || "").toLowerCase();
   if (!TIPOS_OK.has(tipo)) {
